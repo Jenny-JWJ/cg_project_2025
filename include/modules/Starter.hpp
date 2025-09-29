@@ -16,6 +16,7 @@
 #include <chrono>
 #include <unordered_map>
 #include <map>
+#include "VulkanUtils.hpp"
 
 #ifdef STARTER_IMPLEMENTATION
 // to allow splitting header and implementation
@@ -352,6 +353,7 @@ struct RenderPass {
 	private:
 	void createRenderPass();
 	void createFramebuffers();
+    std::vector<VkExtent2D> framebufferExtents;
 };
 
 struct Pipeline {
@@ -812,7 +814,8 @@ void BaseProject::initVulkan() {
 	pipelinesAndDescriptorSetsInit();
 
 //		createCommandBuffers();			
-	createSyncObjects();			 
+	createSyncObjects();
+
 }
 
 void BaseProject::createInstance() {
@@ -1041,6 +1044,10 @@ void BaseProject::pickPhysicalDevice() {
 	if (physicalDevice == VK_NULL_HANDLE) {
 		throw std::runtime_error("failed to find a suitable GPU!");
 	}
+
+    printVulkanDeviceInfo(physicalDevice);
+    printSupportedExtensions(physicalDevice);
+    printSwapchainFormat(physicalDevice, surface);
 }
 
 bool BaseProject::isDeviceSuitable(VkPhysicalDevice device, deviceReport &devRep) {
@@ -3781,34 +3788,34 @@ void RenderPass::createRenderPass() {
 }
 
 void RenderPass::createFramebuffers() {
-	frameBuffers.resize(count);
-	for (size_t i = 0; i < frameBuffers.size(); i++) {
+        frameBuffers.resize(count);
+        framebufferExtents.resize(count); // aggiunto
 
-		std::vector<VkImageView> att;
-		att.resize(attachments.size());
-		for(int j = 0; j < attachments.size(); j++) {
-			att[j] = attachments[j].getView(i);
-		}
+        for (size_t i = 0; i < frameBuffers.size(); i++) {
+            std::vector<VkImageView> att(attachments.size());
+            for (int j = 0; j < attachments.size(); j++) {
+                att[j] = attachments[j].getView(i);
+            }
 
-		VkFramebufferCreateInfo framebufferInfo{};
-		framebufferInfo.sType =
-			VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass = renderPass;
-		framebufferInfo.attachmentCount =
-						static_cast<uint32_t>(att.size());;
-		framebufferInfo.pAttachments = att.data();
-		framebufferInfo.width = width; 
-		framebufferInfo.height = height;
-		framebufferInfo.layers = 1;
-		
-		VkResult result = vkCreateFramebuffer(BP->device, &framebufferInfo, nullptr,
-					&frameBuffers[i]);
-		if (result != VK_SUCCESS) {
-			PrintVkError(result);
-			throw std::runtime_error("failed to create framebuffer!");
-		}
-	}
-}
+            VkFramebufferCreateInfo framebufferInfo{};
+            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebufferInfo.renderPass = renderPass;
+            framebufferInfo.attachmentCount = static_cast<uint32_t>(att.size());
+            framebufferInfo.pAttachments = att.data();
+            framebufferInfo.width = width;
+            framebufferInfo.height = height;
+            framebufferInfo.layers = 1;
+
+            VkResult result = vkCreateFramebuffer(BP->device, &framebufferInfo, nullptr, &frameBuffers[i]);
+            if (result != VK_SUCCESS) {
+                PrintVkError(result);
+                throw std::runtime_error("failed to create framebuffer!");
+            }
+
+            // Salva le dimensioni
+            framebufferExtents[i] = {framebufferInfo.width, framebufferInfo.height};
+        }
+    }
 
 void RenderPass::create() {
 	createRenderPass();
@@ -3834,7 +3841,7 @@ void RenderPass::begin(VkCommandBuffer commandBuffer, int currentImage) {
 	renderPassInfo.renderPass = renderPass; 
 	renderPassInfo.framebuffer = frameBuffers[currentImage];
 	renderPassInfo.renderArea.offset = {0, 0};
-	renderPassInfo.renderArea.extent = {(uint32_t)width, (uint32_t)height};
+	renderPassInfo.renderArea.extent = framebufferExtents[currentImage];
 
 	renderPassInfo.clearValueCount =
 					static_cast<uint32_t>(clearValues.size());
