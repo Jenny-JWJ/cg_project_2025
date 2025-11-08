@@ -104,7 +104,17 @@ class E09 : public BaseProject {
 	float Yaw = glm::radians(0.0f);
 	float Pitch = glm::radians(0.0f);
 	float Roll = glm::radians(0.0f);
-	
+
+	//CAM VARIABLE
+	bool isFirstPerson = false; //State of the cam
+	bool c_pressed = false; //Debounce c clicked
+
+	//Player state variables
+	glm::vec3 oldPos;
+	int currRunState = 1;
+	float relDir = glm::radians(0.0f);
+	float dampedRelDir = glm::radians(0.0f);
+	glm::vec3 dampedCamPos = glm::vec3(0.0, 0.0, 5); //Initialize StartingPosition
 	glm::vec4 debug1 = glm::vec4(0);
 
 	// Here you set the main application parameters
@@ -115,7 +125,7 @@ class E09 : public BaseProject {
 		windowTitle = "E09 - Showing animations";
     	windowResizable = GLFW_TRUE;
 		
-		// Initial aspect ratio
+		// Initial aspect ratioF
 		Ar = 4.0f / 3.0f;
 	}
 	
@@ -401,6 +411,18 @@ std::cout << "\nLoading the scene\n\n";
 			glfwSetWindowShouldClose(window, GL_TRUE);
 		}
 
+		if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS && !c_pressed) {
+			isFirstPerson = !isFirstPerson; //Revert the state
+			c_pressed = true;
+
+			if (isFirstPerson) {
+				Pitch = 0.0f;
+			}
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_C) == GLFW_RELEASE) {
+			c_pressed = false;
+		}
 
 		if(glfwGetKey(window, GLFW_KEY_1)) {
 			if(!debounce) {
@@ -506,7 +528,11 @@ std::cout << "Playing anim: " << curAnim << "\n";
 		glm::mat4 AdaptMat =
 			glm::scale(glm::mat4(1.0f), glm::vec3(0.01f)) * 
 			glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f,0.0f,0.0f));
-		
+
+		if (isFirstPerson) {
+			AdaptMat = glm::scale(AdaptMat, glm::vec3(0.0f));
+		}
+
 		int instanceId;
 		// character
 		for(instanceId = 0; instanceId < SC.TI[0].InstanceCount; instanceId++) {
@@ -566,126 +592,162 @@ std::cout << "Playing anim: " << curAnim << "\n";
 			elapsedT = 0.0f;
 		    countedFrames = 0;
 		}
-		
+
+		//Indicate the cam that is currently in use
+		const float margin = 0.99f;
+		if(isFirstPerson) {
+			// Coordinate (-0.99f, -0.99f) per l'angolo in alto a sinistra
+			txt.print(-margin, -margin, "View: First Person (Press C)", 2, "CO",
+					  false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
+					  {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
+		} else {
+			// Coordinate (-0.99f, -0.99f) per l'angolo in alto a sinistra
+			txt.print(-margin, -margin, "View: Third Person (Press C)", 2, "CO",
+					  false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
+					  {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
+		}
+
 		txt.updateCommandBuffer();
 	}
 	
 	float GameLogic() {
-		// Parameters
-		// Camera FOV-y, Near Plane and Far Plane
-		const float FOVy = glm::radians(45.0f);
-		const float nearPlane = 0.1f;
-		const float farPlane = 100.f;
-		// Player starting point
-		const glm::vec3 StartingPosition = glm::vec3(0.0, 0.0, 5);
-		// Camera target height and distance
-		static float camHeight = 1.5;
-		static float camDist = 5;
-		// Camera Pitch limits
-		const float minPitch = glm::radians(-8.75f);
-		const float maxPitch = glm::radians(60.0f);
-		// Rotation and motion speed
-		const float ROT_SPEED = glm::radians(120.0f);
-		const float MOVE_SPEED_BASE = 2.0f;
-		const float MOVE_SPEED_RUN  = 5.0f;
-		const float ZOOM_SPEED = MOVE_SPEED_BASE * 1.5f;
-		const float MAX_CAM_DIST =  7.5;
-		const float MIN_CAM_DIST =  1.5;
+       // Parameters
+       // Camera FOV-y, Near Plane and Far Plane
+       const float FOVy = glm::radians(45.0f);
+       const float nearPlane = 0.1f;
+       const float farPlane = 100.f;
+       // Player starting point
+       const glm::vec3 StartingPosition = glm::vec3(0.0, 0.0, 5);
+       // Camera target height and distance
+       static float camHeight = 1.5;
+       static float camDist = 5;
+       // Camera Pitch limits
+       const float minPitch = glm::radians(-8.75f);
+       const float maxPitch = glm::radians(60.0f);
+       // Rotation and motion speed
+       const float ROT_SPEED = glm::radians(120.0f);
+       const float MOVE_SPEED_BASE = 2.0f;
+       const float MOVE_SPEED_RUN  = 5.0f;
+       const float ZOOM_SPEED = MOVE_SPEED_BASE * 1.5f;
+       const float MAX_CAM_DIST =  7.5;
+       const float MIN_CAM_DIST =  1.5;
 
-		// Integration with the timers and the controllers
-		float deltaT;
-		glm::vec3 m = glm::vec3(0.0f), r = glm::vec3(0.0f);
-		bool fire = false;
-		getSixAxis(deltaT, m, r, fire);
-		float MOVE_SPEED = fire ? MOVE_SPEED_RUN : MOVE_SPEED_BASE;
-
-
-		// Game Logic implementation
-		// Current Player Position - statc variable make sure its value remain unchanged in subsequent calls to the procedure
-		static glm::vec3 Pos = StartingPosition;
-		static glm::vec3 oldPos;
-		static int currRunState = 1;
-
-/*		camDist = camDist - m.y * ZOOM_SPEED * deltaT;
-		camDist = camDist < MIN_CAM_DIST ? MIN_CAM_DIST :
-				 (camDist > MAX_CAM_DIST ? MAX_CAM_DIST : camDist);*/
-		camDist = (MIN_CAM_DIST + MIN_CAM_DIST) / 2.0f; 
-
-		// To be done in the assignment
-		ViewPrj = glm::mat4(1);
-		World = glm::mat4(1);
-
-		oldPos = Pos;
-
-		static float Yaw = glm::radians(0.0f);
-		static float Pitch = glm::radians(0.0f);
-		static float relDir = glm::radians(0.0f);
-		static float dampedRelDir = glm::radians(0.0f);
-		static glm::vec3 dampedCamPos = StartingPosition;
-		
-		// World
-		// Position
-		glm::vec3 ux = glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0,1,0)) * glm::vec4(1,0,0,1);
-		glm::vec3 uz = glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0,1,0)) * glm::vec4(0,0,-1,1);
-		Pos = Pos + MOVE_SPEED * m.x * ux * deltaT;
-		Pos = Pos - MOVE_SPEED * m.z * uz * deltaT;
-		
-		camHeight += MOVE_SPEED * m.y * deltaT;
-		// Rotation
-		Yaw = Yaw - ROT_SPEED * deltaT * r.y;
-		Pitch = Pitch - ROT_SPEED * deltaT * r.x;
-		Pitch  =  Pitch < minPitch ? minPitch :
-				   (Pitch > maxPitch ? maxPitch : Pitch);
+       // Integration with the timers and the controllers
+       float deltaT;
+       glm::vec3 m = glm::vec3(0.0f), r = glm::vec3(0.0f);
+       bool fire = false;
+       getSixAxis(deltaT, m, r, fire);
+       float MOVE_SPEED = fire ? MOVE_SPEED_RUN : MOVE_SPEED_BASE;
 
 
-		float ef = exp(-10.0 * deltaT);
-		// Rotational independence from view with damping
-		if(glm::length(glm::vec3(m.x, 0.0f, m.z)) > 0.001f) {
-			relDir = Yaw + atan2(m.x, m.z);
-			dampedRelDir = dampedRelDir > relDir + 3.1416f ? dampedRelDir - 6.28f :
-						   dampedRelDir < relDir - 3.1416f ? dampedRelDir + 6.28f : dampedRelDir;
-		}
-		dampedRelDir = ef * dampedRelDir + (1.0f - ef) * relDir;
-		
-		// Final world matrix computaiton
-		World = glm::translate(glm::mat4(1), Pos) * glm::rotate(glm::mat4(1.0f), dampedRelDir, glm::vec3(0,1,0));
-		
-		// Projection
-		glm::mat4 Prj = glm::perspective(FOVy, Ar, nearPlane, farPlane);
-		Prj[1][1] *= -1;
+       // Game Logic implementation
+       // Le variabili di stato (Pos, Yaw, Pitch, ecc.) sono ora membri della classe
+       // e le dichiarazioni 'static' sono state rimosse da qui.
 
-		// View
-		// Target
-		glm::vec3 target = Pos + glm::vec3(0.0f, camHeight, 0.0f);
+		/* camDist = camDist - m.y * ZOOM_SPEED * deltaT;
+       camDist = camDist < MIN_CAM_DIST ? MIN_CAM_DIST :
+              (camDist > MAX_CAM_DIST ? MAX_CAM_DIST : camDist);*/
+       camDist = (MIN_CAM_DIST + MIN_CAM_DIST) / 2.0f;
 
-		// Camera position, depending on Yaw parameter, but not character direction
-		glm::mat4 camWorld = glm::translate(glm::mat4(1), Pos) * glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0,1,0));
-		cameraPos = camWorld * glm::vec4(0.0f, camHeight + camDist * sin(Pitch), camDist * cos(Pitch), 1.0);
-		// Damping of camera
-		dampedCamPos = ef * dampedCamPos + (1.0f - ef) * cameraPos;
+       // To be done in the assignment
+       ViewPrj = glm::mat4(1);
+       World = glm::mat4(1);
 
-		glm::mat4 View = glm::lookAt(dampedCamPos, target, glm::vec3(0,1,0));
+       oldPos = Pos; // 'oldPos' è ora un membro della classe
 
-		ViewPrj = Prj * View;
-		
-		float vel = length(Pos - oldPos) / deltaT;
-		
-		if(vel < 0.2) {
-			if(currRunState != 1) {
-				currRunState = 1;
-			}
-		} else if(vel < 3.5) {
-			if(currRunState != 2) {
-				currRunState = 2;
-			}
-		} else {
-			if(currRunState != 3) {
-				currRunState = 3;
-			}
-		}
-		
-		return deltaT;
-	}
+       // Aggiorna Rotazione (comune a entrambe le visuali)
+       Yaw = Yaw - ROT_SPEED * deltaT * r.y;
+       Pitch = Pitch - ROT_SPEED * deltaT * r.x;
+       Pitch  =  Pitch < minPitch ? minPitch :
+                (Pitch > maxPitch ? maxPitch : Pitch);
+
+       float ef = exp(-10.0 * deltaT);
+
+       // Matrice di Proiezione
+       glm::mat4 Prj = glm::perspective(FOVy, Ar, nearPlane, farPlane);
+       Prj[1][1] *= -1;
+
+       glm::mat4 View;
+
+       // --- INIZIO BLOCCO DI CODICE CORRETTO ---
+
+       // Calcola i vettori di direzione (comuni a entrambe le logiche)
+       // DICHIARATI QUI UNA SOLA VOLTA E CON IL CAST A VEC3 CORRETTO
+       glm::vec3 ux = glm::vec3(glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0,1,0)) * glm::vec4(1,0,0,1));
+       glm::vec3 uz = glm::vec3(glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0,1,0)) * glm::vec4(0,0,-1,1));
+
+       if(isFirstPerson) {
+            // --- LOGICA PRIMA PERSONA (Stile FPS) ---
+
+            // 1. Calcola il vettore 'front' (dove guardi)
+            glm::mat4 pitchRotation = glm::rotate(glm::mat4(1.0f), Pitch, ux); // Ruota attorno all'asse 'destra' (ux)
+            glm::vec3 front = glm::normalize(glm::vec3(pitchRotation * glm::vec4(uz, 0.0f)));
+
+            // 2. Calcola il vero 'up' della telecamera
+            glm::vec3 up = glm::normalize(glm::cross(ux, front));
+
+            // 3. Muovi 'Pos' in base a 'front' e 'ux' (Stile FPS)
+            Pos = Pos - MOVE_SPEED * m.z * front * deltaT; // Muovi lungo 'front' (usa - per W)
+            Pos = Pos + MOVE_SPEED * m.x * ux * deltaT;    // Muovi lungo 'ux' (strafe)
+
+            // 4. La telecamera è negli "occhi" del personaggio
+            cameraPos = Pos + glm::vec3(0.0f, camHeight, 0.0f);
+            glm::vec3 target = cameraPos + front; // Guarda dritto davanti a sé
+            View = glm::lookAt(cameraPos, target, up);
+
+            // 5. Il modello (invisibile) ruota con la telecamera
+            World = glm::translate(glm::mat4(1), Pos) * glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0,1,0));
+
+       } else {
+            // --- LOGICA TERZA PERSONA (Tuo codice originale, MA SENZA LE DICHIARAZIONI DI UX E UZ) ---
+
+            // 1. Muovi 'Pos' (Logica originale)
+            // Le dichiarazioni di ux e uz sono state rimosse da qui
+            Pos = Pos + MOVE_SPEED * m.x * ux * deltaT;
+            Pos = Pos - MOVE_SPEED * m.z * uz * deltaT;
+
+            camHeight += MOVE_SPEED * m.y * deltaT;
+
+            // 2. Rotazione modello (Logica originale, smorzata)
+            if(glm::length(glm::vec3(m.x, 0.0f, m.z)) > 0.001f) {
+               relDir = Yaw + atan2(m.x, m.z);
+               dampedRelDir = dampedRelDir > relDir + 3.1416f ? dampedRelDir - 6.28f :
+                           dampedRelDir < relDir - 3.1416f ? dampedRelDir + 6.28f : dampedRelDir;
+            }
+            dampedRelDir = ef * dampedRelDir + (1.0f - ef) * relDir;
+            World = glm::translate(glm::mat4(1), Pos) * glm::rotate(glm::mat4(1.0f), dampedRelDir, glm::vec3(0,1,0));
+
+            // 3. Telecamera (Logica originale, orbitale e smorzata)
+            glm::vec3 target = Pos + glm::vec3(0.0f, camHeight, 0.0f);
+            glm::mat4 camWorld = glm::translate(glm::mat4(1), Pos) * glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0,1,0));
+            cameraPos = camWorld * glm::vec4(0.0f, camHeight + camDist * sin(Pitch), camDist * cos(Pitch), 1.0);
+            dampedCamPos = ef * dampedCamPos + (1.0f - ef) * cameraPos;
+            View = glm::lookAt(dampedCamPos, target, glm::vec3(0,1,0));
+       }
+
+       // Calcolo finale della matrice View-Projection
+       ViewPrj = Prj * View;
+
+       // --- FINE BLOCCO DI CODICE CORRETTO ---
+
+       float vel = length(Pos - oldPos) / deltaT;
+
+       if(vel < 0.2) {
+          if(currRunState != 1) {
+             currRunState = 1;
+          }
+       } else if(vel < 3.5) {
+          if(currRunState != 2) {
+             currRunState = 2;
+          }
+       } else {
+          if(currRunState != 3) {
+             currRunState = 3;
+          }
+       }
+
+       return deltaT;
+    }
 };
 
 
