@@ -65,7 +65,7 @@
 		{"technique": "CookTorranceChar", "elements": [
 			{"id": "hm0",  "model": "hm0",   "texture": ["st"]},
 			{"id": "hm1",  "model": "hm1",   "texture": ["st"]}
-		]}, 
+		]},
 		{"technique": "CookTorranceNoiseSimp", "elements": [
 			{"id": "gb1",  "model": "gb",   "texture": ["main", "pnois"],
 				"translate": [2, 0, 0],
@@ -80,10 +80,10 @@
 							  0, 1, 0, 0,
 							  0, 0, 1, -5,
 							  0, 0, 0, 1]}
-		]}, 
+		]},
 		{"technique": "SkyBox", "elements": [
 			{"id": "skybox",  "model": "skybox",   "texture": ["skybox"]}
-		]}, 
+		]},
 		{"technique": "PBR", "elements": [
 			{"id": "scb",  "model": "scb",   "texture": ["scba", "scbnm", "scbmt", "scbrf"],
 				"translate": [0, 0, 1.5],

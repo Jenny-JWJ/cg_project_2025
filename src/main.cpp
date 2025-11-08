@@ -109,6 +109,12 @@ class E09 : public BaseProject {
 	bool isFirstPerson = false; //State of the cam
 	bool c_pressed = false; //Debounce c clicked
 
+	//Mouse variable
+	double lastX;
+	double lastY;
+	bool firstMouse = true; //Avoids crazy movements at the beginning
+	float mouseSensitivity = 0.1f; //Mouse sensibility
+
 	//Player state variables
 	glm::vec3 oldPos;
 	int currRunState = 1;
@@ -143,190 +149,219 @@ class E09 : public BaseProject {
 	
 	// Here you load and setup all your Vulkan Models and Texutures.
 	// Here you also create your Descriptor set layouts and load the shaders for the pipelines
-	void localInit() {
-		// Descriptor Layouts [what will be passed to the shaders]
-		DSLglobal.init(this, {
-					// this array contains the binding:
-					// first  element : the binding number
-					// second element : the type of element (buffer or texture)
-					// third  element : the pipeline stage where it will be used
-					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(GlobalUniformBufferObject), 1}
-				  });
+	// Here you load and setup all your Vulkan Models and Texutures.
+    // Here you also create your Descriptor set layouts and load the shaders for the pipelines
+    void localInit() {
+       // --- INIZIO MODIFICA: Blocco Cursore ---
+       // Blocca il cursore al centro, lo nasconde e abilita la modalità "raw mouse motion" (FPS)
+       glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+       // --- FINE MODIFICA: Blocco Cursore ---
 
-		DSLlocalChar.init(this, {
-					// this array contains the binding:
-					// first  element : the binding number
-					// second element : the type of element (buffer or texture)
-					// third  element : the pipeline stage where it will be used
-					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, sizeof(UniformBufferObjectChar), 1},
-					{1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 1}
-				  });
+       // --- INIZIO MODIFICA: Inizializzazione Mouse ---
+       // Imposta la posizione iniziale del mouse al centro della finestra
+       lastX = windowWidth / 2.0;
+       lastY = windowHeight / 2.0;
+       firstMouse = true;
+       // --- FINE MODIFICA: Inizializzazione Mouse ---
 
-		DSLlocalSimp.init(this, {
-					// this array contains the binding:
-					// first  element : the binding number
-					// second element : the type of element (buffer or texture)
-					// third  element : the pipeline stage where it will be used
-					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, sizeof(UniformBufferObjectSimp), 1},
-					{1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 1},
-					{2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1, 1}
-				  });
+       // Descriptor Layouts [what will be passed to the shaders]
+       DSLglobal.init(this, {
+                // this array contains the binding:
+                // first  element : the binding number
+                // second element : the type of element (buffer or texture)
+                // third  element : the pipeline stage where it will be used
+                {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(GlobalUniformBufferObject), 1}
+               });
 
-		DSLskyBox.init(this, {
-			{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, sizeof(skyBoxUniformBufferObject), 1},
-			{1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 1}
-		  });
+       DSLlocalChar.init(this, {
+                // this array contains the binding:
+                // first  element : the binding number
+                // second element : the type of element (buffer or texture)
+                // third  element : the pipeline stage where it will be used
+                {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, sizeof(UniformBufferObjectChar), 1},
+                {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 1}
+               });
 
-		DSLlocalPBR.init(this, {
-					// this array contains the binding:
-					// first  element : the binding number
-					// second element : the type of element (buffer or texture)
-					// third  element : the pipeline stage where it will be used
-					{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, sizeof(UniformBufferObjectSimp), 1},
-					{1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 1},
-					{2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1, 1},
-					{3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2, 1},
+       DSLlocalSimp.init(this, {
+                // this array contains the binding:
+                // first  element : the binding number
+                // second element : the type of element (buffer or texture)
+                // third  element : the pipeline stage where it will be used
+                {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, sizeof(UniformBufferObjectSimp), 1},
+                {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 1},
+                {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1, 1}
+               });
+
+       DSLskyBox.init(this, {
+          {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, sizeof(skyBoxUniformBufferObject), 1},
+          {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 1}
+         });
+
+       DSLlocalPBR.init(this, {
+                // this array contains the binding:
+                // first  element : the binding number
+                // second element : the type of element (buffer or texture)
+                // third  element : the pipeline stage where it will be used
+                {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, sizeof(UniformBufferObjectSimp), 1},
+                {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 1},
+                {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1, 1},
+                {3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2, 1},
                     {4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3, 1}
-				  });
+               });
 
-		VDchar.init(this, {
-				  {0, sizeof(VertexChar), VK_VERTEX_INPUT_RATE_VERTEX}
-				}, {
-				  {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexChar, pos),
-				         sizeof(glm::vec3), POSITION},
-				  {0, 1, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexChar, norm),
-				         sizeof(glm::vec3), NORMAL},
-				  {0, 2, VK_FORMAT_R32G32_SFLOAT, offsetof(VertexChar, UV),
-				         sizeof(glm::vec2), UV},
-					{0, 3, VK_FORMAT_R32G32B32A32_UINT, offsetof(VertexChar, jointIndices),
-				         sizeof(glm::uvec4), JOINTINDEX},
-					{0, 4, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexChar, weights),
-				         sizeof(glm::vec4), JOINTWEIGHT}
-				});
+       VDchar.init(this, {
+               {0, sizeof(VertexChar), VK_VERTEX_INPUT_RATE_VERTEX}
+             }, {
+               {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexChar, pos),
+                      sizeof(glm::vec3), POSITION},
+               {0, 1, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexChar, norm),
+                      sizeof(glm::vec3), NORMAL},
+               {0, 2, VK_FORMAT_R32G32_SFLOAT, offsetof(VertexChar, UV),
+                      sizeof(glm::vec2), UV},
+                {0, 3, VK_FORMAT_R32G32B32A32_UINT, offsetof(VertexChar, jointIndices),
+                      sizeof(glm::uvec4), JOINTINDEX},
+                {0, 4, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexChar, weights),
+                      sizeof(glm::vec4), JOINTWEIGHT}
+             });
 
-		VDsimp.init(this, {
-				  {0, sizeof(VertexSimp), VK_VERTEX_INPUT_RATE_VERTEX}
-				}, {
-				  {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexSimp, pos),
-				         sizeof(glm::vec3), POSITION},
-				  {0, 1, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexSimp, norm),
-				         sizeof(glm::vec3), NORMAL},
-				  {0, 2, VK_FORMAT_R32G32_SFLOAT, offsetof(VertexSimp, UV),
-				         sizeof(glm::vec2), UV}
-				});
+       VDsimp.init(this, {
+               {0, sizeof(VertexSimp), VK_VERTEX_INPUT_RATE_VERTEX}
+             }, {
+               {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexSimp, pos),
+                      sizeof(glm::vec3), POSITION},
+               {0, 1, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexSimp, norm),
+                      sizeof(glm::vec3), NORMAL},
+               {0, 2, VK_FORMAT_R32G32_SFLOAT, offsetof(VertexSimp, UV),
+                      sizeof(glm::vec2), UV}
+             });
 
-		VDskyBox.init(this, {
-		  {0, sizeof(skyBoxVertex), VK_VERTEX_INPUT_RATE_VERTEX}
-		}, {
-		  {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(skyBoxVertex, pos),
-				 sizeof(glm::vec3), POSITION}
-		});
+       VDskyBox.init(this, {
+         {0, sizeof(skyBoxVertex), VK_VERTEX_INPUT_RATE_VERTEX}
+       }, {
+         {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(skyBoxVertex, pos),
+              sizeof(glm::vec3), POSITION}
+       });
 
-		VDtan.init(this, {
-				  {0, sizeof(VertexTan), VK_VERTEX_INPUT_RATE_VERTEX}
-				}, {
-				  {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexTan, pos),
-				         sizeof(glm::vec3), POSITION},
-				  {0, 1, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexTan, norm),
-				         sizeof(glm::vec3), NORMAL},
-				  {0, 2, VK_FORMAT_R32G32_SFLOAT, offsetof(VertexTan, UV),
-				         sizeof(glm::vec2), UV},
-				  {0, 3, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexTan, tan),
-				         sizeof(glm::vec4), TANGENT}
-				});
-				
-		VDRs.resize(4);
-		VDRs[0].init("VDchar",   &VDchar);
-		VDRs[1].init("VDsimp",   &VDsimp);
-		VDRs[2].init("VDskybox", &VDskyBox);
-		VDRs[3].init("VDtan",    &VDtan);
-		
-		// initializes the render passes
-		RP.init(this);
-		// sets the blue sky
-		RP.properties[0].clearValue = {0.0f,0.9f,1.0f,1.0f};
-		
+       VDtan.init(this, {
+               {0, sizeof(VertexTan), VK_VERTEX_INPUT_RATE_VERTEX}
+             }, {
+               {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexTan, pos),
+                      sizeof(glm::vec3), POSITION},
+               {0, 1, VK_FORMAT_R32G32B32_SFLOAT, offsetof(VertexTan, norm),
+                      sizeof(glm::vec3), NORMAL},
+               {0, 2, VK_FORMAT_R32G32_SFLOAT, offsetof(VertexTan, UV),
+                      sizeof(glm::vec2), UV},
+               {0, 3, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(VertexTan, tan),
+                      sizeof(glm::vec4), TANGENT}
+             });
 
-		// Pipelines [Shader couples]
-		// The last array, is a vector of pointer to the layouts of the sets that will
-		// be used in this pipeline. The first element will be set 0, and so on..
-		Pchar.init(this, &VDchar, "shaders/PosNormUvTanWeights.vert.spv", "shaders/CookTorranceForCharacter.frag.spv", {&DSLglobal, &DSLlocalChar});
+       VDRs.resize(4);
+       VDRs[0].init("VDchar",   &VDchar);
+       VDRs[1].init("VDsimp",   &VDsimp);
+       VDRs[2].init("VDskybox", &VDskyBox);
+       VDRs[3].init("VDtan",    &VDtan);
 
-		PsimpObj.init(this, &VDsimp, "shaders/SimplePosNormUV.vert.spv", "shaders/CookTorrance.frag.spv", {&DSLglobal, &DSLlocalSimp});
+       // initializes the render passes
+       RP.init(this);
+       // sets the blue sky
+       RP.properties[0].clearValue = {0.0f,0.9f,1.0f,1.0f};
 
-		PskyBox.init(this, &VDskyBox, "shaders/SkyBoxShader.vert.spv", "shaders/SkyBoxShader.frag.spv", {&DSLskyBox});
-		PskyBox.setCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL);
-		PskyBox.setCullMode(VK_CULL_MODE_BACK_BIT);
-		PskyBox.setPolygonMode(VK_POLYGON_MODE_FILL);
 
-		P_PBR.init(this, &VDtan, "shaders/SimplePosNormUvTan.vert.spv", "shaders/PBR.frag.spv", {&DSLglobal, &DSLlocalPBR});
+       // Pipelines [Shader couples]
+       // The last array, is a vector of pointer to the layouts of the sets that will
+       // be used in this pipeline. The first element will be set 0, and so on..
+       Pchar.init(this, &VDchar, "shaders/PosNormUvTanWeights.vert.spv", "shaders/CookTorranceForCharacter.frag.spv", {&DSLglobal, &DSLlocalChar});
 
-		PRs.resize(4);
-		PRs[0].init("CookTorranceChar", {
-							 {&Pchar, {//Pipeline and DSL for the first pass
-								 /*DSLglobal*/{},
-								 /*DSLlocalChar*/{
-										/*t0*/{true,  0, {}}// index 0 of the "texture" field in the json file
-									 }
-									}}
-							  }, /*TotalNtextures*/1, &VDchar);
-		PRs[1].init("CookTorranceNoiseSimp", {
-							 {&PsimpObj, {//Pipeline and DSL for the first pass
-								 /*DSLglobal*/{},
-								 /*DSLlocalSimp*/{
-										/*t0*/{true,  0, {}},// index 0 of the "texture" field in the json file
-										/*t1*/{true,  1, {}} // index 1 of the "texture" field in the json file
-									 }
-									}}
-							  }, /*TotalNtextures*/2, &VDsimp);
-		PRs[2].init("SkyBox", {
-							 {&PskyBox, {//Pipeline and DSL for the first pass
-								 /*DSLskyBox*/{
-										/*t0*/{true,  0, {}}// index 0 of the "texture" field in the json file
-									 }
-									}}
-							  }, /*TotalNtextures*/1, &VDskyBox);
-		PRs[3].init("PBR", {
-							 {&P_PBR, {//Pipeline and DSL for the first pass
-								 /*DSLglobal*/{},
-								 /*DSLlocalPBR*/{
-										/*t0*/{true,  0, {}},// index 0 of the "texture" field in the json file
-										/*t1*/{true,  1, {}},// index 1 of the "texture" field in the json file
-										/*t2*/{true,  2, {}},// index 2 of the "texture" field in the json file
-										/*t3*/{true,  3, {}}// index 3 of the "texture" field in the json file
-									 }
-									}}
-							  }, /*TotalNtextures*/4, &VDtan);
+       PsimpObj.init(this, &VDsimp, "shaders/SimplePosNormUV.vert.spv", "shaders/CookTorrance.frag.spv", {&DSLglobal, &DSLlocalSimp});
 
-		// Models, textures and Descriptors (values assigned to the uniforms)
-		
-		// sets the size of the Descriptor Set Pool
-		DPSZs.uniformBlocksInPool = 3;
-		DPSZs.texturesInPool = 4;
-		DPSZs.setsInPool = 3;
-		
-std::cout << "\nLoading the scene\n\n";
-		if(SC.init(this, /*Npasses*/1, VDRs, PRs, "assets/models/scene.json") != 0) {
-			std::cout << "ERROR LOADING THE SCENE\n";
-			exit(0);
-		}
-		// initializes animations
-		for(int ian = 0; ian < N_ANIMATIONS; ian++) {
-			Anim[ian].init(*SC.As[ian]);
-		}
-		AB.init({{0,32,0.0f,0}, {0,16,0.0f,1}, {0,263,0.0f,2}, {0,83,0.0f,3}, {0,16,0.0f,4}});
-		//AB.init({{0,31,0.0f}});
-		SKA.init(Anim, 5, "Armature|mixamo.com|Layer0", 0);
-		
-		// initializes the textual output
-		txt.init(this, windowWidth, windowHeight);
+       PskyBox.init(this, &VDskyBox, "shaders/SkyBoxShader.vert.spv", "shaders/SkyBoxShader.frag.spv", {&DSLskyBox});
+       PskyBox.setCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL);
+       PskyBox.setCullMode(VK_CULL_MODE_BACK_BIT);
+       PskyBox.setPolygonMode(VK_POLYGON_MODE_FILL);
 
-		// submits the main command buffer
-		submitCommandBuffer("main", 0, populateCommandBufferAccess, this);
+       P_PBR.init(this, &VDtan, "shaders/SimplePosNormUvTan.vert.spv", "shaders/PBR.frag.spv", {&DSLglobal, &DSLlocalPBR});
 
-		// Prepares for showing the FPS count
-		txt.print(1.0f, 1.0f, "FPS:",1,"CO",false,false,true,TAL_RIGHT,TRH_RIGHT,TRV_BOTTOM,{1.0f,0.0f,0.0f,1.0f},{0.8f,0.8f,0.0f,1.0f});
-	}
+       PRs.resize(4);
+       PRs[0].init("CookTorranceChar", {
+                       {&Pchar, {//Pipeline and DSL for the first pass
+                          /*DSLglobal*/{},
+                          /*DSLlocalChar*/{
+                               /*t0*/{true,  0, {}}// index 0 of the "texture" field in the json file
+                             }
+                            }}
+                        }, /*TotalNtextures*/1, &VDchar);
+       PRs[1].init("CookTorranceNoiseSimp", {
+                       {&PsimpObj, {//Pipeline and DSL for the first pass
+                          /*DSLglobal*/{},
+                          /*DSLlocalSimp*/{
+                               /*t0*/{true,  0, {}},// index 0 of the "texture" field in the json file
+                               /*t1*/{true,  1, {}} // index 1 of the "texture" field in the json file
+                             }
+                            }}
+                        }, /*TotalNtextures*/2, &VDsimp);
+       PRs[2].init("SkyBox", {
+                       {&PskyBox, {//Pipeline and DSL for the first pass
+                          /*DSLskyBox*/{
+                               /*t0*/{true,  0, {}}// index 0 of the "texture" field in the json file
+                             }
+                            }}
+                        }, /*TotalNtextures*/1, &VDskyBox);
+       PRs[3].init("PBR", {
+                       {&P_PBR, {//Pipeline and DSL for the first pass
+                          /*DSLglobal*/{},
+                          /*DSLlocalPBR*/{
+                               /*t0*/{true,  0, {}},// index 0 of the "texture" field in the json file
+                               /*t1*/{true,  1, {}},// index 1 of the "texture" field in the json file
+                               /*t2*/{true,  2, {}},// index 2 of the "texture" field in the json file
+                               /*t3*/{true,  3, {}}// index 3 of the "texture" field in the json file
+                             }
+                            }}
+                        }, /*TotalNtextures*/4, &VDtan);
+
+       // Models, textures and Descriptors (values assigned to the uniforms)
+
+       // sets the size of the Descriptor Set Pool
+       DPSZs.uniformBlocksInPool = 3;
+       DPSZs.texturesInPool = 4;
+       DPSZs.setsInPool = 3;
+
+       std::cout << "\nLoading the scene\n\n";
+       if(SC.init(this, /*Npasses*/1, VDRs, PRs, "assets/models/scene.json") != 0) {
+          std::cout << "ERROR LOADING THE SCENE\n";
+          exit(0);
+       }
+       // initializes animations
+       for(int ian = 0; ian < N_ANIMATIONS; ian++) {
+          Anim[ian].init(*SC.As[ian]);
+       }
+       AB.init({{0,32,0.0f,0}, {0,16,0.0f,1}, {0,263,0.0f,2}, {0,83,0.0f,3}, {0,16,0.0f,4}});
+       //AB.init({{0,31,0.0f}});
+       SKA.init(Anim, 5, "Armature|mixamo.com|Layer0", 0);
+
+       // initializes the textual output
+       txt.init(this, windowWidth, windowHeight);
+
+       // submits the main command buffer
+       submitCommandBuffer("main", 0, populateCommandBufferAccess, this);
+
+       // Prepares for showing the FPS count
+       txt.print(1.0f, 1.0f, "FPS:",1,"CO",false,false,true,TAL_RIGHT,TRH_RIGHT,TRV_BOTTOM,{1.0f,0.0f,0.0f,1.0f},{0.8f,0.8f,0.0f,1.0f});
+
+       // --- INIZIO MODIFICA 3: Inizializzazione Testi Telecamera e Puntatore ---
+       // Inizializza il testo della modalità telecamera (ID 2),
+       // usando (-1.0, -1.0) che è l'angolo Alto-Sinistra
+       txt.print(-1.0f, -1.0f, "View: Third Person (Press C)", 2, "CO",
+                 false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
+                 {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
+
+       // Inizializza il crosshair (ID 3),
+       // usando (0.0, 0.0) che è il centro
+       txt.print(0.0f, 0.0f, "+", 3, "CO",
+                 false, false, true, TAL_CENTER, TRH_CENTER, TRV_MIDDLE,
+                 {1.0f, 1.0f, 1.0f, 1.0f}, // Colore: Bianco
+                 {0.0f, 0.0f, 0.0f, 1.0f}); // Bordo: Nero
+       // --- FINE MODIFICA 3 ---
+    }
 	
 	// Here you create your pipelines and Descriptor Sets!
 	void pipelinesAndDescriptorSetsInit() {
@@ -401,214 +436,228 @@ std::cout << "\nLoading the scene\n\n";
 	}
 
 	// Here is where you update the uniforms.
-	// Very likely this will be where you will be writing the logic of your application.
-	void updateUniformBuffer(uint32_t currentImage) {
-		static bool debounce = false;
-		static int curDebounce = 0;
-		
-		// handle the ESC key to exit the app
-		if(glfwGetKey(window, GLFW_KEY_ESCAPE)) {
-			glfwSetWindowShouldClose(window, GL_TRUE);
-		}
+    // Very likely this will be where you will be writing the logic of your application.
+    void updateUniformBuffer(uint32_t currentImage) {
+       static bool debounce = false;
+       static int curDebounce = 0;
 
-		if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS && !c_pressed) {
-			isFirstPerson = !isFirstPerson; //Revert the state
-			c_pressed = true;
+       // handle the ESC key to exit the app
+       if(glfwGetKey(window, GLFW_KEY_ESCAPE)) {
+          glfwSetWindowShouldClose(window, GL_TRUE);
+       }
 
-			if (isFirstPerson) {
-				Pitch = 0.0f;
-			}
-		}
+       // --- INIZIO MODIFICA: Switch Telecamera ---
+       // Gestione switch telecamera (Tasto C)
+       if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS && !c_pressed) {
+           isFirstPerson = !isFirstPerson; // Inverti lo stato
+           c_pressed = true;
 
-		if (glfwGetKey(window, GLFW_KEY_C) == GLFW_RELEASE) {
-			c_pressed = false;
-		}
+           // Resetta il pitch quando passi alla prima persona per evitare visuali strane
+           if(isFirstPerson) {
+                Pitch = 0.0f;
+           }
+       }
+       if (glfwGetKey(window, GLFW_KEY_C) == GLFW_RELEASE) {
+           c_pressed = false;
+       }
+       // --- FINE MODIFICA: Switch Telecamera ---
 
-		if(glfwGetKey(window, GLFW_KEY_1)) {
-			if(!debounce) {
-				debounce = true;
-				curDebounce = GLFW_KEY_1;
 
-				debug1.x = 1.0 - debug1.x;
-			}
-		} else {
-			if((curDebounce == GLFW_KEY_1) && debounce) {
-				debounce = false;
-				curDebounce = 0;
-			}
-		}
+       if(glfwGetKey(window, GLFW_KEY_1)) {
+          if(!debounce) {
+             debounce = true;
+             curDebounce = GLFW_KEY_1;
 
-		if(glfwGetKey(window, GLFW_KEY_2)) {
-			if(!debounce) {
-				debounce = true;
-				curDebounce = GLFW_KEY_2;
+             debug1.x = 1.0 - debug1.x;
+          }
+       } else {
+          if((curDebounce == GLFW_KEY_1) && debounce) {
+             debounce = false;
+             curDebounce = 0;
+          }
+       }
 
-				debug1.y = 1.0 - debug1.y;
-			}
-		} else {
-			if((curDebounce == GLFW_KEY_2) && debounce) {
-				debounce = false;
-				curDebounce = 0;
-			}
-		}
+       if(glfwGetKey(window, GLFW_KEY_2)) {
+          if(!debounce) {
+             debounce = true;
+             curDebounce = GLFW_KEY_2;
 
-		if(glfwGetKey(window, GLFW_KEY_P)) {
-			if(!debounce) {
-				debounce = true;
-				curDebounce = GLFW_KEY_P;
+             debug1.y = 1.0 - debug1.y;
+          }
+       } else {
+          if((curDebounce == GLFW_KEY_2) && debounce) {
+             debounce = false;
+             curDebounce = 0;
+          }
+       }
 
-				debug1.z = (float)(((int)debug1.z + 1) % 65);
+       if(glfwGetKey(window, GLFW_KEY_P)) {
+          if(!debounce) {
+             debounce = true;
+             curDebounce = GLFW_KEY_P;
+
+             debug1.z = (float)(((int)debug1.z + 1) % 65);
 std::cout << "Showing bone index: " << debug1.z << "\n";
-			}
-		} else {
-			if((curDebounce == GLFW_KEY_P) && debounce) {
-				debounce = false;
-				curDebounce = 0;
-			}
-		}
+          }
+       } else {
+          if((curDebounce == GLFW_KEY_P) && debounce) {
+             debounce = false;
+             curDebounce = 0;
+          }
+       }
 
-		if(glfwGetKey(window, GLFW_KEY_O)) {
-			if(!debounce) {
-				debounce = true;
-				curDebounce = GLFW_KEY_O;
+       if(glfwGetKey(window, GLFW_KEY_O)) {
+          if(!debounce) {
+             debounce = true;
+             curDebounce = GLFW_KEY_O;
 
-				debug1.z = (float)(((int)debug1.z + 64) % 65);
+             debug1.z = (float)(((int)debug1.z + 64) % 65);
 std::cout << "Showing bone index: " << debug1.z << "\n";
-			}
-		} else {
-			if((curDebounce == GLFW_KEY_O) && debounce) {
-				debounce = false;
-				curDebounce = 0;
-			}
-		}
+          }
+       } else {
+          if((curDebounce == GLFW_KEY_O) && debounce) {
+             debounce = false;
+             curDebounce = 0;
+          }
+       }
 
-		static int curAnim = 0;
-		if(glfwGetKey(window, GLFW_KEY_SPACE)) {
-			if(!debounce) {
-				debounce = true;
-				curDebounce = GLFW_KEY_SPACE;
+       static int curAnim = 0;
+       if(glfwGetKey(window, GLFW_KEY_SPACE)) {
+          if(!debounce) {
+             debounce = true;
+             curDebounce = GLFW_KEY_SPACE;
 
-				curAnim = (curAnim + 1) % 5;
-				AB.Start(curAnim, 0.5);
+             curAnim = (curAnim + 1) % 5;
+             AB.Start(curAnim, 0.5);
 std::cout << "Playing anim: " << curAnim << "\n";
-			}
-		} else {
-			if((curDebounce == GLFW_KEY_SPACE) && debounce) {
-				debounce = false;
-				curDebounce = 0;
-			}
-		}
+          }
+       } else {
+          if((curDebounce == GLFW_KEY_SPACE) && debounce) {
+             debounce = false;
+             curDebounce = 0;
+          }
+       }
 
-		// moves the view
-		float deltaT = GameLogic();
-		
-		// updated the animation
-		const float SpeedUpAnimFact = 0.85f;
-		AB.Advance(deltaT * SpeedUpAnimFact);
-		
-		// defines the global parameters for the uniform
-		const glm::mat4 lightView = glm::rotate(glm::mat4(1), glm::radians(-30.0f), glm::vec3(0.0f,1.0f,0.0f)) * glm::rotate(glm::mat4(1), glm::radians(-45.0f), glm::vec3(1.0f,0.0f,0.0f));
-		const glm::vec3 lightDir = glm::vec3(lightView * glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
-	
-		GlobalUniformBufferObject gubo{};
+       // moves the view
+       float deltaT = GameLogic();
 
-		gubo.lightDir = lightDir;
-		gubo.lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-		gubo.eyePos = cameraPos;
+       // updated the animation
+       const float SpeedUpAnimFact = 0.85f;
+       AB.Advance(deltaT * SpeedUpAnimFact);
 
-		// defines the local parameters for the uniforms
-		UniformBufferObjectChar uboc{};	
-		uboc.debug1 = debug1;
+       // defines the global parameters for the uniform
+       const glm::mat4 lightView = glm::rotate(glm::mat4(1), glm::radians(-30.0f), glm::vec3(0.0f,1.0f,0.0f)) * glm::rotate(glm::mat4(1), glm::radians(-45.0f), glm::vec3(1.0f,0.0f,0.0f));
+       const glm::vec3 lightDir = glm::vec3(lightView * glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
 
-		SKA.Sample(AB);
-		std::vector<glm::mat4> *TMsp = SKA.getTransformMatrices();
-		
+       GlobalUniformBufferObject gubo{};
+
+       gubo.lightDir = lightDir;
+       gubo.lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+       gubo.eyePos = cameraPos;
+
+       // defines the local parameters for the uniforms
+       UniformBufferObjectChar uboc{};
+       uboc.debug1 = debug1;
+
+       SKA.Sample(AB);
+       std::vector<glm::mat4> *TMsp = SKA.getTransformMatrices();
+
 //printMat4("TF[55]", (*TMsp)[55]);
-		
-		glm::mat4 AdaptMat =
-			glm::scale(glm::mat4(1.0f), glm::vec3(0.01f)) * 
-			glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f,0.0f,0.0f));
 
-		if (isFirstPerson) {
-			AdaptMat = glm::scale(AdaptMat, glm::vec3(0.0f));
-		}
+       glm::mat4 AdaptMat =
+          glm::scale(glm::mat4(1.0f), glm::vec3(0.01f)) * glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f,0.0f,0.0f));
 
-		int instanceId;
-		// character
-		for(instanceId = 0; instanceId < SC.TI[0].InstanceCount; instanceId++) {
-			for(int im = 0; im < TMsp->size(); im++) {
-				uboc.mMat[im]   = AdaptMat * (*TMsp)[im];
-				uboc.mvpMat[im] = ViewPrj * uboc.mMat[im];
-				uboc.nMat[im] = glm::inverse(glm::transpose(uboc.mMat[im]));
+       // Nasconde il modello del personaggio in prima persona
+       if(isFirstPerson) {
+            AdaptMat = glm::scale(AdaptMat, glm::vec3(0.0f));
+       }
+
+       int instanceId;
+       // character
+       for(instanceId = 0; instanceId < SC.TI[0].InstanceCount; instanceId++) {
+          for(int im = 0; im < TMsp->size(); im++) {
+             uboc.mMat[im]   = AdaptMat * (*TMsp)[im];
+             uboc.mvpMat[im] = ViewPrj * uboc.mMat[im];
+             uboc.nMat[im] = glm::inverse(glm::transpose(uboc.mMat[im]));
 //std::cout << im << "\t";
 //printMat4("mMat", ubo.mMat[im]);
-			}
+          }
 
-			SC.TI[0].I[instanceId].DS[0][0]->map(currentImage, &gubo, 0); // Set 0
-			SC.TI[0].I[instanceId].DS[0][1]->map(currentImage, &uboc, 0);  // Set 1
-		}
+          SC.TI[0].I[instanceId].DS[0][0]->map(currentImage, &gubo, 0); // Set 0
+          SC.TI[0].I[instanceId].DS[0][1]->map(currentImage, &uboc, 0);  // Set 1
+       }
 
-		UniformBufferObjectSimp ubos{};	
-		// normal objects
-		for(instanceId = 0; instanceId < SC.TI[1].InstanceCount; instanceId++) {
-			ubos.mMat   = SC.TI[1].I[instanceId].Wm;
-			ubos.mvpMat = ViewPrj * ubos.mMat;
-			ubos.nMat   = glm::inverse(glm::transpose(ubos.mMat));
+       UniformBufferObjectSimp ubos{};
+       // normal objects
+       for(instanceId = 0; instanceId < SC.TI[1].InstanceCount; instanceId++) {
+          ubos.mMat   = SC.TI[1].I[instanceId].Wm;
+          ubos.mvpMat = ViewPrj * ubos.mMat;
+          ubos.nMat   = glm::inverse(glm::transpose(ubos.mMat));
 
-			SC.TI[1].I[instanceId].DS[0][0]->map(currentImage, &gubo, 0); // Set 0
-			SC.TI[1].I[instanceId].DS[0][1]->map(currentImage, &ubos, 0);  // Set 1
-		}
-		
-		// skybox pipeline
-		skyBoxUniformBufferObject sbubo{};
-		sbubo.mvpMat = ViewPrj * glm::translate(glm::mat4(1), cameraPos) * glm::scale(glm::mat4(1), glm::vec3(100.0f));
-		SC.TI[2].I[0].DS[0][0]->map(currentImage, &sbubo, 0);
+          SC.TI[1].I[instanceId].DS[0][0]->map(currentImage, &gubo, 0); // Set 0
+          SC.TI[1].I[instanceId].DS[0][1]->map(currentImage, &ubos, 0);  // Set 1
+       }
 
-		// PBR objects
-		for(instanceId = 0; instanceId < SC.TI[3].InstanceCount; instanceId++) {
-			ubos.mMat   = SC.TI[3].I[instanceId].Wm;
-			ubos.mvpMat = ViewPrj * ubos.mMat;
-			ubos.nMat   = glm::inverse(glm::transpose(ubos.mMat));
+       // skybox pipeline
+       skyBoxUniformBufferObject sbubo{};
+       sbubo.mvpMat = ViewPrj * glm::translate(glm::mat4(1), cameraPos) * glm::scale(glm::mat4(1), glm::vec3(100.0f));
+       SC.TI[2].I[0].DS[0][0]->map(currentImage, &sbubo, 0);
 
-			SC.TI[3].I[instanceId].DS[0][0]->map(currentImage, &gubo, 0); // Set 0
-			SC.TI[3].I[instanceId].DS[0][1]->map(currentImage, &ubos, 0);  // Set 1
-		}
+       // PBR objects
+       for(instanceId = 0; instanceId < SC.TI[3].InstanceCount; instanceId++) {
+          ubos.mMat   = SC.TI[3].I[instanceId].Wm;
+          ubos.mvpMat = ViewPrj * ubos.mMat;
+          ubos.nMat   = glm::inverse(glm::transpose(ubos.mMat));
+
+          SC.TI[3].I[instanceId].DS[0][0]->map(currentImage, &gubo, 0); // Set 0
+          SC.TI[3].I[instanceId].DS[0][1]->map(currentImage, &ubos, 0);  // Set 1
+       }
 
 
-		// updates the FPS
-		static float elapsedT = 0.0f;
-		static int countedFrames = 0;
-		
-		countedFrames++;
-		elapsedT += deltaT;
-		if(elapsedT > 1.0f) {
-			float Fps = (float)countedFrames / elapsedT;
-			
-			std::ostringstream oss;
-			oss << "FPS: " << Fps << "\n";
+       // updates the FPS
+       static float elapsedT = 0.0f;
+       static int countedFrames = 0;
 
-			txt.print(1.0f, 1.0f, oss.str(), 1, "CO", false, false, true,TAL_RIGHT,TRH_RIGHT,TRV_BOTTOM,{1.0f,0.0f,0.0f,1.0f},{0.8f,0.8f,0.0f,1.0f});
-			
-			elapsedT = 0.0f;
-		    countedFrames = 0;
-		}
+       countedFrames++;
+       elapsedT += deltaT;
+       if(elapsedT > 1.0f) {
+          float Fps = (float)countedFrames / elapsedT;
 
-		//Indicate the cam that is currently in use
-		const float margin = 0.99f;
-		if(isFirstPerson) {
-			// Coordinate (-0.99f, -0.99f) per l'angolo in alto a sinistra
-			txt.print(-margin, -margin, "View: First Person (Press C)", 2, "CO",
-					  false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
-					  {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
-		} else {
-			// Coordinate (-0.99f, -0.99f) per l'angolo in alto a sinistra
-			txt.print(-margin, -margin, "View: Third Person (Press C)", 2, "CO",
-					  false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
-					  {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
-		}
+          std::ostringstream oss;
+          oss << "FPS: " << Fps << "\n";
 
-		txt.updateCommandBuffer();
-	}
+          txt.print(1.0f, 1.0f, oss.str(), 1, "CO", false, false, true,TAL_RIGHT,TRH_RIGHT,TRV_BOTTOM,{1.0f,0.0f,0.0f,1.0f},{0.8f,0.8f,0.0f,1.0f});
+
+          elapsedT = 0.0f;
+           countedFrames = 0;
+       }
+
+       // --- INIZIO MODIFICA: Aggiornamento Testi UI ---
+
+       // Aggiorna il testo della modalità telecamera (ID 2)
+       // Coordinate (-1.0, -1.0) = Angolo Alto-Sinistra
+       if(isFirstPerson) {
+           txt.print(-1.0f, -1.0f, "View: First Person (Press C)", 2, "CO",
+                     false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
+                     {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
+       } else {
+           txt.print(-1.0f, -1.0f, "View: Third Person (Press C)", 2, "CO",
+                     false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
+                     {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
+       }
+
+       // Aggiorna il crosshair (ID 3) - Lo "nasconde" in terza persona stampando uno spazio vuoto
+       if(isFirstPerson) {
+           txt.print(0.0f, 0.0f, "+", 3, "CO", // Coordinate (0.0, 0.0) = Centro
+                     false, false, true, TAL_CENTER, TRH_CENTER, TRV_MIDDLE,
+                     {1.0f, 1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
+       } else {
+           txt.print(0.0f, 0.0f, " ", 3, "CO", // Stampa uno spazio vuoto per nasconderlo
+                     false, false, true, TAL_CENTER, TRH_CENTER, TRV_MIDDLE,
+                     {1.0f, 1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
+       }
+       txt.updateCommandBuffer();
+    }
 	
 	float GameLogic() {
        // Parameters
@@ -622,8 +671,9 @@ std::cout << "Playing anim: " << curAnim << "\n";
        static float camHeight = 1.5;
        static float camDist = 5;
        // Camera Pitch limits
-       const float minPitch = glm::radians(-8.75f);
-       const float maxPitch = glm::radians(60.0f);
+       // --- Questi sono i limiti originali, ora li gestiamo nell'if/else ---
+       // const float minPitch = glm::radians(-8.75f);
+       // const float maxPitch = glm::radians(60.0f);
        // Rotation and motion speed
        const float ROT_SPEED = glm::radians(120.0f);
        const float MOVE_SPEED_BASE = 2.0f;
@@ -634,9 +684,9 @@ std::cout << "Playing anim: " << curAnim << "\n";
 
        // Integration with the timers and the controllers
        float deltaT;
-       glm::vec3 m = glm::vec3(0.0f), r = glm::vec3(0.0f);
+       glm::vec3 m = glm::vec3(0.0f), r = glm::vec3(0.0f); // 'r' non sarà usato per la rotazione
        bool fire = false;
-       getSixAxis(deltaT, m, r, fire);
+       getSixAxis(deltaT, m, r, fire); // Chiamata per 'deltaT', 'm', e 'fire'
        float MOVE_SPEED = fire ? MOVE_SPEED_RUN : MOVE_SPEED_BASE;
 
 
@@ -644,7 +694,7 @@ std::cout << "Playing anim: " << curAnim << "\n";
        // Le variabili di stato (Pos, Yaw, Pitch, ecc.) sono ora membri della classe
        // e le dichiarazioni 'static' sono state rimosse da qui.
 
-		/* camDist = camDist - m.y * ZOOM_SPEED * deltaT;
+/* camDist = camDist - m.y * ZOOM_SPEED * deltaT;
        camDist = camDist < MIN_CAM_DIST ? MIN_CAM_DIST :
               (camDist > MAX_CAM_DIST ? MAX_CAM_DIST : camDist);*/
        camDist = (MIN_CAM_DIST + MIN_CAM_DIST) / 2.0f;
@@ -655,11 +705,48 @@ std::cout << "Playing anim: " << curAnim << "\n";
 
        oldPos = Pos; // 'oldPos' è ora un membro della classe
 
-       // Aggiorna Rotazione (comune a entrambe le visuali)
-       Yaw = Yaw - ROT_SPEED * deltaT * r.y;
-       Pitch = Pitch - ROT_SPEED * deltaT * r.x;
-       Pitch  =  Pitch < minPitch ? minPitch :
-                (Pitch > maxPitch ? maxPitch : Pitch);
+       // --- INIZIO BLOCCO MODIFICATO ---
+
+       // 1. Calcola l'offset del mouse (come prima)
+       double xpos, ypos;
+       glfwGetCursorPos(window, &xpos, &ypos);
+
+       if (firstMouse)
+       {
+           lastX = xpos;
+           lastY = ypos;
+           firstMouse = false;
+       }
+
+       float xoffset = (float)(xpos - lastX);
+       float yoffset = (float)(lastY - ypos); // Y-up
+       lastX = xpos;
+       lastY = ypos;
+
+       if(isFirstPerson) {
+            // --- Logica 1a Persona ---
+            Yaw   -= xoffset * (ROT_SPEED * mouseSensitivity) * deltaT;
+            Pitch += yoffset * (ROT_SPEED * mouseSensitivity) * deltaT;
+
+            // Clamping 1a Persona: non puoi girarti sottosopra
+            const float pitchLimit = glm::radians(89.0f);
+            Pitch  =  Pitch < -pitchLimit ? -pitchLimit :
+                     (Pitch > pitchLimit ? pitchLimit : Pitch);
+       } else {
+            // --- Logica 3a Persona ---
+            // APPLICA L'OFFSET INVERTITO
+            Yaw   -= xoffset * (ROT_SPEED * mouseSensitivity) * deltaT;
+            Pitch -= yoffset * (ROT_SPEED * mouseSensitivity) * deltaT;
+
+            // Clamping 3a Persona:
+            // Limite guardando in alto (es. quasi verticale)
+            const float minPitch_3rd = glm::radians(-89.0f);
+            // Limite guardando in basso (es. 60 gradi)
+            const float maxPitch_3rd = glm::radians(60.0f);
+
+            Pitch  =  Pitch < minPitch_3rd ? minPitch_3rd :
+                     (Pitch > maxPitch_3rd ? maxPitch_3rd : Pitch);
+       }
 
        float ef = exp(-10.0 * deltaT);
 
@@ -669,10 +756,7 @@ std::cout << "Playing anim: " << curAnim << "\n";
 
        glm::mat4 View;
 
-       // --- INIZIO BLOCCO DI CODICE CORRETTO ---
-
        // Calcola i vettori di direzione (comuni a entrambe le logiche)
-       // DICHIARATI QUI UNA SOLA VOLTA E CON IL CAST A VEC3 CORRETTO
        glm::vec3 ux = glm::vec3(glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0,1,0)) * glm::vec4(1,0,0,1));
        glm::vec3 uz = glm::vec3(glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0,1,0)) * glm::vec4(0,0,-1,1));
 
@@ -680,35 +764,34 @@ std::cout << "Playing anim: " << curAnim << "\n";
             // --- LOGICA PRIMA PERSONA (Stile FPS) ---
 
             // 1. Calcola il vettore 'front' (dove guardi)
-            glm::mat4 pitchRotation = glm::rotate(glm::mat4(1.0f), Pitch, ux); // Ruota attorno all'asse 'destra' (ux)
+            glm::mat4 pitchRotation = glm::rotate(glm::mat4(1.0f), Pitch, ux);
             glm::vec3 front = glm::normalize(glm::vec3(pitchRotation * glm::vec4(uz, 0.0f)));
 
             // 2. Calcola il vero 'up' della telecamera
             glm::vec3 up = glm::normalize(glm::cross(ux, front));
 
             // 3. Muovi 'Pos' in base a 'front' e 'ux' (Stile FPS)
-            Pos = Pos - MOVE_SPEED * m.z * front * deltaT; // Muovi lungo 'front' (usa - per W)
-            Pos = Pos + MOVE_SPEED * m.x * ux * deltaT;    // Muovi lungo 'ux' (strafe)
+            Pos = Pos - MOVE_SPEED * m.z * front * deltaT;
+            Pos = Pos + MOVE_SPEED * m.x * ux * deltaT;
 
             // 4. La telecamera è negli "occhi" del personaggio
             cameraPos = Pos + glm::vec3(0.0f, camHeight, 0.0f);
-            glm::vec3 target = cameraPos + front; // Guarda dritto davanti a sé
+            glm::vec3 target = cameraPos + front;
             View = glm::lookAt(cameraPos, target, up);
 
             // 5. Il modello (invisibile) ruota con la telecamera
             World = glm::translate(glm::mat4(1), Pos) * glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0,1,0));
 
        } else {
-            // --- LOGICA TERZA PERSONA (Tuo codice originale, MA SENZA LE DICHIARAZIONI DI UX E UZ) ---
+            // --- LOGICA TERZA PERSONA ---
 
-            // 1. Muovi 'Pos' (Logica originale)
-            // Le dichiarazioni di ux e uz sono state rimosse da qui
+            // 1. Muovi 'Pos'
             Pos = Pos + MOVE_SPEED * m.x * ux * deltaT;
             Pos = Pos - MOVE_SPEED * m.z * uz * deltaT;
 
             camHeight += MOVE_SPEED * m.y * deltaT;
 
-            // 2. Rotazione modello (Logica originale, smorzata)
+            // 2. Rotazione modello
             if(glm::length(glm::vec3(m.x, 0.0f, m.z)) > 0.001f) {
                relDir = Yaw + atan2(m.x, m.z);
                dampedRelDir = dampedRelDir > relDir + 3.1416f ? dampedRelDir - 6.28f :
@@ -717,7 +800,7 @@ std::cout << "Playing anim: " << curAnim << "\n";
             dampedRelDir = ef * dampedRelDir + (1.0f - ef) * relDir;
             World = glm::translate(glm::mat4(1), Pos) * glm::rotate(glm::mat4(1.0f), dampedRelDir, glm::vec3(0,1,0));
 
-            // 3. Telecamera (Logica originale, orbitale e smorzata)
+            // 3. Telecamera
             glm::vec3 target = Pos + glm::vec3(0.0f, camHeight, 0.0f);
             glm::mat4 camWorld = glm::translate(glm::mat4(1), Pos) * glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0,1,0));
             cameraPos = camWorld * glm::vec4(0.0f, camHeight + camDist * sin(Pitch), camDist * cos(Pitch), 1.0);
@@ -728,7 +811,7 @@ std::cout << "Playing anim: " << curAnim << "\n";
        // Calcolo finale della matrice View-Projection
        ViewPrj = Prj * View;
 
-       // --- FINE BLOCCO DI CODICE CORRETTO ---
+       // --- FINE BLOCCO MODIFICATO ---
 
        float vel = length(Pos - oldPos) / deltaT;
 
