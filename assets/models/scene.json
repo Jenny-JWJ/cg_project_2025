@@ -16,6 +16,7 @@
 		{"id": "water_well", "VD": "VDsimp", "model": "assets/models/Castle/SPW_Medieval_Props_01.mgcg", "format":"MGCG"},
 		{"id": "house1", "VD": "VDsimp", "model": "assets/models/Castle/SPW_Medieval_Bldg_01.mgcg", "format":"MGCG"},
 		{"id": "house2", "VD": "VDsimp", "model": "assets/models/Castle/SPW_Medieval_Bldg_02.mgcg", "format":"MGCG"},
+		{"id": "house7", "VD": "VDsimp", "model": "assets/models/Castle/SPW_Medieval_Bldg_07.mgcg", "format":"MGCG"},
 
 		{"id": "ground",  "VD": "VDtan",  "model": "Ground", "node": "Ground", "meshId": 0, "asset": "ct", "format":"ASSET"}
 	],
@@ -41,13 +42,47 @@
 				"translate": [0, 0, 0],
 				"quaternion" : [0.707, 0.707, 0, 0],
 				"scale": [1, 1, 1]},
-			{"id": "h1_1",  "model": "house1",   "texture": ["castle_builds", "pnois"],
-				"translate": [-20, 0, 0],
+
+			{"id": "h2_1",  "model": "house2",   "texture": ["castle_builds", "pnois"],
+				"translate": [-20, 0, -20],
 				"eulerAngles": [90, 0, 0],
 				"scale": [1.0, 1.0, 1.0]},
-			{"id": "h2_1",  "model": "house2",   "texture": ["castle_builds", "pnois"],
-				"translate": [10, 0, 12],
-				"eulerAngles": [90, 45, 0],
+			{"id": "h7_1",  "model": "house7",   "texture": ["castle_builds", "pnois"],
+				"translate": [-40, 0, -20],
+				"eulerAngles": [90, 0, 0],
+				"scale": [1.0, 1.0, 1.0]},
+			{"id": "h1_1",  "model": "house1",   "texture": ["castle_builds", "pnois"],
+				"translate": [-60, 0, -20],
+				"eulerAngles": [90, 0, 0],
+				"scale": [1.0, 1.0, 1.0]},
+
+			{"id": "h1_2",  "model": "house1",   "texture": ["castle_builds", "pnois"],
+				"translate": [-20, 0, -40],
+				"eulerAngles": [90, 0, 0],
+				"scale": [1.0, 1.0, 1.0]},
+			{"id": "h7_2",  "model": "house7",   "texture": ["castle_builds", "pnois"],
+				"translate": [-40, 0, -40],
+				"eulerAngles": [90, 0, 0],
+				"scale": [1.0, 1.0, 1.0]},
+			{"id": "h1_3",  "model": "house1",   "texture": ["castle_builds", "pnois"],
+				"translate": [-60, 0, -40],
+				"eulerAngles": [90, 0, 0],
+				"scale": [1.0, 1.0, 1.0]},
+
+			{"id": "h1_4",  "model": "house1",   "texture": ["castle_builds", "pnois"],
+				"translate": [-20, 0, -60],
+				"eulerAngles": [90, 0, 0],
+				"scale": [1.0, 1.0, 1.0]},
+
+
+			{"id": "h7_3",  "model": "house7",   "texture": ["castle_builds", "pnois"],
+				"translate": [-20, 0, -80],
+				"eulerAngles": [90, 0, 0],
+				"scale": [1.0, 1.0, 1.0]},
+
+			{"id": "h1_5",  "model": "house1",   "texture": ["castle_builds", "pnois"],
+				"translate": [-20, 0, -100],
+				"eulerAngles": [90, 0, 0],
 				"scale": [1.0, 1.0, 1.0]}
 		]},
 		{"technique": "SkyBox", "elements": [
