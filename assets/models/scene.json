@@ -17,15 +17,16 @@
 		{"id": "house1", "VD": "VDsimp", "model": "assets/models/Castle/SPW_Medieval_Bldg_01.mgcg", "format":"MGCG"},
 		{"id": "house2", "VD": "VDsimp", "model": "assets/models/Castle/SPW_Medieval_Bldg_02.mgcg", "format":"MGCG"},
 		{"id": "house7", "VD": "VDsimp", "model": "assets/models/Castle/SPW_Medieval_Bldg_07.mgcg", "format":"MGCG"},
-
+		{"id": "grass", "VD": "VDsimp", "model": "assets/models/Castle/SPW_Terrain_Grass_Flat.mgcg", "format":"MGCG"},
 		{"id": "ground",  "VD": "VDtan",  "model": "Ground", "node": "Ground", "meshId": 0, "asset": "ct", "format":"ASSET"}
 	],
 	"textures": [
 		{"id": "st",    "texture": "assets/textures/uomo/Ch01_1001_Diffuse.png",	   "format": "C"},
 		{"id": "castle_builds",    "texture": "assets/textures/Castle_Textures/SPW_Medieval.png","format": "C"},
 		{"id": "castle_nature1",    "texture": "assets/textures/Castle_Textures/SPW_Natures_01.png","format": "C"},
+		{"id": "castle_nature2",    "texture": "assets/textures/Castle_Textures/SPW_Natures_02.png","format": "C"},
 		{"id": "pnois", "texture": "assets/textures/Perlin_noise.png", "format": "C"},
-		{"id": "skybox", "texture": "assets/textures/skybox.jpg", "format": "C"},
+		{"id": "skybox", "texture": "assets/textures/sky_23_2k.png", "format": "C"},
 		{"id": "scbmt", "texture": "assets/textures/SoccerBall/Untitled.png", "format": "D"},
 
 		{"id": "Pavement_Concrete_Marked_Footprints_UV_CM_1", "texture": "assets/textures/MainScene/Pavement_Concrete_Marked_Footprints_UV_CM_1.jpg", "format": "C"},
@@ -38,11 +39,11 @@
 			{"id": "hm1",  "model": "hm1",   "texture": ["st"]}
 		]},
 		{"technique": "CookTorranceNoiseSimp", "elements": [
+			{"id": "grass",  "model": "grass",   "texture": ["castle_nature2", "pnois"]},
 			{"id": "ww1",  "model": "water_well",   "texture": ["castle_builds", "pnois"],
 				"translate": [0, 0, 0],
 				"quaternion" : [0.707, 0.707, 0, 0],
 				"scale": [1, 1, 1]},
-
 			{"id": "h2_1",  "model": "house2",   "texture": ["castle_builds", "pnois"],
 				"translate": [-20, 0, -20],
 				"eulerAngles": [90, 0, 0],
@@ -68,18 +69,14 @@
 				"translate": [-60, 0, -40],
 				"eulerAngles": [90, 0, 0],
 				"scale": [1.0, 1.0, 1.0]},
-
 			{"id": "h1_4",  "model": "house1",   "texture": ["castle_builds", "pnois"],
 				"translate": [-20, 0, -60],
 				"eulerAngles": [90, 0, 0],
 				"scale": [1.0, 1.0, 1.0]},
-
-
 			{"id": "h7_3",  "model": "house7",   "texture": ["castle_builds", "pnois"],
 				"translate": [-20, 0, -80],
 				"eulerAngles": [90, 0, 0],
 				"scale": [1.0, 1.0, 1.0]},
-
 			{"id": "h1_5",  "model": "house1",   "texture": ["castle_builds", "pnois"],
 				"translate": [-20, 0, -100],
 				"eulerAngles": [90, 0, 0],
@@ -87,9 +84,6 @@
 		]},
 		{"technique": "SkyBox", "elements": [
 			{"id": "skybox",  "model": "skybox",   "texture": ["skybox"]}
-		]},
-		{"technique": "PBR", "elements": [
-			{"id": "ground",  "model": "ground",   "texture": ["Pavement_Concrete_Marked_Footprints_UV_CM_1", "PavementConcreteNM", "scbmt", "Untitled"]}
 		]}
 	]
 }
