@@ -107,7 +107,8 @@ protected:
     bool isFirstPerson = false; //State of the cam
     bool c_pressed = false; //Debounce c clicked
     bool resetCamera = false; //Flag to reset the camera
-
+    bool walking = false;
+    bool running = false;
     //Mouse variable
     double lastX;
     double lastY;
@@ -497,6 +498,20 @@ protected:
         static bool debounce = false;
         static int curDebounce = 0;
 
+        if(!walking){
+            AB.Start(2, 0.5);
+        }
+        else
+        {
+            if(running)
+            {
+                AB.Start(1, 0.5);
+            }
+            else
+            {
+                AB.Start(0, 0.5);
+            }
+        }
         // handle the ESC key to exit the app
         if (glfwGetKey(window, GLFW_KEY_ESCAPE)) {
             glfwSetWindowShouldClose(window, GL_TRUE);
@@ -582,13 +597,12 @@ protected:
             if (!debounce) {
                 debounce = true;
                 curDebounce = GLFW_KEY_SPACE;
-
-                curAnim = (curAnim + 1) % 5;
-                AB.Start(curAnim, 0.5);
+                running = true;
                 std::cout << "Playing anim: " << curAnim << "\n";
             }
         } else {
             if ((curDebounce == GLFW_KEY_SPACE) && debounce) {
+                running = false;
                 debounce = false;
                 curDebounce = 0;
             }
@@ -782,11 +796,26 @@ protected:
         lastX = xpos;
         lastY = ypos;
 
+        if (m != glm::vec3(0,0,0))
+        {
+            walking = true;
+        }
+        else
+        {
+            walking = false;
+        }
+
+        float oldCharacterRotation = characterRotation;
         if(isFirstPerson){
             characterRotation = Yaw;
         }
         else{
-            characterRotation = Yaw + atan2(m.z, m.x);
+            if(m == glm::vec3(0,0,0)){
+                characterRotation = oldCharacterRotation;
+            }
+            else{
+                characterRotation = -Yaw + atan2(m.z, m.x) + glm::radians(270.0f);
+            }
         }
 
         if (isFirstPerson) {
