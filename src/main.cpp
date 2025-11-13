@@ -102,7 +102,7 @@ protected:
     float Yaw = glm::radians(0.0f);
     float Pitch = glm::radians(0.0f);
     float Roll = glm::radians(0.0f);
-
+    float characterRotation = glm::radians(0.0f);
     //CAM VARIABLE
     bool isFirstPerson = false; //State of the cam
     bool c_pressed = false; //Debounce c clicked
@@ -623,7 +623,8 @@ protected:
 
         glm::mat4 AdaptMat =
                 glm::scale(glm::mat4(1.0f), glm::vec3(0.01f)) * glm::rotate(
-                    glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f))*glm::translate(glm::mat4(1.0f),glm::vec3(Pos.x * 100, Pos.z * 100 , Pos.y * 100))*glm::rotate(
+                glm::mat4(1.0f), characterRotation, glm::vec3(0.0f, 0.0f, 1.0f));
 
         // Nasconde il modello del personaggio in prima persona
         if (isFirstPerson) {
@@ -780,6 +781,13 @@ protected:
         float yoffset = (float) (lastY - ypos); // Y-up
         lastX = xpos;
         lastY = ypos;
+
+        if(isFirstPerson){
+            characterRotation = Yaw;
+        }
+        else{
+            characterRotation = Yaw + atan2(m.z, m.x);
+        }
 
         if (isFirstPerson) {
             // --- Logica 1a Persona ---
