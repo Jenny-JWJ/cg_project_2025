@@ -103,6 +103,7 @@ protected:
     float Pitch = glm::radians(0.0f);
     float Roll = glm::radians(0.0f);
     float characterRotation = glm::radians(0.0f);
+
     //CAM VARIABLE
     bool isFirstPerson = false; //State of the cam
     bool c_pressed = false; //Debounce c clicked
@@ -110,9 +111,21 @@ protected:
     bool v_pressed = false;
     float currentCamDist = 5.0f;
     bool resetCamera = false; //Flag to reset the camera
+
+    //WINDOW VARIABLE
+    bool f11_pressed = false;
+    bool isFullScreen = false;
+    //Save old window position
+    int savedWindowX = 0;
+    int savedWindowY = 0;
+    int savedWindowW = 800;
+    int savedWindowH = 600;
+
+    //TPV VARIABLE
     bool walking = false;
     bool running = false;
-    //Mouse variable
+
+    //MOUSE VARIABLE
     double lastX;
     double lastY;
     bool firstMouse = true; //Avoids crazy movements at the beginning
@@ -505,6 +518,31 @@ protected:
         // handle the ESC key to exit the app
         if (glfwGetKey(window, GLFW_KEY_ESCAPE)) {
             glfwSetWindowShouldClose(window, GL_TRUE);
+        }
+
+        // Change window dimension
+        if (glfwGetKey(window, GLFW_KEY_F11) == GLFW_PRESS && !f11_pressed) {
+            f11_pressed = true;
+            isFullScreen = !isFullScreen;
+
+            if (isFullScreen) {
+                //Save current position and dimension
+                glfwGetWindowPos(window, &savedWindowX, &savedWindowY);
+                glfwGetWindowSize(window, &savedWindowW, &savedWindowH);
+
+                //Get primary monitor and its video mode
+                GLFWmonitor *monitor = glfwGetPrimaryMonitor();
+                const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+
+                //Change to full screen
+                glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+            }else {
+                glfwSetWindowMonitor(window, nullptr, savedWindowX, savedWindowY, savedWindowW, savedWindowH, 0);
+            }
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_F11) == GLFW_RELEASE) {
+            f11_pressed = false;
         }
 
         // Camera changing management
