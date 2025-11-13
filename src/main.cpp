@@ -106,6 +106,9 @@ protected:
     //CAM VARIABLE
     bool isFirstPerson = false; //State of the cam
     bool c_pressed = false; //Debounce c clicked
+    bool isWideView = false;
+    bool v_pressed = false;
+    float currentCamDist = 5.0f;
     bool resetCamera = false; //Flag to reset the camera
     bool walking = false;
     bool running = false;
@@ -152,17 +155,13 @@ protected:
     // Here you load and setup all your Vulkan Models and Texutures.
     // Here you also create your Descriptor set layouts and load the shaders for the pipelines
     void localInit() {
-        // --- INIZIO MODIFICA: Blocco Cursore ---
-        // Blocca il cursore al centro, lo nasconde e abilita la modalità "raw mouse motion" (FPS)
+        // Hides the mouse cursor
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-        // --- FINE MODIFICA: Blocco Cursore ---
 
-        // --- INIZIO MODIFICA: Inizializzazione Mouse ---
-        // Imposta la posizione iniziale del mouse al centro della finestra
+        // Force the mouse position at the center
         lastX = windowWidth / 2.0;
         lastY = windowHeight / 2.0;
         firstMouse = true;
-        // --- FINE MODIFICA: Inizializzazione Mouse ---
 
         // Descriptor Layouts [what will be passed to the shaders]
         DSLglobal.init(this, {
@@ -404,20 +403,16 @@ protected:
         txt.print(1.0f, 1.0f, "FPS:", 1, "CO", false, false, true, TAL_RIGHT, TRH_RIGHT, TRV_BOTTOM,
                   {1.0f, 0.0f, 0.0f, 1.0f}, {0.8f, 0.8f, 0.0f, 1.0f});
 
-        // --- INIZIO MODIFICA 3: Inizializzazione Testi Telecamera e Puntatore ---
-        // Inizializza il testo della modalità telecamera (ID 2),
-        // usando (-1.0, -1.0) che è l'angolo Alto-Sinistra
+        //Text to indicate current visual mode
         txt.print(-1.0f, -1.0f, "View: Third Person (Press C)", 2, "CO",
                   false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
                   {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
 
-        // Inizializza il crosshair (ID 3),
-        // usando (0.0, 0.0) che è il centro
+        //Define the FPV crosshair
         txt.print(0.0f, 0.0f, "+", 3, "CO",
                   false, false, true, TAL_CENTER, TRH_CENTER, TRV_MIDDLE,
                   {1.0f, 1.0f, 1.0f, 1.0f}, // Colore: Bianco
                   {0.0f, 0.0f, 0.0f, 1.0f}); // Bordo: Nero
-        // --- FINE MODIFICA 3 ---
     }
 
     // Here you create your pipelines and Descriptor Sets!
@@ -498,17 +493,12 @@ protected:
         static bool debounce = false;
         static int curDebounce = 0;
 
-        if(!walking){
+        if (!walking) {
             AB.Start(2, 0.5);
-        }
-        else
-        {
-            if(running)
-            {
+        } else {
+            if (running) {
                 AB.Start(1, 0.5);
-            }
-            else
-            {
+            } else {
                 AB.Start(0, 0.5);
             }
         }
@@ -517,21 +507,20 @@ protected:
             glfwSetWindowShouldClose(window, GL_TRUE);
         }
 
-        // --- INIZIO MODIFICA: Switch Telecamera ---
-        // Gestione switch telecamera (Tasto C)
+        // Camera changing management
         if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS && !c_pressed) {
-            isFirstPerson = !isFirstPerson; // Inverti lo stato
+            isFirstPerson = !isFirstPerson;
             c_pressed = true;
+            // Reset the pitch when switching camera
             Pitch = -Pitch;
-            // Resetta il pitch quando passi alla prima persona per evitare visuali strane
             if (!isFirstPerson) {
                 resetCamera = true;
+                characterRotation = -Yaw + glm::radians(180.0f);
             }
         }
         if (glfwGetKey(window, GLFW_KEY_C) == GLFW_RELEASE) {
             c_pressed = false;
         }
-        // --- FINE MODIFICA: Switch Telecamera ---
 
 
         if (glfwGetKey(window, GLFW_KEY_1)) {
@@ -608,6 +597,17 @@ protected:
             }
         }
 
+        // Makes the third person view wider
+        if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS && !v_pressed) {
+            v_pressed = true;
+            if (!isFirstPerson) {
+                isWideView = !isWideView;
+            }
+        }
+        if (glfwGetKey(window, GLFW_KEY_V) == GLFW_RELEASE) {
+            v_pressed = false;
+        }
+
         // moves the view
         float deltaT = GameLogic();
 
@@ -637,10 +637,11 @@ protected:
 
         glm::mat4 AdaptMat =
                 glm::scale(glm::mat4(1.0f), glm::vec3(0.01f)) * glm::rotate(
-        glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f))*glm::translate(glm::mat4(1.0f),glm::vec3(Pos.x * 100, Pos.z * 100 , Pos.y * 100))*glm::rotate(
-                glm::mat4(1.0f), characterRotation, glm::vec3(0.0f, 0.0f, 1.0f));
+                    glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) * glm::translate(
+                    glm::mat4(1.0f), glm::vec3(Pos.x * 100, Pos.z * 100, Pos.y * 100)) * glm::rotate(
+                    glm::mat4(1.0f), characterRotation, glm::vec3(0.0f, 0.0f, 1.0f));
 
-        // Nasconde il modello del personaggio in prima persona
+        // Hides player model when in FPV
         if (isFirstPerson) {
             AdaptMat = glm::scale(AdaptMat, glm::vec3(0.0f));
         }
@@ -706,10 +707,7 @@ protected:
             countedFrames = 0;
         }
 
-        // --- INIZIO MODIFICA: Aggiornamento Testi UI ---
-
-        // Aggiorna il testo della modalità telecamera (ID 2)
-        // Coordinate (-1.0, -1.0) = Angolo Alto-Sinistra
+        // Updates cam's info text
         if (isFirstPerson) {
             txt.print(-1.0f, -1.0f, "View: First Person (Press C)", 2, "CO",
                       false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
@@ -720,7 +718,7 @@ protected:
                       {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
         }
 
-        // Aggiorna il crosshair (ID 3) - Lo "nasconde" in terza persona stampando uno spazio vuoto
+        // Updates the crossair
         if (isFirstPerson) {
             txt.print(0.0f, 0.0f, "+", 3, "CO", // Coordinate (0.0, 0.0) = Centro
                       false, false, true, TAL_CENTER, TRH_CENTER, TRV_MIDDLE,
@@ -763,25 +761,25 @@ protected:
         getSixAxis(deltaT, m, r, fire); // Chiamata per 'deltaT', 'm', e 'fire'
         float MOVE_SPEED = fire ? MOVE_SPEED_RUN : MOVE_SPEED_BASE;
 
+        //Desired camera distance
+        const float DIST_NORMAL = 2.5f;
+        const float DIST_WIDE = 6.0f;
 
-        // Game Logic implementation
-        // Le variabili di stato (Pos, Yaw, Pitch, ecc.) sono ora membri della classe
-        // e le dichiarazioni 'static' sono state rimosse da qui.
+        //Choose the target depending on isWideView status
+        float targetDist = isWideView ? DIST_WIDE : DIST_NORMAL;
 
-        /* camDist = camDist - m.y * ZOOM_SPEED * deltaT;
-               camDist = camDist < MIN_CAM_DIST ? MIN_CAM_DIST :
-                      (camDist > MAX_CAM_DIST ? MAX_CAM_DIST : camDist);*/
-        camDist = (MIN_CAM_DIST + MIN_CAM_DIST) / 2.0f;
+        currentCamDist += (targetDist - currentCamDist) * (1.0f - exp(-5.0f * deltaT));
+
+        //Change the camera distance
+        camDist = currentCamDist;
 
         // To be done in the assignment
         ViewPrj = glm::mat4(1);
         World = glm::mat4(1);
 
-        oldPos = Pos; // 'oldPos' è ora un membro della classe
+        oldPos = Pos;
 
-        // --- INIZIO BLOCCO MODIFICATO ---
-
-        // 1. Calcola l'offset del mouse (come prima)
+        // Calculates mouse offets
         double xpos, ypos;
         glfwGetCursorPos(window, &xpos, &ypos);
 
@@ -796,46 +794,41 @@ protected:
         lastX = xpos;
         lastY = ypos;
 
-        if (m != glm::vec3(0,0,0))
-        {
+        if (m != glm::vec3(0, 0, 0)) {
             walking = true;
-        }
-        else
-        {
+        } else {
             walking = false;
         }
 
         float oldCharacterRotation = characterRotation;
-        if(isFirstPerson){
+        if (isFirstPerson) {
             characterRotation = Yaw;
-        }
-        else{
-            if(m == glm::vec3(0,0,0)){
+        } else {
+            if (m == glm::vec3(0, 0, 0)) {
                 characterRotation = oldCharacterRotation;
-            }
-            else{
-                characterRotation = -Yaw + atan2(m.z, m.x) + glm::radians(270.0f);
+            } else {
+                float targetRotation = -Yaw + atan2(m.z, m.x) + glm::radians(270.0f);
+                float diff = targetRotation - characterRotation;
+                const float PI = 3.14159265f;
+                while (diff > PI) diff -= 2 * PI;
+                while (diff < -PI) diff += 2 * PI;
+                float rotSmoothness = 10.0f;
+                characterRotation += diff * (1.0f - exp(-rotSmoothness * deltaT));
             }
         }
 
         if (isFirstPerson) {
-            // --- Logica 1a Persona ---
             Yaw -= xoffset * (ROT_SPEED * mouseSensitivity) * deltaT;
             Pitch += yoffset * (ROT_SPEED * mouseSensitivity) * deltaT;
 
-            // Clamping 1a Persona: non puoi girarti sottosopra
+            // Clamping first person
             const float pitchLimit = glm::radians(89.0f);
             Pitch = Pitch < -pitchLimit ? -pitchLimit : (Pitch > pitchLimit ? pitchLimit : Pitch);
         } else {
-            // --- Logica 3a Persona ---
-            // APPLICA L'OFFSET INVERTITO
             Yaw -= xoffset * (ROT_SPEED * mouseSensitivity) * deltaT;
             Pitch -= yoffset * (ROT_SPEED * mouseSensitivity) * deltaT;
 
-            // Clamping 3a Persona:
-            // Limite guardando in alto (es. quasi verticale)
             const float minPitch_3rd = glm::radians(-89.0f);
-            // Limite guardando in basso (es. 60 gradi)
             const float maxPitch_3rd = glm::radians(60.0f);
 
             Pitch = Pitch < minPitch_3rd ? minPitch_3rd : (Pitch > maxPitch_3rd ? maxPitch_3rd : Pitch);
@@ -843,58 +836,52 @@ protected:
 
         float ef = exp(-10.0 * deltaT);
 
-        // Matrice di Proiezione
+        // Projection matrix
         glm::mat4 Prj = glm::perspective(FOVy, Ar, nearPlane, farPlane);
         Prj[1][1] *= -1;
 
         glm::mat4 View;
 
-        // Calcola i vettori di direzione (comuni a entrambe le logiche)
+        // Calculates direction vectors
         glm::vec3 ux = glm::vec3(glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0, 1, 0)) * glm::vec4(1, 0, 0, 1));
         glm::vec3 uz = glm::vec3(glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0, 1, 0)) * glm::vec4(0, 0, -1, 1));
 
         if (isFirstPerson) {
-            // --- LOGICA PRIMA PERSONA (Stile FPS) ---
-
-            // 1. Calcola il vettore 'front' (dove guardi)
+            // Calculate the front vector (where we are watching)
             glm::mat4 pitchRotation = glm::rotate(glm::mat4(1.0f), Pitch, ux);
             glm::vec3 front = glm::normalize(glm::vec3(pitchRotation * glm::vec4(uz, 0.0f)));
 
-            // 2. Calcola il vero 'up' della telecamera
+            // Calculate camera's up
             glm::vec3 up = glm::normalize(glm::cross(ux, front));
 
-            //Lock the movement on the Y axis
+            // Lock the movement on the Y axis
             glm::vec3 moveFront = glm::vec3(front.x, 0.0f, front.z);
 
-            //Normalize to avoid slowed movement when locking up or down
+            // Normalize to avoid slowed movement when locking up or down
             if (glm::length(moveFront) > 0.001f) {
                 moveFront = glm::normalize(moveFront);
             }
 
-            // 3. Muovi 'Pos' in base a 'front' e 'ux' (Stile FPS)
             Pos = Pos - MOVE_SPEED * m.z * front * deltaT;
             Pos = Pos + MOVE_SPEED * m.x * ux * deltaT;
 
-            //Force Y position at a fixed number
+            // Force Y position at a fixed number
             Pos.y = 0.0f;
 
-            // 4. La telecamera è negli "occhi" del personaggio
+            // Camera is at eye height
             cameraPos = Pos + glm::vec3(0.0f, camHeight, 0.0f);
             glm::vec3 target = cameraPos + front;
             View = glm::lookAt(cameraPos, target, up);
 
-            // 5. Il modello (invisibile) ruota con la telecamera
+            // Player model (invisible) rotates with the camera
             World = glm::translate(glm::mat4(1), Pos) * glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0, 1, 0));
         } else {
-            // --- LOGICA TERZA PERSONA ---
-
-            // 1. Muovi 'Pos'
             Pos = Pos + MOVE_SPEED * m.x * ux * deltaT;
             Pos = Pos - MOVE_SPEED * m.z * uz * deltaT;
 
             camHeight += MOVE_SPEED * m.y * deltaT;
 
-            // 2. Rotazione modello
+            // Model rotation
             if (glm::length(glm::vec3(m.x, 0.0f, m.z)) > 0.001f) {
                 relDir = Yaw + atan2(m.x, m.z);
                 dampedRelDir = dampedRelDir > relDir + 3.1416f
@@ -906,7 +893,6 @@ protected:
             dampedRelDir = ef * dampedRelDir + (1.0f - ef) * relDir;
             World = glm::translate(glm::mat4(1), Pos) * glm::rotate(glm::mat4(1.0f), dampedRelDir, glm::vec3(0, 1, 0));
 
-            // 3. Telecamera
             glm::vec3 target = Pos + glm::vec3(0.0f, camHeight, 0.0f);
             glm::mat4 camWorld = glm::translate(glm::mat4(1), Pos) * glm::rotate(
                                      glm::mat4(1.0f), Yaw, glm::vec3(0, 1, 0));
@@ -923,10 +909,8 @@ protected:
             View = glm::lookAt(dampedCamPos, target, glm::vec3(0, 1, 0));
         }
 
-        // Calcolo finale della matrice View-Projection
-        ViewPrj = Prj * View;
 
-        // --- FINE BLOCCO MODIFICATO ---
+        ViewPrj = Prj * View;
 
         float vel = length(Pos - oldPos) / deltaT;
 
