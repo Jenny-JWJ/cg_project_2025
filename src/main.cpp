@@ -103,6 +103,7 @@ protected:
     float Pitch = glm::radians(0.0f);
     float Roll = glm::radians(0.0f);
     float characterRotation = glm::radians(0.0f);
+
     //CAM VARIABLE
     bool isFirstPerson = false; //State of the cam
     bool c_pressed = false; //Debounce c clicked
@@ -110,9 +111,21 @@ protected:
     bool v_pressed = false;
     float currentCamDist = 5.0f;
     bool resetCamera = false; //Flag to reset the camera
+
+    //WINDOW VARIABLE
+    bool f11_pressed = false;
+    bool isFullScreen = false;
+    //Save old window position
+    int savedWindowX = 0;
+    int savedWindowY = 0;
+    int savedWindowW = 800;
+    int savedWindowH = 600;
+
+    //TPV VARIABLE
     bool walking = false;
     bool running = false;
-    //Mouse variable
+
+    //MOUSE VARIABLE
     double lastX;
     double lastY;
     bool firstMouse = true; //Avoids crazy movements at the beginning
@@ -411,8 +424,8 @@ protected:
         //Define the FPV crosshair
         txt.print(0.0f, 0.0f, "+", 3, "CO",
                   false, false, true, TAL_CENTER, TRH_CENTER, TRV_MIDDLE,
-                  {1.0f, 1.0f, 1.0f, 1.0f}, // Colore: Bianco
-                  {0.0f, 0.0f, 0.0f, 1.0f}); // Bordo: Nero
+                  {1.0f, 1.0f, 1.0f, 1.0f}, // Colour: White
+                  {0.0f, 0.0f, 0.0f, 1.0f}); // Border: Black
     }
 
     // Here you create your pipelines and Descriptor Sets!
@@ -493,6 +506,9 @@ protected:
         static bool debounce = false;
         static int curDebounce = 0;
 
+        GLFWgamepadstate padButtons;
+        bool hasPad = glfwGetGamepadState(GLFW_JOYSTICK_1, &padButtons);
+
         if (!walking) {
             AB.Start(2, 0.5);
         } else {
@@ -507,8 +523,49 @@ protected:
             glfwSetWindowShouldClose(window, GL_TRUE);
         }
 
+        // Change window dimension
+        if (glfwGetKey(window, GLFW_KEY_F11) == GLFW_PRESS && !f11_pressed) {
+            f11_pressed = true;
+            isFullScreen = !isFullScreen;
+
+            if (isFullScreen) {
+                //Save current position and dimension
+                glfwGetWindowPos(window, &savedWindowX, &savedWindowY);
+                glfwGetWindowSize(window, &savedWindowW, &savedWindowH);
+
+                //Get primary monitor and its video mode
+                GLFWmonitor *monitor = glfwGetPrimaryMonitor();
+                const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+
+                //Change to full screen
+                glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+            } else {
+                glfwSetWindowMonitor(window, nullptr, savedWindowX, savedWindowY, savedWindowW, savedWindowH, 0);
+            }
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_F11) == GLFW_RELEASE) {
+            f11_pressed = false;
+        }
+
         // Camera changing management
-        if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS && !c_pressed) {
+        bool pressedC = glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS;
+        bool pressedPadY = hasPad && (padButtons.buttons[GLFW_GAMEPAD_BUTTON_Y] == GLFW_PRESS);
+
+        if ((pressedC || pressedPadY) && !c_pressed) {
+            isFirstPerson = !isFirstPerson;
+            c_pressed = true;
+            Pitch = -Pitch;
+            if (!isFirstPerson) {
+                resetCamera = true;
+                characterRotation = -Yaw + glm::radians(180.0f);
+            }
+        }
+
+        if (!(pressedC || pressedPadY)) {
+            c_pressed = false;
+        }
+        /*if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS && !c_pressed) {
             isFirstPerson = !isFirstPerson;
             c_pressed = true;
             // Reset the pitch when switching camera
@@ -521,7 +578,7 @@ protected:
         if (glfwGetKey(window, GLFW_KEY_C) == GLFW_RELEASE) {
             c_pressed = false;
         }
-
+*/
 
         if (glfwGetKey(window, GLFW_KEY_1)) {
             if (!debounce) {
@@ -581,6 +638,23 @@ protected:
             }
         }
 
+        bool pressedSpace = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+        bool pressedPadA = hasPad && (padButtons.buttons[GLFW_GAMEPAD_BUTTON_A] == GLFW_PRESS);
+
+        if (pressedSpace || pressedPadA) {
+            if (!debounce) {
+                debounce = true;
+                curDebounce = GLFW_KEY_SPACE;
+                running = true;
+            }
+        } else {
+            if ((curDebounce == GLFW_KEY_SPACE) && debounce) {
+                running = false;
+                debounce = false;
+                curDebounce = 0;
+            }
+        }
+        /*
         static int curAnim = 0;
         if (glfwGetKey(window, GLFW_KEY_SPACE)) {
             if (!debounce) {
@@ -596,8 +670,21 @@ protected:
                 curDebounce = 0;
             }
         }
-
+*/
         // Makes the third person view wider
+        bool pressedV = glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS;
+        bool pressedPadB = hasPad && (padButtons.buttons[GLFW_GAMEPAD_BUTTON_B] == GLFW_PRESS);
+
+        if ((pressedV || pressedPadB) && !v_pressed) {
+            v_pressed = true;
+            if (!isFirstPerson) {
+                isWideView = !isWideView;
+            }
+        }
+        if (!(pressedV || pressedPadB)) {
+            v_pressed = false;
+        }
+        /*
         if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS && !v_pressed) {
             v_pressed = true;
             if (!isFirstPerson) {
@@ -607,7 +694,7 @@ protected:
         if (glfwGetKey(window, GLFW_KEY_V) == GLFW_RELEASE) {
             v_pressed = false;
         }
-
+*/
         // moves the view
         float deltaT = GameLogic();
 
@@ -720,11 +807,11 @@ protected:
 
         // Updates the crossair
         if (isFirstPerson) {
-            txt.print(0.0f, 0.0f, "+", 3, "CO", // Coordinate (0.0, 0.0) = Centro
+            txt.print(0.0f, 0.0f, "+", 3, "CO",
                       false, false, true, TAL_CENTER, TRH_CENTER, TRV_MIDDLE,
                       {1.0f, 1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
         } else {
-            txt.print(0.0f, 0.0f, " ", 3, "CO", // Stampa uno spazio vuoto per nasconderlo
+            txt.print(0.0f, 0.0f, " ", 3, "CO",
                       false, false, true, TAL_CENTER, TRH_CENTER, TRV_MIDDLE,
                       {1.0f, 1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
         }
@@ -743,7 +830,6 @@ protected:
         static float camHeight = 1.5;
         static float camDist = 5;
         // Camera Pitch limits
-        // --- Questi sono i limiti originali, ora li gestiamo nell'if/else ---
         // const float minPitch = glm::radians(-8.75f);
         // const float maxPitch = glm::radians(60.0f);
         // Rotation and motion speed
@@ -756,9 +842,33 @@ protected:
 
         // Integration with the timers and the controllers
         float deltaT;
-        glm::vec3 m = glm::vec3(0.0f), r = glm::vec3(0.0f); // 'r' non sarà usato per la rotazione
+        glm::vec3 m = glm::vec3(0.0f), r = glm::vec3(0.0f); // 'r' won't be used for rotation
         bool fire = false;
-        getSixAxis(deltaT, m, r, fire); // Chiamata per 'deltaT', 'm', e 'fire'
+        getSixAxis(deltaT, m, r, fire);
+
+        //Implement Pad visual
+        GLFWgamepadstate padState;
+        //If the pad is connected
+        if (glfwGetGamepadState(GLFW_JOYSTICK_1, &padState)) {
+            float deadzone = 0.2f;
+            float padRotSpeed = 2.5f * deltaT; //Pad rotation speed
+
+            float rStickX = padState.axes[GLFW_GAMEPAD_AXIS_RIGHT_X];
+            float rStickY = padState.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y];
+
+            //Update the stick in the dead zone, update Yaw and Pitch
+            if (std::abs(rStickX) > deadzone) {
+                Yaw -= rStickX * padRotSpeed;
+            }
+            if (std::abs(rStickY) > deadzone) {
+                if (isFirstPerson) {
+                    Pitch -= rStickY * padRotSpeed;
+                } else {
+                    Pitch += rStickY * padRotSpeed;
+                }
+            }
+        }
+
         float MOVE_SPEED = fire ? MOVE_SPEED_RUN : MOVE_SPEED_BASE;
 
         //Desired camera distance
