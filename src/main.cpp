@@ -8,6 +8,8 @@
 #include "modules/Scene.hpp"
 #include "modules/Animations.hpp"
 
+#include "MapManager.hpp"
+
 // The uniform buffer object used in this example
 struct VertexChar {
     glm::vec3 pos;
@@ -1047,6 +1049,7 @@ protected:
 int main() {
     E09 app;
 
+    (new MapManager())->makeJson();
     try {
         app.run();
     } catch (const std::exception &e) {
