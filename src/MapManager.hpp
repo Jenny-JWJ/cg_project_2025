@@ -16,24 +16,9 @@ public:
 
     float gridsize = 20.0f;
 
-    std::string filePathsBuildings[20] = {
-            "assets/models/Castle/SPW_Medieval_Bldg_01.mgcg",
-            "assets/models/Castle/SPW_Medieval_Bldg_02.mgcg",
-            "assets/models/Castle/SPW_Medieval_Bldg_03.mgcg",
-            "assets/models/Castle/SPW_Medieval_Bldg_04.mgcg",
-            "assets/models/Castle/SPW_Medieval_Bldg_05.mgcg",
-            "assets/models/Castle/SPW_Medieval_Bldg_06.mgcg",
-            "assets/models/Castle/SPW_Medieval_Bldg_07.mgcg"
-    };
+    static std::map<std::string,std::string> modelsPaths;
 
-    std::string filePathsDeco[20] = {
-            "assets/models/Castle/SPW_Medieval_Boat.mgcg",
-            "assets/models/Castle/SPW_Medieval_Box_01.mgcg",
-            "assets/models/Castle/SPW_Medieval_Box_02.mgcg",
-            "assets/models/Castle/SPW_Medieval_Box_03.mgcg",
-            "assets/models/Castle/SPW_Medieval_Barrel>.mgcg",
-            "assets/models/Castle/SPW_Medieval_Props_01.mgcg"
-    };
+    static std::map<std::string,std::string> texturePaths;
 
     static std::string jsonPath;
 
@@ -100,6 +85,22 @@ public:
     // -------------------------------------------------------
 // STRUCT CREATION FUNCTIONS
 // -------------------------------------------------------
+
+   static std::string getExtension(const std::string& path) {
+        // Trova l'ultima occorrenza del punto
+        size_t dotPos = path.find_last_of('.');
+        if (dotPos == std::string::npos) {
+            return ""; // Nessun punto → nessuna estensione
+        }
+
+        // Trova l'ultima slash per evitare errori tipo "/path.to/file"
+        size_t slashPos = path.find_last_of("/\\");
+        if (slashPos != std::string::npos && dotPos < slashPos) {
+            return ""; // Il punto è in una cartella, non è un'estensione
+        }
+
+        return path.substr(dotPos); // Include il punto
+    }
 
     static AssetFile createAssetFile(const std::string& id,
                               const std::string& file,
@@ -180,6 +181,39 @@ public:
         return inst;
     }
 
+    static Model makeModel(std::pair<std::string,std::string> modelPath){
+        std::string extension = getExtension(modelPath.first);
+        Format format;
+        if (extension == ".obj")
+            format = OBJ;
+        if (extension == ".mgcg")
+            format = MGCG;
+        if (extension == ".gltf")
+            format = GLTF;
+        return createModel(modelPath.second,"VDsimp",modelPath.first,format);
+    }
+
+    static Texture makeTexture(std::pair<std::string,std::string> texturePath){
+        return createTexture(texturePath.second, texturePath.first, C);
+    }
+
+ static std::vector<Model> makeModels(){
+        std::vector<Model> models;
+        for (const auto& model : modelsPaths){
+            models.emplace_back(makeModel(model));
+        }
+     return models;
+   }
+
+ static std::vector<Texture> makeTextures(){
+     std::vector<Texture> textures;
+     for (const auto& texture : texturePaths){
+         printf("%s : ", texture.second.c_str());
+         textures.emplace_back(makeTexture(texture));
+         printf("%s\n", makeTexture(texture).id.c_str());
+     }
+     return textures;
+   }
 
     // -------------------------------------------------------
     // ENUM → STRING conversion
@@ -316,7 +350,35 @@ public:
         file << j.dump(4); // indent = 4
     }
 
+     static void Initialize(){
+         modelsPaths = {
+                 {"assets/models/Castle/SPW_Medieval_Bldg_01.mgcg", "bldg1"},
+                 {"assets/models/Castle/SPW_Medieval_Bldg_02.mgcg", "bldg2"},
+                 {"assets/models/Castle/SPW_Medieval_Bldg_03.mgcg", "bldg3"},
+                 {"assets/models/Castle/SPW_Medieval_Bldg_04.mgcg", "bldg4"},
+                 {"assets/models/Castle/SPW_Medieval_Bldg_05.mgcg", "bldg5"},
+                 {"assets/models/Castle/SPW_Medieval_Bldg_06.mgcg", "bldg6"},
+                 {"assets/models/Castle/SPW_Medieval_Bldg_07.mgcg", "bldg7"},
+                 {"assets/models/Castle/SPW_Medieval_Boat.mgcg", "boat"},
+                 {"assets/models/Castle/SPW_Medieval_Box_01.mgcg", "box1"},
+                 {"assets/models/Castle/SPW_Medieval_Box_02.mgcg", "box2"},
+                 {"assets/models/Castle/SPW_Medieval_Box_03.mgcg", "box3"},
+                 {"assets/models/Castle/SPW_Medieval_Barrel.mgcg", "barrel"},
+                 {"assets/models/Castle/SPW_Medieval_Props_01.mgcg", "well"},
+                 {"assets/models/Castle/SPW_Terrain_Grass_Flat.mgcg", "ground"}
+         };
+
+         texturePaths = {
+                 {"assets/textures/Castle_Textures/SPW_Medieval.png", "medieval_buildings"},
+                 {"assets/textures/Castle_Textures/SPW_Natures_01.png", "medieval_nature1"},
+                 {"assets/textures/Castle_Textures/SPW_Natures_02.png", "medieval_nature2"},
+                 {"assets/textures/Perlin_noise.png", "pnois"},
+                 {"assets/textures/sky_23_2k.png", "skybox"}
+         };
+    }
+
     static void makeJson(){
+        Initialize();
         jsonPath = "assets/models/scene.json";
         std::vector<AssetFile> assetFiles = {
                 createAssetFile("hm", "assets/models/uomo.gltf", GLTF),
@@ -326,29 +388,34 @@ public:
                 createAssetFile("a4", "assets/models/waving.gltf", GLTF),
                 createAssetFile("ct", "assets/models/MainSceneEnvOnly.gltf", GLTF)
         };
-        std::vector<Model> models = {
+        std::vector<Model> models = makeModels();
+        std::vector<Model> modelsToAdd = {
                 createModel("hm0","VDchar", "Mesh", ASSET, "Ch01_Body", 0, "hm"),
                 createModel("hm1","VDchar", "Mesh", ASSET, "Ch01_Body", 1, "hm"),
                 createModel("skybox","VDskybox", "assets/models/SkyBoxCube.obj", OBJ),
-                createModel("water_well","VDsimp", "assets/models/Castle/SPW_Medieval_Props_01.mgcg", MGCG),
-                createModel("ground","VDsimp", "assets/models/Castle/SPW_Terrain_Grass_Flat.mgcg", MGCG),
         };
 
-        std::vector<Texture> textures = {
+        for (const auto& model : modelsToAdd){
+            models.emplace_back(model);
+        }
+
+        std::vector<Texture> textures = makeTextures();
+
+        std::vector<Texture> texturesToAdd = {
                 createTexture("st", "assets/textures/uomo/Ch01_1001_Diffuse.png", C),
-                createTexture("castle_builds", "assets/textures/Castle_Textures/SPW_Medieval.png", C),
-                createTexture("castle_nature2", "assets/textures/Castle_Textures/SPW_Natures_02.png", C),
-                createTexture("pnois", "assets/textures/Perlin_noise.png", C),
-                createTexture("skybox", "assets/textures/sky_23_2k.png", C),
         };
+
+        for (const auto& texture : texturesToAdd){
+            textures.emplace_back(texture);
+        }
 
         std::vector<Element> charElements = {
                 createElement("hm0", "hm0", {"st"}),
                 createElement("hm1", "hm1", {"st"}),
         };
         std::vector<Element> simpElements = {
-                createElement("grass", "ground", {"castle_nature2", "pnois"}, {0,0,0}, {90,0,0}, {1,1,1}),
-                createElement("ww1", "water_well", {"castle_builds", "pnois"}, {0,0,0}, {90,0,0}, {1,1,1})
+                createElement("grass", "ground", {"medieval_nature2", "pnois"}, {0,0,0}, {90,0,0}, {1,1,1}),
+                createElement("ww1", "well", {"medieval_buildings", "pnois"}, {0,0,0}, {90,0,0}, {1,1,1})
         };
         std::vector<Element> skyboxElements = {
                 createElement("skybox", "skybox", {"skybox"})

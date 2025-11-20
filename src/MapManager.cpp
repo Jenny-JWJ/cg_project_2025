@@ -4,4 +4,6 @@
 
 #include "MapManager.hpp"
 
+std::map<std::string,std::string> MapManager::modelsPaths = {};
+std::map<std::string,std::string> MapManager::texturePaths = {};
 std::string MapManager::jsonPath = "";
