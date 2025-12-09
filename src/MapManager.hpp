@@ -314,8 +314,8 @@ public:
        std::vector<Element> elements;
        int count_x = hight/scale;
        int count_z = lenght/scale;
-       int idNumber = 1;
-       std::string idName = "grass";
+       int idNumber = 0;
+       std::string idName = "grass_ground";
 
        for (int i = 0; i < count_z; i++){
            for (int j = 0; j < count_x; j++){
@@ -326,6 +326,27 @@ public:
         return elements;
    }
 
+    static std::vector<Element> createPaths(std::vector<float> starting_pos, std::vector<float> ending_pos, float x_pass, float z_pass, std::vector<float> scale = {1,0.5,1}, int idNumber = 0){
+        std::vector<Element> elements;
+        float diff_x = fabs(starting_pos[0] - ending_pos[0]);
+        float diff_z = fabs(starting_pos[2] - ending_pos[2]);
+        int x_step = x_pass!=0? diff_x/x_pass : 0;
+        int z_step = z_pass!=0? diff_z/z_pass : 0;
+        int steps = std::max(x_step, z_step);
+        std::string idName = "path_ground";
+        float posx = starting_pos[0];
+        float posz = starting_pos[2];
+        for (int i = 0; i < steps; i++){
+                idNumber++;
+                elements.emplace_back(createElement(idName + std::to_string(idNumber), "ground", {"medieval_nature1", "pnois"},{posx,0.1,posz},{90,0,0},{scale[0],scale[1],scale[2]}));
+                if (i < x_step)
+                    posx += x_pass;
+                if (i < z_step)
+                    posz += z_pass;
+        }
+        return elements;
+    }
+
     static int rand_int(int lo, int hi) {
         std::uniform_int_distribution<int> dist(lo, hi);
         return dist(gen);
@@ -334,9 +355,7 @@ public:
     static std::vector<Element> placeHouses(float hight = 200.0, float lenght = 200.0, float x_offset = 50.0, float z_offset = 50.0, float scale = 20.0, int idNumber = 0){
         std::vector<Element> elements;
         int count_x = hight/scale;
-        printf("count x = %d", count_x);
         int count_z = lenght/scale;
-        printf("count z = %d", count_z);
         std::string idName = "house";
 
         for (int i = 0; i < count_z; i++){
@@ -453,9 +472,11 @@ public:
                 createElement("hm0", "hm0", {"st"}),
                 createElement("hm1", "hm1", {"st"}),
         };
-        std::vector<Element> simpElementsGrass = placeGrassGround();
+        std::vector<Element> simpElements = placeGrassGround();
 
-        //simpElements.reserve(500);
+        for (const auto& simpElement : createPaths({-200, 0, 0},{200,0,0},20,0)){
+            simpElements.emplace_back(simpElement);
+        }
 
         std::vector<Element> simpElementsHouses = placeHouses(150,150,-200, -200,30);
 
@@ -481,7 +502,7 @@ public:
         }
 
         for (const auto& simpElement : simpElementsHouses){
-            simpElementsGrass.emplace_back(simpElement);
+            simpElements.emplace_back(simpElement);
         }
 
         std::vector<Element> skyboxElements = {
@@ -489,7 +510,7 @@ public:
         };
         std::vector<Istance> istances = {
                 createInstance(CookTorranceChar,charElements),
-                createInstance(CookTorranceNoiseSimp, simpElementsGrass),
+                createInstance(CookTorranceNoiseSimp, simpElements),
                 createInstance(SkyBox, skyboxElements)
         };
 
