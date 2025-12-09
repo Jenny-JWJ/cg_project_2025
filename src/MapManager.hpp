@@ -8,6 +8,9 @@
 #include <string>
 #include <fstream>
 #include <json.hpp>
+#include <random>
+#include <iostream>
+
 
 using json = nlohmann::json;
 
@@ -21,6 +24,8 @@ public:
     static std::map<std::string,std::string> texturePaths;
 
     static std::string jsonPath;
+
+    static std::mt19937_64 gen;
 
     // -------------------------------------------------------
     // ENUM
@@ -79,7 +84,7 @@ public:
 
     struct Istance {
         Technique technique;
-        Element elements[100];
+        std::vector<Element> elements;
     };
 
     // -------------------------------------------------------
@@ -173,10 +178,7 @@ public:
     {
         Istance inst;
         inst.technique = technique;
-
-        int count = std::min((int)elems.size(), 100);
-        for (int i = 0; i < count; i++)
-            inst.elements[i] = elems[i];
+        inst.elements = elems;
 
         return inst;
     }
@@ -308,6 +310,44 @@ public:
         return j;
     }
 
+    static std::vector<Element> placeGrassGround(float hight = 100.0, float lenght = 200.0, float x_offset = 50.0, float z_offset = 50.0, float scale = 20.0){
+       std::vector<Element> elements;
+       int count_x = hight/scale;
+       int count_z = lenght/scale;
+       int idNumber = 1;
+       std::string idName = "grass";
+
+       for (int i = 0; i < count_z; i++){
+           for (int j = 0; j < count_x; j++){
+               idNumber++;
+               elements.emplace_back(createElement(idName + std::to_string(idNumber), "ground", {"medieval_nature2", "pnois"},{j*scale-x_offset,0,i*scale-z_offset},{90,0,0},{4,1,4}));
+           }
+       }
+        return elements;
+   }
+
+    static int rand_int(int lo, int hi) {
+        std::uniform_int_distribution<int> dist(lo, hi);
+        return dist(gen);
+    }
+
+    static std::vector<Element> placeHouses(float hight = 200.0, float lenght = 200.0, float x_offset = 50.0, float z_offset = 50.0, float scale = 20.0, int idNumber = 0){
+        std::vector<Element> elements;
+        int count_x = hight/scale;
+        printf("count x = %d", count_x);
+        int count_z = lenght/scale;
+        printf("count z = %d", count_z);
+        std::string idName = "house";
+
+        for (int i = 0; i < count_z; i++){
+            for (int j = 0; j < count_x; j++){
+                idNumber++;
+                elements.emplace_back(createElement(idName + std::to_string(idNumber), "bldg" + std::to_string(rand_int(1,7)), {"medieval_buildings", "pnois"},{j*scale-x_offset,0,i*scale-z_offset},{90,0,0},{1,1,1}));
+            }
+        }
+        return elements;
+    }
+
     // -------------------------------------------------------
     // BUILD JSON DOCUMENT
     // -------------------------------------------------------
@@ -413,18 +453,46 @@ public:
                 createElement("hm0", "hm0", {"st"}),
                 createElement("hm1", "hm1", {"st"}),
         };
-        std::vector<Element> simpElements = {
-                createElement("grass", "ground", {"medieval_nature2", "pnois"}, {0,0,0}, {90,0,0}, {1,1,1}),
+        std::vector<Element> simpElementsGrass = placeGrassGround();
+
+        //simpElements.reserve(500);
+
+        std::vector<Element> simpElementsHouses = placeHouses(150,150,-200, -200,30);
+
+        for (const auto& simpElement : placeHouses(150,150,-200, 50,30, 25)){
+            simpElementsHouses.emplace_back(simpElement);
+        }
+
+        for (const auto& simpElement : placeHouses(150,150,50, 50,30, 50)){
+            simpElementsHouses.emplace_back(simpElement);
+        }
+
+        for (const auto& simpElement : placeHouses(150,150,50, -200,30, 75)){
+            simpElementsHouses.emplace_back(simpElement);
+        }
+
+
+        std::vector<Element> simpElementsToAdd{
                 createElement("ww1", "well", {"medieval_buildings", "pnois"}, {0,0,0}, {90,0,0}, {1,1,1})
         };
+
+        for (const auto& simpElement : simpElementsToAdd){
+            simpElementsHouses.emplace_back(simpElement);
+        }
+
+        for (const auto& simpElement : simpElementsHouses){
+            simpElementsGrass.emplace_back(simpElement);
+        }
+
         std::vector<Element> skyboxElements = {
                 createElement("skybox", "skybox", {"skybox"})
         };
         std::vector<Istance> istances = {
                 createInstance(CookTorranceChar,charElements),
-                createInstance(CookTorranceNoiseSimp, simpElements),
+                createInstance(CookTorranceNoiseSimp, simpElementsGrass),
                 createInstance(SkyBox, skyboxElements)
         };
+
 
         json jsonobj = buildJson(assetFiles,models,textures,istances);
         saveJson(jsonobj, jsonPath);

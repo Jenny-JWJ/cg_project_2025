@@ -7,3 +7,4 @@
 std::map<std::string,std::string> MapManager::modelsPaths = {};
 std::map<std::string,std::string> MapManager::texturePaths = {};
 std::string MapManager::jsonPath = "";
+std::mt19937_64 MapManager::gen(123456);
