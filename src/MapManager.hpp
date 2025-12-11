@@ -352,7 +352,7 @@ public:
         return dist(gen);
     }
 
-    static std::vector<Element> placeHouses(float hight = 200.0, float lenght = 200.0, float x_offset = 50.0, float z_offset = 50.0, float scale = 20.0, int idNumber = 0){
+    static std::vector<Element> placeHouses(float hight = 200.0, float lenght = 200.0, float x_offset = 50.0, float z_offset = 50.0, float scale = 20.0, int idNumber = 0, std::vector<float> rotation = {90,0,0}){
         std::vector<Element> elements;
         int count_x = hight/scale;
         int count_z = lenght/scale;
@@ -361,7 +361,7 @@ public:
         for (int i = 0; i < count_z; i++){
             for (int j = 0; j < count_x; j++){
                 idNumber++;
-                elements.emplace_back(createElement(idName + std::to_string(idNumber), "bldg" + std::to_string(rand_int(1,7)), {"medieval_buildings", "pnois"},{j*scale-x_offset,0,i*scale-z_offset},{90,0,0},{1,1,1}));
+                elements.emplace_back(createElement(idName + std::to_string(idNumber), "bldg" + std::to_string(rand_int(1,7)), {"medieval_buildings", "pnois"},{j*scale-x_offset,0,i*scale-z_offset},rotation,{1,1,1}));
             }
         }
         return elements;
@@ -478,17 +478,21 @@ public:
             simpElements.emplace_back(simpElement);
         }
 
-        std::vector<Element> simpElementsHouses = placeHouses(150,150,-200, -200,30);
+        for (const auto& simpElement : createPaths({0, 0, -200},{0,0,200},0,20,{0.5,1,1},20)){
+            simpElements.emplace_back(simpElement);
+        }
 
-        for (const auto& simpElement : placeHouses(150,150,-200, 50,30, 25)){
+        std::vector<Element> simpElementsHouses = placeHouses(150,150,-20, -20,30,0,{90,180,0});
+
+        for (const auto& simpElement : placeHouses(150,150,-20, 140,30, 25)){
             simpElementsHouses.emplace_back(simpElement);
         }
 
-        for (const auto& simpElement : placeHouses(150,150,50, 50,30, 50)){
+        for (const auto& simpElement : placeHouses(150,150,140, -20,30, 50, {90,180,0})){
             simpElementsHouses.emplace_back(simpElement);
         }
 
-        for (const auto& simpElement : placeHouses(150,150,50, -200,30, 75)){
+        for (const auto& simpElement : placeHouses(150,150,140, 140,30, 75)){
             simpElementsHouses.emplace_back(simpElement);
         }
 
