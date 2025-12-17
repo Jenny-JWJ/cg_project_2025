@@ -400,6 +400,38 @@ protected:
             std::cout << "ERROR LOADING THE SCENE\n";
             exit(0);
         }
+        
+        //initial collision box
+        houseCollisions.clear();
+        for (int i = 0; i < SC.TI[1].InstanceCount; i++) {
+            auto& inst = SC.TI[1].I[i];
+            std::cout << "inst.id = [" << *inst.id << "]" << std::endl;
+            // Only add collision for houses / buildings
+            CollisionObject Col;
+            glm::vec3 pos(
+                    inst.Wm[3][0],   // x
+                    inst.Wm[3][1],   // y
+                    inst.Wm[3][2]    // z
+            );
+            std::string id = *inst.id;
+
+            if (id.find("house") != std::string::npos) {
+                // house (here need to modify the size of collisionbox w.r.t different types of houses)
+                Col.addBox(
+                        pos + glm::vec3(0.0f, 2.5f, 0.0f),
+                        glm::vec3(10.0f, 5.0f, 10.0f)
+                );
+            }
+            else if (id.find("ww") != std::string::npos) {
+                // well
+                Col.addBox(
+                        pos + glm::vec3(0.0f, 1.0f, 0.0f),
+                        glm::vec3(1.0f, 1.0f, 1.0f)
+                );
+            }
+            houseCollisions.push_back(Col);
+        }
+        
         // initializes animations
         for (int ian = 0; ian < N_ANIMATIONS; ian++) {
             Anim[ian].init(*SC.As[ian]);
@@ -1020,7 +1052,21 @@ protected:
             dampedCamPos = ef * dampedCamPos + (1.0f - ef) * cameraPos;
             View = glm::lookAt(dampedCamPos, target, glm::vec3(0, 1, 0));
         }
+        // ===============================
+        // COLLISION CHECK (COMMON)
+        // ===============================
+        CollisionObject playerCol;
+        playerCol.addBox(
+                Pos + glm::vec3(0.0f, 1.0f, 0.0f),
+                glm::vec3(1.5f, 2.0f, 1.5f)
+        );
 
+        for (const auto& house : houseCollisions) {
+            if (playerCol.collidesWith(house)) {
+                Pos = oldPos;   
+                break;
+            }
+        }
 
         ViewPrj = Prj * View;
 
