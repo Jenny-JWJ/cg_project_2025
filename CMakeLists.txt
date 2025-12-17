@@ -152,6 +152,7 @@ elseif(UNIX AND NOT APPLE)
     file(GLOB_RECURSE HEADERS include/*.h include/*.hpp)
 
     add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} src/MapManager.hpp)
+    add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} src/CollisionBox.hpp)
 
     find_package(Vulkan REQUIRED)
     find_package(glfw3 REQUIRED)
