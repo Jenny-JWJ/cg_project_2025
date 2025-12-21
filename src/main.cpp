@@ -9,6 +9,7 @@
 #include "modules/Animations.hpp"
 
 #include "MapManager.hpp"
+#include "CollisionBox.hpp"
 
 // The uniform buffer object used in this example
 struct VertexChar {
@@ -62,6 +63,8 @@ struct skyBoxUniformBufferObject {
 
 // MAIN !
 class E09 : public BaseProject {
+private:
+    std::vector<CollisionObject> houseCollisions;
 protected:
     // Here you list all the Vulkan objects you need:
 
