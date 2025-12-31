@@ -21,12 +21,12 @@
 		{"id": "ground",  "VD": "VDtan",  "model": "Ground", "node": "Ground", "meshId": 0, "asset": "ct", "format":"ASSET"}
 	],
 	"textures": [
-		{"id": "st",    "texture": "assets/textures/uomo/Ch01_1001_Diffuse.png",	   "format": "C"},
+		{"id": "st",    "texture": "assets/textures/uomo/Ch01_1001_Diffuse.png",	  "format": "C"},
 		{"id": "castle_builds",    "texture": "assets/textures/Castle_Textures/SPW_Medieval.png","format": "C"},
 		{"id": "castle_nature1",    "texture": "assets/textures/Castle_Textures/SPW_Natures_01.png","format": "C"},
 		{"id": "castle_nature2",    "texture": "assets/textures/Castle_Textures/SPW_Natures_02.png","format": "C"},
 		{"id": "pnois", "texture": "assets/textures/Perlin_noise.png", "format": "C"},
-		{"id": "skybox", "texture": "assets/textures/sky_23_2k.png", "format": "C"},
+		{"id": "skybox", "texture": "assets/textures/day_sky.png", "format": "C"},
 		{"id": "scbmt", "texture": "assets/textures/SoccerBall/Untitled.png", "format": "D"},
 
 		{"id": "Pavement_Concrete_Marked_Footprints_UV_CM_1", "texture": "assets/textures/MainScene/Pavement_Concrete_Marked_Footprints_UV_CM_1.jpg", "format": "C"},

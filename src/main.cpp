@@ -58,6 +58,7 @@ struct UniformBufferObjectSimp {
 
 struct skyBoxUniformBufferObject {
     alignas(16) glm::mat4 mvpMat;
+    alignas(16) glm::vec4 settings; // x = blendFactor (0 night , 1 day)
 };
 
 
@@ -65,6 +66,7 @@ struct skyBoxUniformBufferObject {
 class E09 : public BaseProject {
 private:
     std::vector<CollisionObject> houseCollisions;
+
 protected:
     // Here you list all the Vulkan objects you need:
 
@@ -219,10 +221,14 @@ protected:
                           });
 
         DSLskyBox.init(this, {
+                           // Binding 0: Uniform Buffer (dati ciclo giorno/notte)
                            {
-                               0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT,
+                               0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                               VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                                sizeof(skyBoxUniformBufferObject), 1
                            },
+
+                           // Binding 1: Texture Giorno (UNICA TEXTURE)
                            {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 1}
                        });
 
@@ -334,6 +340,8 @@ protected:
         PsimpObj.init(this, &VDsimp, "shaders/SimplePosNormUV.vert.spv", "shaders/CookTorrance.frag.spv",
                       {&DSLglobal, &DSLlocalSimp});
 
+        PsimpObj.setCullMode(VK_CULL_MODE_BACK_BIT);
+
         PskyBox.init(this, &VDskyBox, "shaders/SkyBoxShader.vert.spv", "shaders/SkyBoxShader.frag.spv", {&DSLskyBox});
         PskyBox.setCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL);
         PskyBox.setCullMode(VK_CULL_MODE_BACK_BIT);
@@ -369,13 +377,13 @@ protected:
         PRs[2].init("SkyBox", {
                         {
                             &PskyBox, {
-                                //Pipeline and DSL for the first pass
                                 /*DSLskyBox*/{
-                                    /*t0*/{true, 0, {}} // index 0 of the "texture" field in the json file
+                                    {true, 0, {}}, // Refers to the UBO
+                                    {true, 0, {}}, // Refers to Texture index 0 in JSON (Day)
                                 }
                             }
                         }
-                    }, /*TotalNtextures*/1, &VDskyBox);
+                    }, 1, &VDskyBox); // IMPORTANT: Changed TotalNtextures from 1 to 2
         PRs[3].init("PBR", {
                         {
                             &P_PBR, {
@@ -394,47 +402,46 @@ protected:
         // Models, textures and Descriptors (values assigned to the uniforms)
 
         // sets the size of the Descriptor Set Pool
-        DPSZs.uniformBlocksInPool = 3;
-        DPSZs.texturesInPool = 4;
-        DPSZs.setsInPool = 3;
+        DPSZs.uniformBlocksInPool = 2000;
+        DPSZs.texturesInPool = 2000;
+        DPSZs.setsInPool = 2000;
 
         std::cout << "\nLoading the scene\n\n";
         if (SC.init(this, /*Npasses*/1, VDRs, PRs, "assets/models/scene.json") != 0) {
             std::cout << "ERROR LOADING THE SCENE\n";
             exit(0);
         }
-        
+
         //initial collision box
         houseCollisions.clear();
         for (int i = 0; i < SC.TI[1].InstanceCount; i++) {
-            auto& inst = SC.TI[1].I[i];
+            auto &inst = SC.TI[1].I[i];
             std::cout << "inst.id = [" << *inst.id << "]" << std::endl;
             // Only add collision for houses / buildings
             CollisionObject Col;
             glm::vec3 pos(
-                    inst.Wm[3][0],   // x
-                    inst.Wm[3][1],   // y
-                    inst.Wm[3][2]    // z
+                inst.Wm[3][0], // x
+                inst.Wm[3][1], // y
+                inst.Wm[3][2] // z
             );
             std::string id = *inst.id;
 
             if (id.find("house") != std::string::npos) {
                 // house (here need to modify the size of collisionbox w.r.t different types of houses)
                 Col.addBox(
-                        pos + glm::vec3(0.0f, 2.5f, 0.0f),
-                        glm::vec3(10.0f, 5.0f, 10.0f)
+                    pos + glm::vec3(0.0f, 2.5f, 0.0f),
+                    glm::vec3(10.0f, 5.0f, 10.0f)
                 );
-            }
-            else if (id.find("ww") != std::string::npos) {
+            } else if (id.find("ww") != std::string::npos) {
                 // well
                 Col.addBox(
-                        pos + glm::vec3(0.0f, 1.0f, 0.0f),
-                        glm::vec3(1.0f, 1.0f, 1.0f)
+                    pos + glm::vec3(0.0f, 1.0f, 0.0f),
+                    glm::vec3(1.0f, 1.0f, 1.0f)
                 );
             }
             houseCollisions.push_back(Col);
         }
-        
+
         // initializes animations
         for (int ian = 0; ian < N_ANIMATIONS; ian++) {
             Anim[ian].init(*SC.As[ian]);
@@ -739,15 +746,74 @@ protected:
         const float SpeedUpAnimFact = 0.85f;
         AB.Advance(deltaT * SpeedUpAnimFact);
 
-        // defines the global parameters for the uniform
-        const glm::mat4 lightView = glm::rotate(glm::mat4(1), glm::radians(-30.0f), glm::vec3(0.0f, 1.0f, 0.0f)) *
-                                    glm::rotate(glm::mat4(1), glm::radians(-45.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        const glm::vec3 lightDir = glm::vec3(lightView * glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
+        // --- DAY/NIGHT & SUNSET CYCLE START ---
 
+        // 1. Time Accumulator
+        static float sunAngle = 0.0f;
+
+        // Set day duration to 5 minutes (300 seconds)
+        float dayDuration = 300.0f;
+
+        //Calculate rotation speed: 360 degrees divided by total duration
+        float rotationSpeed = glm::radians(360.0f) / dayDuration;
+
+        sunAngle += deltaT * rotationSpeed;
+
+        // 2. Sun Position
+        // Rotates around X (Rise/Set) with slight tilt on Y (-30 deg)
+        glm::mat4 lightRot = glm::rotate(glm::mat4(1), glm::radians(-30.0f), glm::vec3(0.0f, 1.0f, 0.0f)) *
+                             glm::rotate(glm::mat4(1), sunAngle, glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::vec3 currentLightDir = glm::vec3(lightRot * glm::vec4(0.0f, 0.0f, 1.0f, 0.0f));
+
+        // 3. Define Colors
+        glm::vec4 dayColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // White Day
+        glm::vec4 sunsetColor = glm::vec4(1.0f, 0.4f, 0.1f, 1.0f); // Orange/Red Sunset
+        glm::vec4 nightColor = glm::vec4(0.05f, 0.05f, 0.15f, 1.0f); // Dark Blue Night
+
+        glm::vec4 currentLightColor;
+        float blendFactor = 0.0f; // 0 = Night Texture, 1 = Day Texture
+
+        // 4. Calculate Phase based on Sun Height (Y)
+        float sunHeight = currentLightDir.y;
+
+        // --- LOGIC: DAY vs SUNSET vs NIGHT ---
+
+        if (sunHeight > 0.2f) {
+            // PHASE: FULL DAY
+            // Smooth transition from Sunset Orange to Day White as sun goes up
+            float t = glm::clamp((sunHeight - 0.2f) / 0.3f, 0.0f, 1.0f);
+            currentLightColor = mix(sunsetColor, dayColor, t);
+
+            blendFactor = 1.0f; // Use Full Day Texture
+        } else if (sunHeight > -0.2f) {
+            // PHASE: TRANSITION (Sunset / Sunrise)
+            // The sun is crossing the horizon [-0.2 to 0.2]
+
+            // Calculate mix for texture (0 at -0.2, 1 at 0.2)
+            blendFactor = (sunHeight + 0.2f) / 0.4f;
+
+            if (sunHeight > 0.0f) {
+                // Upper Horizon: Pure Sunset Orange
+                currentLightColor = sunsetColor;
+            } else {
+                // Lower Horizon: Fade from Orange to Night Blue
+                float t = (sunHeight + 0.2f) / 0.2f;
+                currentLightColor = mix(nightColor, sunsetColor, t);
+            }
+        } else {
+            // PHASE: FULL NIGHT
+            currentLightColor = nightColor;
+            blendFactor = 0.0f; // Use Full Night Texture
+        }
+
+        // 5. Update Global Uniforms
         GlobalUniformBufferObject gubo{};
+        gubo.lightDir = currentLightDir;
+        gubo.lightColor = currentLightColor;
+        gubo.eyePos = cameraPos;
 
-        gubo.lightDir = lightDir;
-        gubo.lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+        // --- DAY/NIGHT CYCLE END ---
+
         gubo.eyePos = cameraPos;
 
         // defines the local parameters for the uniforms
@@ -799,10 +865,12 @@ protected:
         // skybox pipeline
         skyBoxUniformBufferObject sbubo{};
         sbubo.mvpMat = ViewPrj * glm::translate(glm::mat4(1), cameraPos) * glm::scale(glm::mat4(1), glm::vec3(100.0f));
+        sbubo.settings.x = blendFactor;
         SC.TI[2].I[0].DS[0][0]->map(currentImage, &sbubo, 0);
 
+        //TODO THIS CAUSED SOME CRASHES WHEN THE PROGRAM WAS COMPILED AND RUNNED IDK WHY SO I COMMENTED IT BECAUSE THEORETICALLY WE DO NOT USE PBR OBJECTS PLS CHECK THIS
         // PBR objects
-        for (instanceId = 0; instanceId < SC.TI[3].InstanceCount; instanceId++) {
+        /*for (instanceId = 0; instanceId < SC.TI[3].InstanceCount; instanceId++) {
             ubos.mMat = SC.TI[3].I[instanceId].Wm;
             ubos.mvpMat = ViewPrj * ubos.mMat;
             ubos.nMat = glm::inverse(glm::transpose(ubos.mMat));
@@ -810,7 +878,7 @@ protected:
             SC.TI[3].I[instanceId].DS[0][0]->map(currentImage, &gubo, 0); // Set 0
             SC.TI[3].I[instanceId].DS[0][1]->map(currentImage, &ubos, 0); // Set 1
         }
-
+        */
 
         // updates the FPS
         static float elapsedT = 0.0f;
@@ -859,7 +927,7 @@ protected:
         // Parameters
         // Camera FOV-y, Near Plane and Far Plane
         const float FOVy = glm::radians(45.0f);
-        const float nearPlane = 0.1f;
+        const float nearPlane = 0.5f; //Fix for house cornering flickering
         const float farPlane = 100.f;
         // Player starting point
         const glm::vec3 StartingPosition = glm::vec3(0.0, 0.0, 5);
@@ -975,7 +1043,8 @@ protected:
             Yaw -= xoffset * (ROT_SPEED * mouseSensitivity) * deltaT;
             Pitch -= yoffset * (ROT_SPEED * mouseSensitivity) * deltaT;
 
-            const float minPitch_3rd = glm::radians(-89.0f);
+            // Prevent camera from going too low (looking from below)
+            const float minPitch_3rd = glm::radians(-10.0f);
             const float maxPitch_3rd = glm::radians(60.0f);
 
             Pitch = Pitch < minPitch_3rd ? minPitch_3rd : (Pitch > maxPitch_3rd ? maxPitch_3rd : Pitch);
@@ -1045,6 +1114,10 @@ protected:
                                      glm::mat4(1.0f), Yaw, glm::vec3(0, 1, 0));
             cameraPos = camWorld * glm::vec4(0.0f, camHeight + camDist * sin(Pitch), camDist * cos(Pitch), 1.0);
 
+            if (cameraPos.y < 0.2f) {
+                cameraPos.y = 0.2f;
+            }
+
             //Start reset to improve camera movement when changing
             if (resetCamera) {
                 dampedCamPos = cameraPos; //Teleport
@@ -1060,13 +1133,13 @@ protected:
         // ===============================
         CollisionObject playerCol;
         playerCol.addBox(
-                Pos + glm::vec3(0.0f, 1.0f, 0.0f),
-                glm::vec3(1.5f, 2.0f, 1.5f)
+            Pos + glm::vec3(0.0f, 1.0f, 0.0f),
+            glm::vec3(1.5f, 2.0f, 1.5f)
         );
 
-        for (const auto& house : houseCollisions) {
+        for (const auto &house: houseCollisions) {
             if (playerCol.collidesWith(house)) {
-                Pos = oldPos;   
+                Pos = oldPos;
                 break;
             }
         }
