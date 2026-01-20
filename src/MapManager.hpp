@@ -43,7 +43,8 @@ public:
         CookTorranceChar,
         CookTorranceNoiseSimp,
         SkyBox,
-        PBR
+        PBR,
+        Vegetation
     };
 
     // -------------------------------------------------------
@@ -233,6 +234,7 @@ public:
             case CookTorranceNoiseSimp: return "CookTorranceNoiseSimp";
             case SkyBox: return "SkyBox";
             case PBR: return "PBR";
+            case Vegetation: return "Vegetation";
         }
         return "";
     }
@@ -375,6 +377,70 @@ public:
         return elements;
     }
 
+    static std::vector<Element> placeVegetationInGrid(float height = 200.0, float length = 200.0,
+                                                      float x_offset = 50.0, float z_offset = 50.0,
+                                                      float minDistance = 2.5f,
+                                                      std::vector<std::string> modelIds = {"tree"},
+                                                      std::string textureId = "tree_tex",
+                                                      const std::vector<Element>& obstacles = {}) {
+        std::vector<Element> elements;
+
+        // --- MODIFICA QUI ---
+        // Usa 0.1 (10%) o addirittura 0.05 (5%) se ne vuoi pochissimi.
+        // Questo riduce drasticamente il numero totale, ma permette loro di stare vicini.
+        int targetCount = (int)((height * length) / (minDistance * minDistance)) * 0.1;
+
+        if (targetCount > 1000) targetCount = 1000;
+
+        // ... Il resto rimane UGUALE (copialo dal codice precedente) ...
+        int idNumber = 0;
+        std::uniform_real_distribution<float> randomX(0.0f, height);
+        std::uniform_real_distribution<float> randomZ(0.0f, length);
+        std::uniform_real_distribution<float> scaleDist(0.3f, 0.7f);
+        std::uniform_real_distribution<float> rotDist(0.0f, 360.0f);
+        std::uniform_int_distribution<int> modelSelector(0, modelIds.size() - 1);
+        float obstacleSafeRadius = 11.0f;
+
+        for (int i = 0; i < targetCount; i++) {
+            float plantX = randomX(gen) - x_offset;
+            float plantZ = randomZ(gen) - z_offset;
+            float roadSafeZone = 12.0f;
+            if (std::abs(plantX) < roadSafeZone || std::abs(plantZ) < roadSafeZone) continue;
+
+            bool hitObstacle = false;
+            for (const auto& obs : obstacles) {
+                float dx = plantX - obs.translate[0];
+                float dz = plantZ - obs.translate[2];
+                float distSq = dx*dx + dz*dz;
+                if (distSq < (obstacleSafeRadius * obstacleSafeRadius)) {
+                    hitObstacle = true; break;
+                }
+            }
+            if (hitObstacle) continue;
+
+            bool tooClose = false;
+            for (const auto& el : elements) {
+                float dx = plantX - el.translate[0];
+                float dz = plantZ - el.translate[2];
+                float distSq = dx*dx + dz*dz;
+                if (distSq < (minDistance * minDistance)) {
+                    tooClose = true; break;
+                }
+            }
+            if (tooClose) continue;
+
+            idNumber++;
+            int selectedIndex = modelSelector(gen);
+            elements.emplace_back(createElement(
+                "veg_" + std::to_string(idNumber) + "_" + std::to_string(rand()),
+                modelIds[selectedIndex], {textureId, "pnois"},
+                {plantX, 0.0f, plantZ}, {0.0f, rotDist(gen), 0.0f},
+                {scaleDist(gen), scaleDist(gen), scaleDist(gen)}
+            ));
+        }
+        return elements;
+    }
+
     // -------------------------------------------------------
     // BUILD JSON DOCUMENT
     // -------------------------------------------------------
@@ -431,7 +497,12 @@ public:
             {"assets/models/Castle/SPW_Medieval_Box_03.mgcg", "box3"},
             {"assets/models/Castle/SPW_Medieval_Barrel.mgcg", "barrel"},
             {"assets/models/Castle/SPW_Medieval_Props_01.mgcg", "well"},
-            {"assets/models/Castle/SPW_Terrain_Grass_Flat.mgcg", "ground"}
+            {"assets/models/Castle/SPW_Terrain_Grass_Flat.mgcg", "ground"},
+            {"assets/models/Vegetation/vegetation.016.mgcg", "tree1"},
+            {"assets/models/Vegetation/vegetation.025.mgcg", "tree2"},
+            {"assets/models/Vegetation/vegetation.028.mgcg", "tree3"},
+            {"assets/models/Vegetation/vegetation.029.mgcg", "tree4"},
+
         };
 
         texturePaths = {
@@ -440,12 +511,18 @@ public:
             {"assets/textures/Castle_Textures/SPW_Natures_02.png", "medieval_nature2"},
             {"assets/textures/Perlin_noise.png", "pnois"},
             {"assets/textures/day_sky.png", "skybox"},
+            {"assets/textures/Vegetation/Textures_Vegetation.png", "tree_tex"}
         };
     }
 
+    // -------------------------------------------------------
+    // MAIN FUNCTION: Generate the scene.json file
+    // -------------------------------------------------------
     static void makeJson() {
         Initialize();
         jsonPath = "assets/models/scene.json";
+
+        // --- 1. ASSETS & MODELS ---
         std::vector<AssetFile> assetFiles = {
             createAssetFile("hm", "assets/models/uomo.gltf", GLTF),
             createAssetFile("a1", "assets/models/running.gltf", GLTF),
@@ -454,77 +531,80 @@ public:
             createAssetFile("a4", "assets/models/waving.gltf", GLTF),
             createAssetFile("ct", "assets/models/MainSceneEnvOnly.gltf", GLTF)
         };
-        std::vector<Model> models = makeModels();
-        std::vector<Model> modelsToAdd = {
-            createModel("hm0", "VDchar", "Mesh", ASSET, "Ch01_Body", 0, "hm"),
-            createModel("hm1", "VDchar", "Mesh", ASSET, "Ch01_Body", 1, "hm"),
-            createModel("skybox", "VDskybox", "assets/models/SkyBoxCube.obj", OBJ),
-        };
 
-        for (const auto &model: modelsToAdd) {
-            models.emplace_back(model);
-        }
+        std::vector<Model> models = makeModels();
+        models.emplace_back(createModel("hm0", "VDchar", "Mesh", ASSET, "Ch01_Body", 0, "hm"));
+        models.emplace_back(createModel("hm1", "VDchar", "Mesh", ASSET, "Ch01_Body", 1, "hm"));
+        models.emplace_back(createModel("skybox", "VDskybox", "assets/models/SkyBoxCube.obj", OBJ));
 
         std::vector<Texture> textures = makeTextures();
+        textures.emplace_back(createTexture("st", "assets/textures/uomo/Ch01_1001_Diffuse.png", C));
 
-        std::vector<Texture> texturesToAdd = {
-            createTexture("st", "assets/textures/uomo/Ch01_1001_Diffuse.png", C),
-        };
-
-        for (const auto &texture: texturesToAdd) {
-            textures.emplace_back(texture);
-        }
-
+        // --- 2. STATIC ELEMENTS ---
         std::vector<Element> charElements = {
             createElement("hm0", "hm0", {"st"}),
             createElement("hm1", "hm1", {"st"}),
         };
+
         std::vector<Element> simpElements = placeGrassGround();
 
-        for (const auto &simpElement: createPaths({-200, 0, 0}, {200, 0, 0}, 20, 0)) {
-            simpElements.emplace_back(simpElement);
-        }
-
-        for (const auto &simpElement: createPaths({0, 0, -200}, {0, 0, 200}, 0, 20, {0.5, 1, 1}, 20)) {
-            simpElements.emplace_back(simpElement);
-        }
-
-        std::vector<Element> simpElementsHouses = placeHouses(150, 150, -20, -20, 30, 0, {90, 180, 0});
-
-        for (const auto &simpElement: placeHouses(150, 150, -20, 140, 30, 25)) {
-            simpElementsHouses.emplace_back(simpElement);
-        }
-
-        for (const auto &simpElement: placeHouses(150, 150, 140, -20, 30, 50, {90, 180, 0})) {
-            simpElementsHouses.emplace_back(simpElement);
-        }
-
-        for (const auto &simpElement: placeHouses(150, 150, 140, 140, 30, 75)) {
-            simpElementsHouses.emplace_back(simpElement);
-        }
+        auto paths1 = createPaths({-200, 0, 0}, {200, 0, 0}, 20, 0);
+        simpElements.insert(simpElements.end(), paths1.begin(), paths1.end());
+        auto paths2 = createPaths({0, 0, -200}, {0, 0, 200}, 0, 20, {0.5, 1, 1}, 20);
+        simpElements.insert(simpElements.end(), paths2.begin(), paths2.end());
 
 
-        std::vector<Element> simpElementsToAdd{
-            createElement("ww1", "well", {"medieval_buildings", "pnois"}, {0, 0, 0}, {90, 0, 0}, {1, 1, 1})
-        };
+        // --- 3. HOUSES GENERATION ---
+        float areaW = 150.0f; float areaL = 150.0f; float gridSize = 30.0f;
 
-        for (const auto &simpElement: simpElementsToAdd) {
-            simpElementsHouses.emplace_back(simpElement);
-        }
+        std::vector<Element> h1 = placeHouses(areaW, areaL, -20, -20, gridSize, 0, {90, 180, 0});
+        std::vector<Element> h2 = placeHouses(areaW, areaL, -20, 140, gridSize, 25);
+        std::vector<Element> h3 = placeHouses(areaW, areaL, 140, -20, gridSize, 50, {90, 180, 0});
+        std::vector<Element> h4 = placeHouses(areaW, areaL, 140, 140, gridSize, 75);
 
-        for (const auto &simpElement: simpElementsHouses) {
-            simpElements.emplace_back(simpElement);
-        }
+        std::vector<Element> extras;
+        extras.emplace_back(createElement("ww1", "well", {"medieval_buildings", "pnois"}, {0, 0, 0}, {90, 0, 0}, {1, 1, 1}));
 
-        std::vector<Element> skyboxElements = {
-            createElement("skybox", "skybox", {"skybox"})
-        };
+        // --- IMPORTANT: CREATE A MASTER LIST OF ALL OBSTACLES ---
+        // This ensures tree generation avoids ALL houses, no matter which area we are filling.
+        std::vector<Element> allObstacles;
+        allObstacles.insert(allObstacles.end(), h1.begin(), h1.end());
+        allObstacles.insert(allObstacles.end(), h2.begin(), h2.end());
+        allObstacles.insert(allObstacles.end(), h3.begin(), h3.end());
+        allObstacles.insert(allObstacles.end(), h4.begin(), h4.end());
+        allObstacles.insert(allObstacles.end(), extras.begin(), extras.end());
+
+
+        // --- 4. VEGETATION PLACEMENT ---
+        std::vector<std::string> treeModels = {"tree1", "tree2", "tree3", "tree4"};
+        float treeSpacing = 4.0f; // Min distance between trees
+
+        // Pass 'allObstacles' to every call
+        std::vector<Element> vegElements = placeVegetationInGrid(areaW, areaL, -20, -20, treeSpacing, treeModels, "tree_tex", allObstacles);
+
+        auto v2 = placeVegetationInGrid(areaW, areaL, -20, 140, treeSpacing, treeModels, "tree_tex", allObstacles);
+        vegElements.insert(vegElements.end(), v2.begin(), v2.end());
+
+        auto v3 = placeVegetationInGrid(areaW, areaL, 140, -20, treeSpacing, treeModels, "tree_tex", allObstacles);
+        vegElements.insert(vegElements.end(), v3.begin(), v3.end());
+
+        auto v4 = placeVegetationInGrid(areaW, areaL, 140, 140, treeSpacing, treeModels, "tree_tex", allObstacles);
+        vegElements.insert(vegElements.end(), v4.begin(), v4.end());
+
+
+        // --- 5. MERGE EVERYTHING TO SIMP ELEMENTS ---
+        simpElements.insert(simpElements.end(), allObstacles.begin(), allObstacles.end());
+
+
+        // --- 6. INSTANCES ---
+        std::vector<Element> skyboxElements = { createElement("skybox", "skybox", {"skybox"}) };
+
         std::vector<Istance> istances = {
-            createInstance(CookTorranceChar, charElements),
-            createInstance(CookTorranceNoiseSimp, simpElements),
-            createInstance(SkyBox, skyboxElements)
+            createInstance(CookTorranceChar, charElements),       // Idx 0
+            createInstance(CookTorranceNoiseSimp, simpElements),  // Idx 1
+            createInstance(SkyBox, skyboxElements),               // Idx 2
+            createInstance(Vegetation, vegElements)               // Idx 3
         };
-
 
         json jsonobj = buildJson(assetFiles, models, textures, istances);
         saveJson(jsonobj, jsonPath);

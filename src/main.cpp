@@ -41,6 +41,7 @@ struct GlobalUniformBufferObject {
     alignas(16) glm::vec3 lightDir;
     alignas(16) glm::vec4 lightColor;
     alignas(16) glm::vec3 eyePos;
+    alignas(4) float time; //Wind animation
 };
 
 struct UniformBufferObjectChar {
@@ -72,6 +73,7 @@ protected:
 
     // Descriptor Layouts [what will be passed to the shaders]
     DescriptorSetLayout DSLlocalChar, DSLlocalSimp, DSLlocalPBR, DSLglobal, DSLskyBox;
+    DescriptorSetLayout DSLveg; // Layout for vegetation
 
     // Vertex formants, Pipelines [Shader couples] and Render passes
     VertexDescriptor VDchar;
@@ -80,6 +82,7 @@ protected:
     VertexDescriptor VDtan;
     RenderPass RP;
     Pipeline Pchar, PsimpObj, PskyBox, P_PBR;
+    Pipeline Pveg; // Pipeline for vegetation rendering
     //*DBG*/Pipeline PDebug;
 
     // Models, textures and Descriptors (values assigned to the uniforms)
@@ -247,6 +250,20 @@ protected:
                              {4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3, 1}
                          });
 
+        DSLveg.init(this, {
+                        // Binding 0: Uniform Buffer (Matrices)
+                        {
+                            0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT,
+                            sizeof(UniformBufferObjectSimp), 1
+                        },
+                        // Binding 1: Texture (Albedo/Color) - Fragment Shader
+                        {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 1},
+                        // Binding 2: Texture (Noise) - Used in Vertex or Fragment
+                        {
+                            2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1, 1
+                        }
+                    });
         VDchar.init(this, {
                         {0, sizeof(VertexChar), VK_VERTEX_INPUT_RATE_VERTEX}
                     }, {
@@ -350,7 +367,11 @@ protected:
         P_PBR.init(this, &VDtan, "shaders/SimplePosNormUvTan.vert.spv", "shaders/PBR.frag.spv",
                    {&DSLglobal, &DSLlocalPBR});
 
-        PRs.resize(4);
+        Pveg.init(this, &VDsimp, "shaders/Vegetation.vert.spv", "shaders/Vegetation.frag.spv", {&DSLglobal, &DSLveg});
+        Pveg.setCullMode(VK_CULL_MODE_NONE);
+        Pveg.setPolygonMode(VK_POLYGON_MODE_FILL);
+
+        PRs.resize(5);
         PRs[0].init("CookTorranceChar", {
                         {
                             &Pchar, {
@@ -398,6 +419,19 @@ protected:
                             }
                         }
                     }, /*TotalNtextures*/4, &VDtan);
+
+        PRs[4].init("Vegetation", {
+                        {
+                            &Pveg, {
+                                // Use the vegetation pipeline
+                                /*DSLglobal*/ {},
+                                /*DSLlocal*/ {
+                                    {true, 0, {}}, // Texture 0: Albedo (Tree/Bush)
+                                    {true, 1, {}} // Texture 1: Noise (for Wind)
+                                }
+                            }
+                        }
+                    }, 2, &VDsimp); // Uses 2 textures total
 
         // Models, textures and Descriptors (values assigned to the uniforms)
 
@@ -483,6 +517,8 @@ protected:
         PskyBox.create(&RP);
         P_PBR.create(&RP);
 
+        Pveg.create(&RP); // Create the vegetation pipeline
+
         SC.pipelinesAndDescriptorSetsInit();
         txt.pipelinesAndDescriptorSetsInit();
     }
@@ -493,6 +529,9 @@ protected:
         PsimpObj.cleanup();
         PskyBox.cleanup();
         P_PBR.cleanup();
+
+        Pveg.cleanup(); //Cleanup vegetation pipeline
+
         RP.cleanup();
 
         SC.pipelinesAndDescriptorSetsCleanup();
@@ -506,12 +545,17 @@ protected:
         DSLlocalSimp.cleanup();
         DSLlocalPBR.cleanup();
         DSLskyBox.cleanup();
+
+        DSLveg.cleanup(); // Destroy layout
+
         DSLglobal.cleanup();
 
         Pchar.destroy();
         PsimpObj.destroy();
         PskyBox.destroy();
         P_PBR.destroy();
+
+        Pveg.destroy(); // Destroy pipeline object
 
         RP.destroy();
 
@@ -812,6 +856,8 @@ protected:
         gubo.lightColor = currentLightColor;
         gubo.eyePos = cameraPos;
 
+        gubo.time = (float)glfwGetTime(); // Pass current time to shader for wind animation
+
         // --- DAY/NIGHT CYCLE END ---
 
         gubo.eyePos = cameraPos;
@@ -867,6 +913,18 @@ protected:
         sbubo.mvpMat = ViewPrj * glm::translate(glm::mat4(1), cameraPos) * glm::scale(glm::mat4(1), glm::vec3(100.0f));
         sbubo.settings.x = blendFactor;
         SC.TI[2].I[0].DS[0][0]->map(currentImage, &sbubo, 0);
+
+        for (instanceId = 0; instanceId < SC.TI[3].InstanceCount; instanceId++) {
+            ubos.mMat = SC.TI[3].I[instanceId].Wm;
+            ubos.mvpMat = ViewPrj * ubos.mMat;
+            ubos.nMat = glm::inverse(glm::transpose(ubos.mMat));
+
+            // Set 0: Global Uniforms (Luce, Tempo, Camera)
+            SC.TI[3].I[instanceId].DS[0][0]->map(currentImage, &gubo, 0);
+
+            // Set 1: Local Uniforms (Matrici MVP della pianta)
+            SC.TI[3].I[instanceId].DS[0][1]->map(currentImage, &ubos, 0);
+        }
 
         //TODO THIS CAUSED SOME CRASHES WHEN THE PROGRAM WAS COMPILED AND RUNNED IDK WHY SO I COMMENTED IT BECAUSE THEORETICALLY WE DO NOT USE PBR OBJECTS PLS CHECK THIS
         // PBR objects
