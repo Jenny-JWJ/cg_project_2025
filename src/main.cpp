@@ -62,6 +62,16 @@ struct skyBoxUniformBufferObject {
     alignas(16) glm::vec4 settings; // x = blendFactor (0 night , 1 day)
 };
 
+// Matches the GLSL structure for std140 alignment
+struct PointLight {
+    alignas(16) glm::vec3 position;
+    alignas(16) glm::vec3 color;
+};
+
+struct PointLightBufferObject {
+    PointLight lights[100];
+    int numActiveLights;
+};
 
 // MAIN !
 class E09 : public BaseProject {
@@ -69,6 +79,7 @@ private:
     std::vector<CollisionObject> houseCollisions;
 
 protected:
+    PointLightBufferObject plboData;
     // Here you list all the Vulkan objects you need:
 
     // Descriptor Layouts [what will be passed to the shaders]
@@ -187,14 +198,17 @@ protected:
         firstMouse = true;
 
         // Descriptor Layouts [what will be passed to the shaders]
+        // Initialize the global Descriptor Set Layout
+        // Binding 0: Sun/Global data
+        // Binding 3: Array of 50 Point Lights for the lamps
         DSLglobal.init(this, {
-                           // this array contains the binding:
-                           // first  element : the binding number
-                           // second element : the type of element (buffer or texture)
-                           // third  element : the pipeline stage where it will be used
                            {
                                0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS,
                                sizeof(GlobalUniformBufferObject), 1
+                           },
+                           {
+                               1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, // CAMBIATO DA 3 A 1
+                               sizeof(PointLightBufferObject), 1
                            }
                        });
 
@@ -504,6 +518,18 @@ protected:
                   false, false, true, TAL_CENTER, TRH_CENTER, TRV_MIDDLE,
                   {1.0f, 1.0f, 1.0f, 1.0f}, // Colour: White
                   {0.0f, 0.0f, 0.0f, 1.0f}); // Border: Black
+
+        // --- POINT LIGHTS SETUP ---
+        plboData.numActiveLights = 0;
+        for (int i = 0; i < SC.TI[1].InstanceCount; i++) {
+            auto &inst = SC.TI[1].I[i];
+            if (inst.id->find("lamp") != std::string::npos && plboData.numActiveLights < 70) {
+                plboData.lights[plboData.numActiveLights].position = glm::vec3(inst.Wm[3][0], 4.5f, inst.Wm[3][2]);
+                plboData.lights[plboData.numActiveLights].color = glm::vec3(1.0f, 0.7f, 0.4f);
+                plboData.numActiveLights++;
+            }
+        }
+        std::cout << "[Light Setup] Found " << plboData.numActiveLights << " lamps in the scene." << std::endl;
     }
 
     // Here you create your pipelines and Descriptor Sets!
@@ -820,6 +846,19 @@ protected:
         // 4. Calculate Phase based on Sun Height (Y)
         float sunHeight = currentLightDir.y;
 
+        // --- LOGICA LUCI DINAMICHE ---
+        // lampIntensity va a 0 quando il sole è alto, e a 1 quando il sole scende
+        float lampIntensity = glm::clamp(1.0f - (sunHeight + 0.1f) / 0.3f, 0.0f, 1.0f);
+
+        // Moltiplichiamo per 10.0f per renderle MOLTO più luminose
+        float brightness = 1.0f;
+        glm::vec3 currentLampColor = glm::vec3(1.0f, 0.7f, 0.4f) * (lampIntensity * brightness);
+
+        // Applichiamo il colore/intensità a tutti i lampioni trovati
+        for (int i = 0; i < plboData.numActiveLights; i++) {
+            plboData.lights[i].color = currentLampColor;
+        }
+
         // --- LOGIC: DAY vs SUNSET vs NIGHT ---
 
         if (sunHeight > 0.2f) {
@@ -856,7 +895,7 @@ protected:
         gubo.lightColor = currentLightColor;
         gubo.eyePos = cameraPos;
 
-        gubo.time = (float)glfwGetTime(); // Pass current time to shader for wind animation
+        gubo.time = (float) glfwGetTime(); // Pass current time to shader for wind animation
 
         // --- DAY/NIGHT CYCLE END ---
 
@@ -894,6 +933,8 @@ protected:
             }
 
             SC.TI[0].I[instanceId].DS[0][0]->map(currentImage, &gubo, 0); // Set 0
+            // Link the Point Light buffer to Binding 3 for the character
+            SC.TI[0].I[instanceId].DS[0][0]->map(currentImage, &plboData, 1);
             SC.TI[0].I[instanceId].DS[0][1]->map(currentImage, &uboc, 0); // Set 1
         }
 
@@ -905,6 +946,8 @@ protected:
             ubos.nMat = glm::inverse(glm::transpose(ubos.mMat));
 
             SC.TI[1].I[instanceId].DS[0][0]->map(currentImage, &gubo, 0); // Set 0
+            // Link the Point Light buffer to Binding 3 for static objects
+            SC.TI[1].I[instanceId].DS[0][0]->map(currentImage, &plboData, 1);
             SC.TI[1].I[instanceId].DS[0][1]->map(currentImage, &ubos, 0); // Set 1
         }
 
@@ -914,15 +957,19 @@ protected:
         sbubo.settings.x = blendFactor;
         SC.TI[2].I[0].DS[0][0]->map(currentImage, &sbubo, 0);
 
+        // vegetation update
         for (instanceId = 0; instanceId < SC.TI[3].InstanceCount; instanceId++) {
             ubos.mMat = SC.TI[3].I[instanceId].Wm;
             ubos.mvpMat = ViewPrj * ubos.mMat;
             ubos.nMat = glm::inverse(glm::transpose(ubos.mMat));
 
-            // Set 0: Global Uniforms (Luce, Tempo, Camera)
+            // Set 0: Global Uniforms (Binding 0)
             SC.TI[3].I[instanceId].DS[0][0]->map(currentImage, &gubo, 0);
 
-            // Set 1: Local Uniforms (Matrici MVP della pianta)
+            // --- ADD THIS LINE: You MUST map binding 3 even for trees! ---
+            SC.TI[3].I[instanceId].DS[0][0]->map(currentImage, &plboData, 1);
+
+            // Set 1: Local Uniforms (Binding 0)
             SC.TI[3].I[instanceId].DS[0][1]->map(currentImage, &ubos, 0);
         }
 

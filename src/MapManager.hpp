@@ -7,10 +7,13 @@
 
 #include <string>
 #include <fstream>
-#include <json.hpp>
+#include <vector>
+#include <map>        // Required for std::map
+#include <cmath>      // Required for fabs()
 #include <random>
-#include <iostream>
+#include <algorithm>  // Required for std::max
 #include <glm/vec3.hpp>
+#include <json.hpp>
 
 
 using json = nlohmann::json;
