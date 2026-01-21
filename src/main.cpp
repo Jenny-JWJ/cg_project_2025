@@ -85,6 +85,7 @@ protected:
     // Descriptor Layouts [what will be passed to the shaders]
     DescriptorSetLayout DSLlocalChar, DSLlocalSimp, DSLlocalPBR, DSLglobal, DSLskyBox;
     DescriptorSetLayout DSLveg; // Layout for vegetation
+    DescriptorSetLayout DSLdebug; //Layout for collision box
 
     // Vertex formants, Pipelines [Shader couples] and Render passes
     VertexDescriptor VDchar;
@@ -94,6 +95,7 @@ protected:
     RenderPass RP;
     Pipeline Pchar, PsimpObj, PskyBox, P_PBR;
     Pipeline Pveg; // Pipeline for vegetation rendering
+    Pipeline Pdebug; // Pipeline for rendering of collision box
     //*DBG*/Pipeline PDebug;
 
     // Models, textures and Descriptors (values assigned to the uniforms)
@@ -278,6 +280,14 @@ protected:
                             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1, 1
                         }
                     });
+
+        DSLdebug.init(this, {
+                {
+                        0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT,
+                        sizeof(UniformBufferObjectSimp), 1
+                },
+        });
+
         VDchar.init(this, {
                         {0, sizeof(VertexChar), VK_VERTEX_INPUT_RATE_VERTEX}
                     }, {
@@ -385,7 +395,12 @@ protected:
         Pveg.setCullMode(VK_CULL_MODE_NONE);
         Pveg.setPolygonMode(VK_POLYGON_MODE_FILL);
 
-        PRs.resize(5);
+        Pdebug.init(this, &VDsimp, "shaders/SimplePosNormUV.vert.spv", "shaders/CookTorrance.frag.spv",
+                    {&DSLglobal, &DSLdebug});
+        Pdebug.setCullMode(VK_CULL_MODE_NONE);
+        Pdebug.setPolygonMode(VK_POLYGON_MODE_FILL);
+
+        PRs.resize(6);
         PRs[0].init("CookTorranceChar", {
                         {
                             &Pchar, {
@@ -447,6 +462,19 @@ protected:
                         }
                     }, 2, &VDsimp); // Uses 2 textures total
 
+        PRs[5].init("DebugCollisionBoxes", {
+                {
+                        &Pdebug, {
+                        // Use the vegetation pipeline
+                        /*DSLglobal*/ {},
+                        /*DSLlocal*/ {
+                                              {true, 0, {}}, // Texture 0: Albedo (Tree/Bush)
+                                              {true, 1, {}} // Texture 1: Noise (for Wind)
+                                      }
+                }
+                }
+        }, 2, &VDsimp); // Uses 2 textures total
+
         // Models, textures and Descriptors (values assigned to the uniforms)
 
         // sets the size of the Descriptor Set Pool
@@ -487,6 +515,7 @@ protected:
                     glm::vec3(1.0f, 1.0f, 1.0f)
                 );
             }
+
             houseCollisions.push_back(Col);
         }
 
@@ -544,6 +573,7 @@ protected:
         P_PBR.create(&RP);
 
         Pveg.create(&RP); // Create the vegetation pipeline
+        Pdebug.create(&RP); //Create the debug pipeline
 
         SC.pipelinesAndDescriptorSetsInit();
         txt.pipelinesAndDescriptorSetsInit();
@@ -557,6 +587,7 @@ protected:
         P_PBR.cleanup();
 
         Pveg.cleanup(); //Cleanup vegetation pipeline
+        Pdebug.cleanup(); //Cleanup debug pipeline
 
         RP.cleanup();
 
@@ -574,6 +605,8 @@ protected:
 
         DSLveg.cleanup(); // Destroy layout
 
+        DSLdebug.cleanup();
+
         DSLglobal.cleanup();
 
         Pchar.destroy();
@@ -582,6 +615,7 @@ protected:
         P_PBR.destroy();
 
         Pveg.destroy(); // Destroy pipeline object
+        Pdebug.destroy();
 
         RP.destroy();
 
