@@ -10,6 +10,7 @@
 #include <json.hpp>
 #include <random>
 #include <iostream>
+#include <glm/vec3.hpp>
 
 
 using json = nlohmann::json;
@@ -335,14 +336,22 @@ public:
         int x_step = x_pass != 0 ? diff_x / x_pass : 0;
         int z_step = z_pass != 0 ? diff_z / z_pass : 0;
         int steps = std::max(x_step, z_step);
+
         std::string idName = "path_ground";
         float posx = starting_pos[0];
         float posz = starting_pos[2];
+
         for (int i = 0; i < steps; i++) {
             idNumber++;
-            elements.emplace_back(createElement(idName + std::to_string(idNumber), "ground",
-                                                {"medieval_nature1", "pnois"}, {posx, 0.1, posz}, {90, 0, 0},
-                                                {scale[0], scale[1], scale[2]}));
+            elements.emplace_back(createElement(
+                idName + std::to_string(idNumber),
+                "ground",
+                {"medieval_buildings", "pnois"},
+                {posx, 0.01f, posz},
+                {90, 0, 0},
+                {scale[0], scale[1], scale[2]}
+            ));
+
             if (i < x_step)
                 posx += x_pass;
             if (i < z_step)
@@ -382,13 +391,13 @@ public:
                                                       float minDistance = 2.5f,
                                                       std::vector<std::string> modelIds = {"tree"},
                                                       std::string textureId = "tree_tex",
-                                                      const std::vector<Element>& obstacles = {}) {
+                                                      const std::vector<Element> &obstacles = {}) {
         std::vector<Element> elements;
 
         // --- MODIFICA QUI ---
         // Usa 0.1 (10%) o addirittura 0.05 (5%) se ne vuoi pochissimi.
         // Questo riduce drasticamente il numero totale, ma permette loro di stare vicini.
-        int targetCount = (int)((height * length) / (minDistance * minDistance)) * 0.1;
+        int targetCount = (int) ((height * length) / (minDistance * minDistance)) * 0.1;
 
         if (targetCount > 1000) targetCount = 1000;
 
@@ -408,23 +417,25 @@ public:
             if (std::abs(plantX) < roadSafeZone || std::abs(plantZ) < roadSafeZone) continue;
 
             bool hitObstacle = false;
-            for (const auto& obs : obstacles) {
+            for (const auto &obs: obstacles) {
                 float dx = plantX - obs.translate[0];
                 float dz = plantZ - obs.translate[2];
-                float distSq = dx*dx + dz*dz;
+                float distSq = dx * dx + dz * dz;
                 if (distSq < (obstacleSafeRadius * obstacleSafeRadius)) {
-                    hitObstacle = true; break;
+                    hitObstacle = true;
+                    break;
                 }
             }
             if (hitObstacle) continue;
 
             bool tooClose = false;
-            for (const auto& el : elements) {
+            for (const auto &el: elements) {
                 float dx = plantX - el.translate[0];
                 float dz = plantZ - el.translate[2];
-                float distSq = dx*dx + dz*dz;
+                float distSq = dx * dx + dz * dz;
                 if (distSq < (minDistance * minDistance)) {
-                    tooClose = true; break;
+                    tooClose = true;
+                    break;
                 }
             }
             if (tooClose) continue;
@@ -436,6 +447,148 @@ public:
                 modelIds[selectedIndex], {textureId, "pnois"},
                 {plantX, 0.0f, plantZ}, {0.0f, rotDist(gen), 0.0f},
                 {scaleDist(gen), scaleDist(gen), scaleDist(gen)}
+            ));
+        }
+        return elements;
+    }
+
+    // -------------------------------------------------------
+    // HELPER FUNCTION: Place rocks STRICTLY ON THE ROAD (Randomized & Tiny)
+    // -------------------------------------------------------
+    static std::vector<Element> placeRocksOnRoad(int count = 40,
+                                                 float mapLimit = 200.0f,
+                                                 std::vector<std::string> modelIds = {"rocks1"},
+                                                 std::string textureId = "medieval_buildings") {
+        std::vector<Element> elements;
+
+        // Random Generators
+
+        // 1. Position along the road length (Longitudinal)
+        std::uniform_real_distribution<float> randomPos(-mapLimit, mapLimit);
+
+        // 2. Position across the road width (Lateral)
+        // Keep strictly centered (-1.5 to +1.5) to ensure they stay on the pavement
+        std::uniform_real_distribution<float> randomWidth(-1.5f, 1.5f);
+
+        // 3. Scale: Tiny pebbles/debris
+        // Range 0.08 - 0.20 makes them look like small stones
+        std::uniform_real_distribution<float> scaleDist(0.08f, 0.2f);
+
+        // 4. Random Rotation
+        std::uniform_real_distribution<float> rotDist(0.0f, 360.0f);
+
+        // 5. Model Selector (Picks a random index)
+        std::uniform_int_distribution<int> modelSelector(0, modelIds.size() - 1);
+
+        for (int i = 0; i < count; i++) {
+            float rockX, rockZ;
+            int direction = rand() % 2;
+
+            if (direction == 0) {
+                // Horizontal Road
+                rockX = randomPos(gen);
+                rockZ = randomWidth(gen);
+            } else {
+                // Vertical Road
+                rockX = randomWidth(gen);
+                rockZ = randomPos(gen);
+            }
+
+            // Lower Height (Y)
+            // 0.05f ensures tiny rocks sit on the ground and don't float
+            float rockY = 0.05f;
+
+            // Overlap check
+            bool tooClose = false;
+            for (const auto& el : elements) {
+                float dx = rockX - el.translate[0];
+                float dz = rockZ - el.translate[2];
+                // Distance threshold 0.3 because rocks are small
+                if ((dx*dx + dz*dz) < 0.3f) { tooClose = true; break; }
+            }
+            if (tooClose) { i--; continue; }
+
+            // Pick Random Model
+            int selectedIndex = modelSelector(gen);
+            std::string currentModel = modelIds[selectedIndex];
+
+            // Create Element
+            elements.emplace_back(createElement(
+                "rock_" + std::to_string(i) + "_" + std::to_string(rand()),
+                currentModel,
+                {textureId, "pnois"},
+                {rockX, rockY, rockZ},
+                {0.0f, rotDist(gen), 0.0f},
+                {scaleDist(gen), scaleDist(gen), scaleDist(gen)}
+            ));
+        }
+        return elements;
+    }
+
+    // -------------------------------------------------------
+    // HELPER FUNCTION: Place Street Lights (EXACTLY ON ROAD EDGE)
+    // -------------------------------------------------------
+    static std::vector<Element> placeStreetLights(float mapLimit = 200.0f,
+                                                  int axis = 0,
+                                                  float spacing = 25.0f,
+                                                  std::string modelId = "lamp1",
+                                                  std::string textureId = "lamp_tex") {
+        std::vector<Element> elements;
+
+        float start = -mapLimit;
+        float end = mapLimit;
+        int count = (int)((end - start) / spacing);
+
+        // --- FIX DISTANCE: EXACTLY ON EDGE ---
+        // Road width is 20 total (-10 to +10).
+        // Setting this to 10.0f places the origin of the lamp exactly on the road line.
+        float offsetFromCenter = 6.0f;
+
+        for (int i = 0; i <= count; i++) {
+            float currentPos = start + (i * spacing);
+
+            // Skip intersection
+            if (std::abs(currentPos) < 15.0f) continue;
+
+            glm::vec3 posLeft, posRight;
+            glm::vec3 rotLeft, rotRight;
+
+            float xRot = 90.0f;
+
+            if (axis == 0) {
+                // Horizontal Road
+                posLeft = {currentPos, 0.0f, offsetFromCenter};
+                rotLeft = {xRot, 180.0f, 0.0f};
+
+                posRight = {currentPos, 0.0f, -offsetFromCenter};
+                rotRight = {xRot, 0.0f, 0.0f};
+            } else {
+                // Vertical Road
+                posLeft = {offsetFromCenter, 0.0f, currentPos};
+                rotLeft = {xRot, 90.0f, 0.0f};
+
+                posRight = {-offsetFromCenter, 0.0f, currentPos};
+                rotRight = {xRot, -90.0f, 0.0f};
+            }
+
+            std::vector<float> scaleVec = {1.0f, 1.0f, 1.0f};
+
+            // Left Lamp
+            elements.emplace_back(createElement(
+                "lamp_" + std::to_string(axis) + "_L_" + std::to_string(i),
+                modelId, {textureId, "pnois"},
+                {posLeft.x, posLeft.y, posLeft.z},
+                {rotLeft.x, rotLeft.y, rotLeft.z},
+                scaleVec
+            ));
+
+            // Right Lamp
+            elements.emplace_back(createElement(
+                "lamp_" + std::to_string(axis) + "_R_" + std::to_string(i),
+                modelId, {textureId, "pnois"},
+                {posRight.x, posRight.y, posRight.z},
+                {rotRight.x, rotRight.y, rotRight.z},
+                scaleVec
             ));
         }
         return elements;
@@ -502,6 +655,10 @@ public:
             {"assets/models/Vegetation/vegetation.025.mgcg", "tree2"},
             {"assets/models/Vegetation/vegetation.028.mgcg", "tree3"},
             {"assets/models/Vegetation/vegetation.029.mgcg", "tree4"},
+            {"assets/models/Vegetation/vegetation.051.mgcg", "rocks1"},
+            {"assets/models/Vegetation/vegetation.052.mgcg", "rocks2"},
+            {"assets/models/Vegetation/vegetation.053.mgcg", "rocks3"},
+            {"assets/models/Castle/SPW_Medieval_Light.mgcg", "lamp1"}
 
         };
 
@@ -511,7 +668,9 @@ public:
             {"assets/textures/Castle_Textures/SPW_Natures_02.png", "medieval_nature2"},
             {"assets/textures/Perlin_noise.png", "pnois"},
             {"assets/textures/day_sky.png", "skybox"},
-            {"assets/textures/Vegetation/Textures_Vegetation.png", "tree_tex"}
+            {"assets/textures/Vegetation/Textures_Vegetation.png", "tree_tex"},
+            {"assets/textures/Vegetation/Textures_Vegetation.png", "rock_tex"},
+            {"assets/textures/Castle_Textures/SPW_Natures_01.png", "lamp_tex"}
         };
     }
 
@@ -522,7 +681,7 @@ public:
         Initialize();
         jsonPath = "assets/models/scene.json";
 
-        // --- 1. ASSETS & MODELS ---
+        // --- A. ASSETS & MODELS ---
         std::vector<AssetFile> assetFiles = {
             createAssetFile("hm", "assets/models/uomo.gltf", GLTF),
             createAssetFile("a1", "assets/models/running.gltf", GLTF),
@@ -540,21 +699,46 @@ public:
         std::vector<Texture> textures = makeTextures();
         textures.emplace_back(createTexture("st", "assets/textures/uomo/Ch01_1001_Diffuse.png", C));
 
-        // --- 2. STATIC ELEMENTS ---
+        // --- B. STATIC ELEMENTS (Ground, Roads, Rocks, Lights) ---
+        // Instance Index 1: Static objects
+
         std::vector<Element> charElements = {
             createElement("hm0", "hm0", {"st"}),
             createElement("hm1", "hm1", {"st"}),
         };
 
+        // 1. Grass Ground
         std::vector<Element> simpElements = placeGrassGround();
 
-        auto paths1 = createPaths({-200, 0, 0}, {200, 0, 0}, 20, 0);
+        // 2. Horizontal Road (Gray Color {0.4, 0.4, 0.4})
+        float widthH = 0.4f;
+        float widthV = 0.4f;
+
+        auto paths1 = createPaths({-200, 0, 0}, {200, 0, 0}, 20, 0, {2.1f, widthH, 1.0f}, 0);
         simpElements.insert(simpElements.end(), paths1.begin(), paths1.end());
-        auto paths2 = createPaths({0, 0, -200}, {0, 0, 200}, 0, 20, {0.5, 1, 1}, 20);
+
+        // 3. Vertical Road (Gray Color {0.4, 0.4, 0.4})
+        auto paths2 = createPaths({0, 0, -200}, {0, 0, 200}, 0, 20, {widthV, 2.1f, 1.0f}, 20);
         simpElements.insert(simpElements.end(), paths2.begin(), paths2.end());
 
+        // 4. Rocks on Road (Multi-model & Gray Texture)
+        std::vector<std::string> rockModels = {"rocks1", "rocks2", "rocks3"};
+        std::vector<Element> roadRocks = placeRocksOnRoad(40, 200.0f, rockModels, "medieval_buildings");
+        simpElements.insert(simpElements.end(), roadRocks.begin(), roadRocks.end());
 
-        // --- 3. HOUSES GENERATION ---
+        // 5. STREET LIGHTS GENERATION
+        // Generate lights for Horizontal Road (Axis 0)
+        // Note: Logic for "Light only at night" must be handled in the Game Loop/Shader,
+        // here we only place the physical 3D model.
+        std::vector<Element> lightsH = placeStreetLights(200.0f, 0, 25.0f, "lamp1", "lamp_tex");
+        simpElements.insert(simpElements.end(), lightsH.begin(), lightsH.end());
+
+        // Generate lights for Vertical Road (Axis 1)
+        std::vector<Element> lightsV = placeStreetLights(200.0f, 1, 25.0f, "lamp1", "lamp_tex");
+        simpElements.insert(simpElements.end(), lightsV.begin(), lightsV.end());
+
+
+        // --- C. HOUSES (Obstacles) ---
         float areaW = 150.0f; float areaL = 150.0f; float gridSize = 30.0f;
 
         std::vector<Element> h1 = placeHouses(areaW, areaL, -20, -20, gridSize, 0, {90, 180, 0});
@@ -565,8 +749,7 @@ public:
         std::vector<Element> extras;
         extras.emplace_back(createElement("ww1", "well", {"medieval_buildings", "pnois"}, {0, 0, 0}, {90, 0, 0}, {1, 1, 1}));
 
-        // --- IMPORTANT: CREATE A MASTER LIST OF ALL OBSTACLES ---
-        // This ensures tree generation avoids ALL houses, no matter which area we are filling.
+        // Master Obstacle List
         std::vector<Element> allObstacles;
         allObstacles.insert(allObstacles.end(), h1.begin(), h1.end());
         allObstacles.insert(allObstacles.end(), h2.begin(), h2.end());
@@ -575,13 +758,11 @@ public:
         allObstacles.insert(allObstacles.end(), extras.begin(), extras.end());
 
 
-        // --- 4. VEGETATION PLACEMENT ---
+        // --- D. VEGETATION ---
         std::vector<std::string> treeModels = {"tree1", "tree2", "tree3", "tree4"};
-        float treeSpacing = 4.0f; // Min distance between trees
+        float treeSpacing = 5.0f;
 
-        // Pass 'allObstacles' to every call
         std::vector<Element> vegElements = placeVegetationInGrid(areaW, areaL, -20, -20, treeSpacing, treeModels, "tree_tex", allObstacles);
-
         auto v2 = placeVegetationInGrid(areaW, areaL, -20, 140, treeSpacing, treeModels, "tree_tex", allObstacles);
         vegElements.insert(vegElements.end(), v2.begin(), v2.end());
 
@@ -592,16 +773,16 @@ public:
         vegElements.insert(vegElements.end(), v4.begin(), v4.end());
 
 
-        // --- 5. MERGE EVERYTHING TO SIMP ELEMENTS ---
+        // --- E. FINALIZE ---
         simpElements.insert(simpElements.end(), allObstacles.begin(), allObstacles.end());
 
 
-        // --- 6. INSTANCES ---
+        // --- F. INSTANCES ---
         std::vector<Element> skyboxElements = { createElement("skybox", "skybox", {"skybox"}) };
 
         std::vector<Istance> istances = {
             createInstance(CookTorranceChar, charElements),       // Idx 0
-            createInstance(CookTorranceNoiseSimp, simpElements),  // Idx 1
+            createInstance(CookTorranceNoiseSimp, simpElements),  // Idx 1 (Includes Lights)
             createInstance(SkyBox, skyboxElements),               // Idx 2
             createInstance(Vegetation, vegElements)               // Idx 3
         };
