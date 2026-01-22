@@ -4,6 +4,7 @@
 
 #ifndef E09_MAPMANAGER_HPP
 #define E09_MAPMANAGER_HPP
+#endif //E09_MAPMANAGER_HPP
 
 #include <string>
 #include <fstream>
@@ -14,13 +15,24 @@
 #include <algorithm>  // Required for std::max
 #include <glm/vec3.hpp>
 #include <json.hpp>
-
+#include "CollisionBoxGenerator.hpp"
+#include "UtilsStructs.hpp"
 
 using json = nlohmann::json;
+
+using Format = UtilsStructs::Format;
+using Technique = UtilsStructs::Technique;
+using AssetFile = UtilsStructs::AssetFile;
+using Model = UtilsStructs::Model;
+using Texture = UtilsStructs::Texture;
+using Element = UtilsStructs::Element;
+using Instance = UtilsStructs::Instance;
 
 class MapManager {
 public:
     float gridsize = 20.0f;
+
+    static bool debug;
 
     static std::map<std::string, std::string> modelsPaths;
 
@@ -29,71 +41,6 @@ public:
     static std::string jsonPath;
 
     static std::mt19937_64 gen;
-
-    // -------------------------------------------------------
-    // ENUM
-    // -------------------------------------------------------
-
-    enum Format {
-        GLTF,
-        MGCG,
-        ASSET,
-        OBJ,
-        D,
-        C
-    };
-
-    enum Technique {
-        CookTorranceChar,
-        CookTorranceNoiseSimp,
-        SkyBox,
-        PBR,
-        Vegetation
-    };
-
-    // -------------------------------------------------------
-    // DATA STRUCTURES
-    // -------------------------------------------------------
-
-    struct AssetFile {
-        std::string id;
-        std::string file;
-        Format format;
-    };
-
-    struct Model {
-        std::string id;
-        std::string VD;
-        std::string model;
-        std::string node;
-        int meshId = -1;
-        std::string asset;
-        Format format;
-    };
-
-    struct Texture {
-        std::string id;
-        std::string texture;
-        Format format;
-    };
-
-    struct Element {
-        std::string id;
-        std::string model;
-        std::string texture[4] = {};
-        float translate[3] = {0, 0, 0};
-        float eulerAngles[3] = {0, 0, 0};
-        float scale[3] = {1, 1, 1};
-    };
-
-    struct Istance {
-        Technique technique;
-        std::vector<Element> elements;
-    };
-
-    // -------------------------------------------------------
-    // STRUCT CREATION FUNCTIONS
-    // -------------------------------------------------------
 
     static std::string getExtension(const std::string &path) {
         // Trova l'ultima occorrenza del punto
@@ -173,9 +120,9 @@ public:
         return e;
     }
 
-    static Istance createInstance(Technique technique,
-                                  const std::vector<Element> &elems) {
-        Istance inst;
+    static Instance createInstance(Technique technique,
+                                   const std::vector<Element> &elems) {
+        Instance inst;
         inst.technique = technique;
         inst.elements = elems;
 
@@ -186,16 +133,16 @@ public:
         std::string extension = getExtension(modelPath.first);
         Format format;
         if (extension == ".obj")
-            format = OBJ;
+            format = UtilsStructs::OBJ;
         if (extension == ".mgcg")
-            format = MGCG;
+            format = UtilsStructs::MGCG;
         if (extension == ".gltf")
-            format = GLTF;
+            format = UtilsStructs::GLTF;
         return createModel(modelPath.second, "VDsimp", modelPath.first, format);
     }
 
     static Texture makeTexture(std::pair<std::string, std::string> texturePath) {
-        return createTexture(texturePath.second, texturePath.first, C);
+        return createTexture(texturePath.second, texturePath.first, UtilsStructs::C);
     }
 
     static std::vector<Model> makeModels() {
@@ -222,23 +169,23 @@ public:
 
     static std::string formatToString(Format f) {
         switch (f) {
-            case GLTF: return "GLTF";
-            case MGCG: return "MGCG";
-            case ASSET: return "ASSET";
-            case OBJ: return "OBJ";
-            case D: return "D";
-            case C: return "C";
+            case UtilsStructs::GLTF: return "GLTF";
+            case UtilsStructs::MGCG: return "MGCG";
+            case UtilsStructs::ASSET: return "ASSET";
+            case UtilsStructs::OBJ: return "OBJ";
+            case UtilsStructs::D: return "D";
+            case UtilsStructs::C: return "C";
         }
         return "";
     }
 
     static std::string techniqueToString(Technique t) {
         switch (t) {
-            case CookTorranceChar: return "CookTorranceChar";
-            case CookTorranceNoiseSimp: return "CookTorranceNoiseSimp";
-            case SkyBox: return "SkyBox";
-            case PBR: return "PBR";
-            case Vegetation: return "Vegetation";
+            case UtilsStructs::CookTorranceChar: return "CookTorranceChar";
+            case UtilsStructs::CookTorranceNoiseSimp: return "CookTorranceNoiseSimp";
+            case UtilsStructs::SkyBox: return "SkyBox";
+            case UtilsStructs::PBR: return "PBR";
+            case UtilsStructs::Vegetation: return "Vegetation";
         }
         return "";
     }
@@ -296,7 +243,7 @@ public:
         return j;
     }
 
-    static json writeInstance(const Istance &inst) {
+    static json writeInstance(const Instance &inst) {
         json j;
         j["technique"] = techniqueToString(inst.technique);
 
@@ -376,14 +323,11 @@ public:
         int count_z = lenght / scale;
         std::string idName = "house";
 
-        for (int i = 0; i < count_z; i++) {
-            for (int j = 0; j < count_x; j++) {
+        for (int i = 0; i < count_z; i++){
+            for (int j = 0; j < count_x; j++){
+                std::string model_number = std::to_string(rand_int(1,6));
                 idNumber++;
-                elements.emplace_back(createElement(idName + std::to_string(idNumber),
-                                                    "bldg" + std::to_string(rand_int(1, 7)),
-                                                    {"medieval_buildings", "pnois"}, {
-                                                        j * scale - x_offset, 0, i * scale - z_offset
-                                                    }, rotation, {1, 1, 1}));
+                elements.emplace_back(createElement(idName + model_number + "_" + std::to_string(idNumber), "bldg" + model_number, {"medieval_buildings", "pnois"},{j*scale-x_offset,0,i*scale-z_offset},rotation,{1,1,1}));
             }
         }
         return elements;
@@ -604,7 +548,7 @@ public:
     static json buildJson(std::vector<AssetFile> &assets,
                           std::vector<Model> &models,
                           std::vector<Texture> &textures,
-                          std::vector<Istance> &instances) {
+                          std::vector<Instance> &instances) {
         json doc;
 
         doc["assetfiles"] = json::array();
@@ -644,9 +588,7 @@ public:
             {"assets/models/Castle/SPW_Medieval_Bldg_02.mgcg", "bldg2"},
             {"assets/models/Castle/SPW_Medieval_Bldg_03.mgcg", "bldg3"},
             {"assets/models/Castle/SPW_Medieval_Bldg_04.mgcg", "bldg4"},
-            {"assets/models/Castle/SPW_Medieval_Bldg_05.mgcg", "bldg5"},
-            {"assets/models/Castle/SPW_Medieval_Bldg_06.mgcg", "bldg6"},
-            {"assets/models/Castle/SPW_Medieval_Bldg_07.mgcg", "bldg7"},
+            {"assets/models/Castle/SPW_Medieval_Bldg_06.mgcg", "bldg5"},
             {"assets/models/Castle/SPW_Medieval_Boat.mgcg", "boat"},
             {"assets/models/Castle/SPW_Medieval_Box_01.mgcg", "box1"},
             {"assets/models/Castle/SPW_Medieval_Box_02.mgcg", "box2"},
@@ -661,8 +603,10 @@ public:
             {"assets/models/Vegetation/vegetation.051.mgcg", "rocks1"},
             {"assets/models/Vegetation/vegetation.052.mgcg", "rocks2"},
             {"assets/models/Vegetation/vegetation.053.mgcg", "rocks3"},
-            {"assets/models/Castle/SPW_Medieval_Light.mgcg", "lamp1"}
-
+            {"assets/models/Castle/SPW_Medieval_Light.mgcg", "lamp1"},
+            {"assets/models/CollisionBoxes/cube.obj", "cube"},
+            {"assets/models/CollisionBoxes/sphere.obj", "sphere"},
+            {"assets/models/CollisionBoxes/cylinder.obj", "cylinder"},
         };
 
         texturePaths = {
@@ -673,7 +617,8 @@ public:
             {"assets/textures/day_sky.png", "skybox"},
             {"assets/textures/Vegetation/Textures_Vegetation.png", "tree_tex"},
             {"assets/textures/Vegetation/Textures_Vegetation.png", "rock_tex"},
-            {"assets/textures/Castle_Textures/SPW_Natures_01.png", "lamp_tex"}
+            {"assets/textures/Castle_Textures/SPW_Natures_01.png", "lamp_tex"},
+            {"assets/textures/translucent_lightblue_texture.png", "colBox_texture"}
         };
     }
 
@@ -686,21 +631,21 @@ public:
 
         // --- A. ASSETS & MODELS ---
         std::vector<AssetFile> assetFiles = {
-            createAssetFile("hm", "assets/models/uomo.gltf", GLTF),
-            createAssetFile("a1", "assets/models/running.gltf", GLTF),
-            createAssetFile("a2", "assets/models/idle.gltf", GLTF),
-            createAssetFile("a3", "assets/models/pointing.gltf", GLTF),
-            createAssetFile("a4", "assets/models/waving.gltf", GLTF),
-            createAssetFile("ct", "assets/models/MainSceneEnvOnly.gltf", GLTF)
+            createAssetFile("hm", "assets/models/uomo.gltf", UtilsStructs::GLTF),
+            createAssetFile("a1", "assets/models/running.gltf", UtilsStructs::GLTF),
+            createAssetFile("a2", "assets/models/idle.gltf", UtilsStructs::GLTF),
+            createAssetFile("a3", "assets/models/pointing.gltf", UtilsStructs::GLTF),
+            createAssetFile("a4", "assets/models/waving.gltf", UtilsStructs::GLTF),
+            createAssetFile("ct", "assets/models/MainSceneEnvOnly.gltf", UtilsStructs::GLTF)
         };
 
         std::vector<Model> models = makeModels();
-        models.emplace_back(createModel("hm0", "VDchar", "Mesh", ASSET, "Ch01_Body", 0, "hm"));
-        models.emplace_back(createModel("hm1", "VDchar", "Mesh", ASSET, "Ch01_Body", 1, "hm"));
-        models.emplace_back(createModel("skybox", "VDskybox", "assets/models/SkyBoxCube.obj", OBJ));
+        models.emplace_back(createModel("hm0", "VDchar", "Mesh", UtilsStructs::ASSET, "Ch01_Body", 0, "hm"));
+        models.emplace_back(createModel("hm1", "VDchar", "Mesh", UtilsStructs::ASSET, "Ch01_Body", 1, "hm"));
+        models.emplace_back(createModel("skybox", "VDskybox", "assets/models/SkyBoxCube.obj", UtilsStructs::OBJ));
 
         std::vector<Texture> textures = makeTextures();
-        textures.emplace_back(createTexture("st", "assets/textures/uomo/Ch01_1001_Diffuse.png", C));
+        textures.emplace_back(createTexture("st", "assets/textures/uomo/Ch01_1001_Diffuse.png", UtilsStructs::C));
 
         // --- B. STATIC ELEMENTS (Ground, Roads, Rocks, Lights) ---
         // Instance Index 1: Static objects
@@ -783,16 +728,33 @@ public:
         // --- F. INSTANCES ---
         std::vector<Element> skyboxElements = { createElement("skybox", "skybox", {"skybox"}) };
 
-        std::vector<Istance> istances = {
-            createInstance(CookTorranceChar, charElements),       // Idx 0
-            createInstance(CookTorranceNoiseSimp, simpElements),  // Idx 1 (Includes Lights)
-            createInstance(SkyBox, skyboxElements),               // Idx 2
-            createInstance(Vegetation, vegElements)               // Idx 3
-        };
+        CollisionBoxGenerator::fillCollisionsBoxes(simpElements);
+        CollisionBoxGenerator::fillCollisionsBoxes(vegElements);
+        Instance debugBox;
+        if(debug){
+            CollisionBoxGenerator::fillCollisionsBoxesVisual();
+            debugBox = CollisionBoxGenerator::collisionInstance;
+        }
+        std::vector<Instance> istances;
+        if(!debug && debugBox.elements.empty())
+            istances = {
+                createInstance(UtilsStructs::CookTorranceChar, charElements),       // Idx 0
+                createInstance(UtilsStructs::CookTorranceNoiseSimp, simpElements),  // Idx 1 (Includes Lights)
+                createInstance(UtilsStructs::SkyBox, skyboxElements),               // Idx 2
+                createInstance(UtilsStructs::Vegetation, vegElements)               // Idx 3
+            };
+
+        else{
+            istances = {
+                    createInstance(UtilsStructs::CookTorranceChar, charElements),       // Idx 0
+                    createInstance(UtilsStructs::CookTorranceNoiseSimp, simpElements),  // Idx 1 (Includes Lights)
+                    createInstance(UtilsStructs::SkyBox, skyboxElements),               // Idx 2
+                    createInstance(UtilsStructs::Vegetation, vegElements),              // Idx 3
+                    debugBox                                                                          // Idx 4
+            };
+        }
 
         json jsonobj = buildJson(assetFiles, models, textures, istances);
         saveJson(jsonobj, jsonPath);
     }
 };
-
-#endif //E09_MAPMANAGER_HPP
