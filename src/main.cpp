@@ -473,8 +473,8 @@ protected:
                                       }
                 }
                 }
-        }, 2, &VDsimp); // Uses 2 textures total
-
+        }, 2, &VDsimp);
+        // Uses 2 textures total
         // Models, textures and Descriptors (values assigned to the uniforms)
 
         // sets the size of the Descriptor Set Pool
