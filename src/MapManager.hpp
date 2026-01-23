@@ -136,7 +136,7 @@ public:
             format = UtilsStructs::OBJ;
         if (extension == ".mgcg")
             format = UtilsStructs::MGCG;
-        if (extension == ".gltf")
+        if (extension == ".gltf" || extension == ".glb")
             format = UtilsStructs::GLTF;
         return createModel(modelPath.second, "VDsimp", modelPath.first, format);
     }
@@ -184,7 +184,7 @@ public:
             case UtilsStructs::CookTorranceChar: return "CookTorranceChar";
             case UtilsStructs::CookTorranceNoiseSimp: return "CookTorranceNoiseSimp";
             case UtilsStructs::SkyBox: return "SkyBox";
-            case UtilsStructs::PBR: return "PBR";
+            //case UtilsStructs::PBR: return "PBR";
             case UtilsStructs::Vegetation: return "Vegetation";
             case UtilsStructs::CBoxDebug: return "DebugCollisionBoxes";
         }
@@ -732,9 +732,9 @@ public:
         CollisionBoxGenerator::fillCollisionsBoxes(simpElements);
         CollisionBoxGenerator::fillCollisionsBoxes(vegElements);
         std::vector<MMElement> debugElements = {
-                createElement("cube", "cube",{"colBox_texture","pnois"},{1,1,0},{0,0,0},{10,10,10}),
-                createElement("cylinder", "cylinder",{"colBox_texture","pnois"},{0,1,1},{0,0,0},{10,10,10}),
-                createElement("sphere", "sphere",{"colBox_texture","pnois"},{-1,1,-1},{0,0,0},{10,10,10})
+                createElement("cube", "cube",{"medieval_nature1","pnois"},{0,3,0},{0,0,0},{10,10,10}),
+                createElement("cylinder", "cylinder",{"medieval_nature1","pnois"},{0,4,0},{0,0,0},{10,10,10}),
+                createElement("sphere", "sphere",{"medieval_nature1","pnois"},{0,5,0},{0,0,0},{10,10,10})
         };
         MMInstance debugBox = createInstance(UtilsStructs::CBoxDebug, debugElements);
         if(debug){

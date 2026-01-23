@@ -287,6 +287,9 @@ protected:
                         0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT,
                         sizeof(UniformBufferObjectSimp), 1
                 },
+                {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 1},
+                // Binding 2: Texture (Noise) - Used in Vertex or Fragment
+
         });
 
         VDchar.init(this, {
@@ -398,10 +401,9 @@ protected:
 
         Pdebug.init(this, &VDsimp, "shaders/SimplePosNormUV.vert.spv", "shaders/CookTorrance.frag.spv",
                     {&DSLglobal, &DSLdebug});
-        Pdebug.setCullMode(VK_CULL_MODE_NONE);
-        Pdebug.setPolygonMode(VK_POLYGON_MODE_FILL);
+        Pdebug.setPolygonMode(VK_POLYGON_MODE_LINE);
 
-        PRs.resize(6);
+        PRs.resize(5);
         PRs[0].init("CookTorranceChar", {
                         {
                             &Pchar, {
@@ -434,23 +436,8 @@ protected:
                                 }
                             }
                         }
-                    }, 1, &VDskyBox); // IMPORTANT: Changed TotalNtextures from 1 to 2
-        PRs[3].init("PBR", {
-                        {
-                            &P_PBR, {
-                                //Pipeline and DSL for the first pass
-                                /*DSLglobal*/{},
-                                /*DSLlocalPBR*/{
-                                    /*t0*/{true, 0, {}}, // index 0 of the "texture" field in the json file
-                                    /*t1*/{true, 1, {}}, // index 1 of the "texture" field in the json file
-                                    /*t2*/{true, 2, {}}, // index 2 of the "texture" field in the json file
-                                    /*t3*/{true, 3, {}} // index 3 of the "texture" field in the json file
-                                }
-                            }
-                        }
-                    }, /*TotalNtextures*/4, &VDtan);
-
-        PRs[4].init("Vegetation", {
+                    }, 1, &VDskyBox); // IMPORTANT: Changed TotalNtextures from 1 to
+        PRs[3].init("Vegetation", {
                         {
                             &Pveg, {
                                 // Use the vegetation pipeline
@@ -458,27 +445,20 @@ protected:
                                 /*DSLlocal*/ {
                                     {true, 0, {}}, // Texture 0: Albedo (Tree/Bush)
                                     {true, 1, {}}, // Texture 1: Noise (for Wind)
-                                    {true, 0, {}}, // MMTexture 0: Albedo (Tree/Bush)
-                                    {true, 1, {}} // MMTexture 1: Noise (for Wind)
                                 }
                             }
                         }
                     }, 2, &VDsimp); // Uses 2 textures total
 
-        PRs[5].init("DebugCollisionBoxes", {
+        PRs[4].init("DebugCollisionBoxes", {
                 {
-                        &Pdebug, {
-                        // Use the vegetation pipeline
-                        /*DSLglobal*/ {},
-                        /*DSLlocal*/ {
-                                              {true, 0, {}}, // Texture 0: Albedo (Tree/Bush)
-                                              {true, 1, {}}, // Texture 1: Noise (for Wind)
-                                              {true, 0, {}},
-                                              {true, 1, {}}
-                                      }
+                        &Pdebug, { // Puoi usare PsimpObj o una pipeline dedicata wireframe
+                        {}, // DSLglobal
+                        { {true, 0, {}}, {true, 1, {}} } // DSLlocalSimp (Binding 0 e 1)
                 }
                 }
         }, 2, &VDsimp);
+
         // Uses 2 textures total
         // Models, textures and Descriptors (values assigned to the uniforms)
 
@@ -968,6 +948,18 @@ protected:
         sbubo.settings.x = blendFactor;
         SC.TI[2].I[0].DS[0][0]->map(currentImage, &sbubo, 0);
 
+        //TODO THIS CAUSED SOME CRASHES WHEN THE PROGRAM WAS COMPILED AND RUNNED IDK WHY SO I COMMENTED IT BECAUSE THEORETICALLY WE DO NOT USE PBR OBJECTS PLS CHECK THIS
+        // PBR objects
+        /*for (instanceId = 0; instanceId < SC.TI[3].InstanceCount; instanceId++) {
+            ubos.mMat = SC.TI[3].I[instanceId].Wm;
+            ubos.mvpMat = ViewPrj * ubos.mMat;
+            ubos.nMat = glm::inverse(glm::transpose(ubos.mMat));
+
+            SC.TI[3].I[instanceId].DS[0][0]->map(currentImage, &gubo, 0); // Set 0
+            SC.TI[3].I[instanceId].DS[0][1]->map(currentImage, &ubos, 0); // Set 1
+        }
+        */
+
         // vegetation update
         for (instanceId = 0; instanceId < SC.TI[3].InstanceCount; instanceId++) {
             ubos.mMat = SC.TI[3].I[instanceId].Wm;
@@ -984,17 +976,34 @@ protected:
             SC.TI[3].I[instanceId].DS[0][1]->map(currentImage, &ubos, 0);
         }
 
-        //TODO THIS CAUSED SOME CRASHES WHEN THE PROGRAM WAS COMPILED AND RUNNED IDK WHY SO I COMMENTED IT BECAUSE THEORETICALLY WE DO NOT USE PBR OBJECTS PLS CHECK THIS
-        // PBR objects
-        /*for (instanceId = 0; instanceId < SC.TI[3].InstanceCount; instanceId++) {
-            ubos.mMat = SC.TI[3].I[instanceId].Wm;
-            ubos.mvpMat = ViewPrj * ubos.mMat;
-            ubos.nMat = glm::inverse(glm::transpose(ubos.mMat));
+        // --- 5. DEBUG COLLISION BOXES MAPPING (Index 4) ---
+        if (MapManager::debug) {
+            if (SC.TI[4].InstanceCount > 0) {
+                for (instanceId = 0; instanceId < SC.TI[4].InstanceCount; instanceId++) {
+                    if (SC.TI[4].I[instanceId].DS[0][1] != nullptr) {
 
-            SC.TI[3].I[instanceId].DS[0][0]->map(currentImage, &gubo, 0); // Set 0
-            SC.TI[3].I[instanceId].DS[0][1]->map(currentImage, &ubos, 0); // Set 1
+                        // Preparation of the matrices
+                        ubos.mMat = SC.TI[4].I[instanceId].Wm;
+                        ubos.mvpMat = ViewPrj * ubos.mMat;
+                        ubos.nMat = glm::inverse(glm::transpose(ubos.mMat));
+
+                        // CORRECTED MAPPING:
+                        // The 3rd parameter is the BINDING INDEX, not the size.
+
+                        // Set 0, Binding 0: Global Uniforms (gubo)
+                        SC.TI[4].I[instanceId].DS[0][0]->map(currentImage, &gubo, 0);
+
+                        // Set 0, Binding 1: Point Lights (plboData)
+                        // Adding this for consistency with your other techniques
+                        SC.TI[4].I[instanceId].DS[0][0]->map(currentImage, &plboData, 1);
+
+                        // Set 1, Binding 0: Local Uniforms (ubos)
+                        // Use 0 as the binding index. The engine knows the size from localInit.
+                        SC.TI[4].I[instanceId].DS[0][1]->map(currentImage, &ubos, 0);
+                    }
+                }
+            }
         }
-        */
 
         // updates the FPS
         static float elapsedT = 0.0f;
