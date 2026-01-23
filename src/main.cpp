@@ -457,7 +457,7 @@ protected:
                                 /*DSLglobal*/ {},
                                 /*DSLlocal*/ {
                                     {true, 0, {}}, // Texture 0: Albedo (Tree/Bush)
-                                    {true, 1, {}} // Texture 1: Noise (for Wind)
+                                    {true, 1, {}}, // Texture 1: Noise (for Wind)
                                     {true, 0, {}}, // MMTexture 0: Albedo (Tree/Bush)
                                     {true, 1, {}} // MMTexture 1: Noise (for Wind)
                                 }
@@ -472,7 +472,7 @@ protected:
                         /*DSLglobal*/ {},
                         /*DSLlocal*/ {
                                               {true, 0, {}}, // Texture 0: Albedo (Tree/Bush)
-                                              {true, 1, {}} // Texture 1: Noise (for Wind)
+                                              {true, 1, {}}, // Texture 1: Noise (for Wind)
                                               {true, 0, {}},
                                               {true, 1, {}}
                                       }
