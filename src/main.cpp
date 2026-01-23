@@ -10,6 +10,7 @@
 
 #include "MapManager.hpp"
 #include "CollisionBox.hpp"
+#include "CollisionBoxGenerator.hpp"
 
 // The uniform buffer object used in this example
 struct VertexChar {
@@ -457,6 +458,8 @@ protected:
                                 /*DSLlocal*/ {
                                     {true, 0, {}}, // Texture 0: Albedo (Tree/Bush)
                                     {true, 1, {}} // Texture 1: Noise (for Wind)
+                                    {true, 0, {}}, // MMTexture 0: Albedo (Tree/Bush)
+                                    {true, 1, {}} // MMTexture 1: Noise (for Wind)
                                 }
                             }
                         }
@@ -470,6 +473,8 @@ protected:
                         /*DSLlocal*/ {
                                               {true, 0, {}}, // Texture 0: Albedo (Tree/Bush)
                                               {true, 1, {}} // Texture 1: Noise (for Wind)
+                                              {true, 0, {}},
+                                              {true, 1, {}}
                                       }
                 }
                 }
@@ -488,36 +493,8 @@ protected:
             exit(0);
         }
 
-        //initial collision box
-        houseCollisions.clear();
-        for (int i = 0; i < SC.TI[1].InstanceCount; i++) {
-            auto &inst = SC.TI[1].I[i];
-            std::cout << "inst.id = [" << *inst.id << "]" << std::endl;
-            // Only add collision for houses / buildings
-            CollisionObject Col;
-            glm::vec3 pos(
-                inst.Wm[3][0], // x
-                inst.Wm[3][1], // y
-                inst.Wm[3][2] // z
-            );
-            std::string id = *inst.id;
-
-            if (id.find("house") != std::string::npos) {
-                // house (here need to modify the size of collisionbox w.r.t different types of houses)
-                Col.addBox(
-                    pos + glm::vec3(0.0f, 2.5f, 0.0f),
-                    glm::vec3(10.0f, 5.0f, 10.0f)
-                );
-            } else if (id.find("ww") != std::string::npos) {
-                // well
-                Col.addBox(
-                    pos + glm::vec3(0.0f, 1.0f, 0.0f),
-                    glm::vec3(1.0f, 1.0f, 1.0f)
-                );
-            }
-
-            houseCollisions.push_back(Col);
-        }
+        //initialize collision box
+        houseCollisions = CollisionBoxGenerator::collisions;
 
         // initializes animations
         for (int ian = 0; ian < N_ANIMATIONS; ian++) {
@@ -595,7 +572,7 @@ protected:
         txt.pipelinesAndDescriptorSetsCleanup();
     }
 
-    // Here you destroy all the Models, Texture and Desc. Set Layouts you created!
+    // Here you destroy all the Models, MMTexture and Desc. Set Layouts you created!
     // You also have to destroy the pipelines
     void localCleanup() {
         DSLlocalChar.cleanup();
@@ -875,7 +852,7 @@ protected:
         glm::vec4 nightColor = glm::vec4(0.05f, 0.05f, 0.15f, 1.0f); // Dark Blue Night
 
         glm::vec4 currentLightColor;
-        float blendFactor = 0.0f; // 0 = Night Texture, 1 = Day Texture
+        float blendFactor = 0.0f; // 0 = Night MMTexture, 1 = Day MMTexture
 
         // 4. Calculate Phase based on Sun Height (Y)
         float sunHeight = currentLightDir.y;
@@ -901,7 +878,7 @@ protected:
             float t = glm::clamp((sunHeight - 0.2f) / 0.3f, 0.0f, 1.0f);
             currentLightColor = mix(sunsetColor, dayColor, t);
 
-            blendFactor = 1.0f; // Use Full Day Texture
+            blendFactor = 1.0f; // Use Full Day MMTexture
         } else if (sunHeight > -0.2f) {
             // PHASE: TRANSITION (Sunset / Sunrise)
             // The sun is crossing the horizon [-0.2 to 0.2]
@@ -920,7 +897,7 @@ protected:
         } else {
             // PHASE: FULL NIGHT
             currentLightColor = nightColor;
-            blendFactor = 0.0f; // Use Full Night Texture
+            blendFactor = 0.0f; // Use Full Night MMTexture
         }
 
         // 5. Update Global Uniforms
@@ -1236,7 +1213,7 @@ protected:
 
             camHeight += MOVE_SPEED * m.y * deltaT;
 
-            // Model rotation
+            // MMModel rotation
             if (glm::length(glm::vec3(m.x, 0.0f, m.z)) > 0.001f) {
                 relDir = Yaw + atan2(m.x, m.z);
                 dampedRelDir = dampedRelDir > relDir + 3.1416f
@@ -1273,7 +1250,8 @@ protected:
         CollisionObject playerCol;
         playerCol.addBox(
             Pos + glm::vec3(0.0f, 1.0f, 0.0f),
-            glm::vec3(1.5f, 2.0f, 1.5f)
+            glm::vec3(1.5f, 2.0f, 1.5f),
+            CollisionBox::cylinder
         );
 
         for (const auto &house: houseCollisions) {

@@ -20,13 +20,13 @@
 
 using json = nlohmann::json;
 
-using Format = UtilsStructs::Format;
-using Technique = UtilsStructs::Technique;
-using AssetFile = UtilsStructs::AssetFile;
-using Model = UtilsStructs::Model;
-using Texture = UtilsStructs::Texture;
-using Element = UtilsStructs::Element;
-using Instance = UtilsStructs::Instance;
+using MMFormat = UtilsStructs::Format;
+using MMTechnique = UtilsStructs::Technique;
+using MMAssetFile = UtilsStructs::AssetFile;
+using MMModel = UtilsStructs::Model;
+using MMTexture = UtilsStructs::Texture;
+using MMElement = UtilsStructs::Element;
+using MMInstance = UtilsStructs::Instance;
 
 class MapManager {
 public:
@@ -58,24 +58,24 @@ public:
         return path.substr(dotPos); // Include il punto
     }
 
-    static AssetFile createAssetFile(const std::string &id,
-                                     const std::string &file,
-                                     Format format) {
-        AssetFile a;
+    static MMAssetFile createAssetFile(const std::string &id,
+                                       const std::string &file,
+                                       MMFormat format) {
+        MMAssetFile a;
         a.id = id;
         a.file = file;
         a.format = format;
         return a;
     }
 
-    static Model createModel(const std::string &id,
-                             const std::string &VD,
-                             const std::string &modelPath,
-                             Format format,
-                             const std::string &node = "",
-                             int meshId = -1,
-                             const std::string &asset = "") {
-        Model m;
+    static MMModel createModel(const std::string &id,
+                               const std::string &VD,
+                               const std::string &modelPath,
+                               MMFormat format,
+                               const std::string &node = "",
+                               int meshId = -1,
+                               const std::string &asset = "") {
+        MMModel m;
         m.id = id;
         m.VD = VD;
         m.model = modelPath;
@@ -86,23 +86,23 @@ public:
         return m;
     }
 
-    static Texture createTexture(const std::string &id,
-                                 const std::string &path,
-                                 Format format) {
-        Texture t;
+    static MMTexture createTexture(const std::string &id,
+                                   const std::string &path,
+                                   MMFormat format) {
+        MMTexture t;
         t.id = id;
         t.texture = path;
         t.format = format;
         return t;
     }
 
-    static Element createElement(const std::string &id,
-                                 const std::string &model,
-                                 const std::vector<std::string> &textures,
-                                 const std::vector<float> &translate = {0, 0, 0},
-                                 const std::vector<float> &eulerAngles = {0, 0, 0},
-                                 const std::vector<float> &scale = {1, 1, 1}) {
-        Element e;
+    static MMElement createElement(const std::string &id,
+                                   const std::string &model,
+                                   const std::vector<std::string> &textures,
+                                   const std::vector<float> &translate = {0, 0, 0},
+                                   const std::vector<float> &eulerAngles = {0, 0, 0},
+                                   const std::vector<float> &scale = {1, 1, 1}) {
+        MMElement e;
         e.id = id;
         e.model = model;
 
@@ -120,18 +120,18 @@ public:
         return e;
     }
 
-    static Instance createInstance(Technique technique,
-                                   const std::vector<Element> &elems) {
-        Instance inst;
+    static MMInstance createInstance(MMTechnique technique,
+                                     const std::vector<MMElement> &elems) {
+        MMInstance inst;
         inst.technique = technique;
         inst.elements = elems;
 
         return inst;
     }
 
-    static Model makeModel(std::pair<std::string, std::string> modelPath) {
+    static MMModel makeModel(std::pair<std::string, std::string> modelPath) {
         std::string extension = getExtension(modelPath.first);
-        Format format;
+        MMFormat format;
         if (extension == ".obj")
             format = UtilsStructs::OBJ;
         if (extension == ".mgcg")
@@ -141,20 +141,20 @@ public:
         return createModel(modelPath.second, "VDsimp", modelPath.first, format);
     }
 
-    static Texture makeTexture(std::pair<std::string, std::string> texturePath) {
+    static MMTexture makeTexture(std::pair<std::string, std::string> texturePath) {
         return createTexture(texturePath.second, texturePath.first, UtilsStructs::C);
     }
 
-    static std::vector<Model> makeModels() {
-        std::vector<Model> models;
+    static std::vector<MMModel> makeModels() {
+        std::vector<MMModel> models;
         for (const auto &model: modelsPaths) {
             models.emplace_back(makeModel(model));
         }
         return models;
     }
 
-    static std::vector<Texture> makeTextures() {
-        std::vector<Texture> textures;
+    static std::vector<MMTexture> makeTextures() {
+        std::vector<MMTexture> textures;
         for (const auto &texture: texturePaths) {
             printf("%s : ", texture.second.c_str());
             textures.emplace_back(makeTexture(texture));
@@ -167,7 +167,7 @@ public:
     // ENUM → STRING conversion
     // -------------------------------------------------------
 
-    static std::string formatToString(Format f) {
+    static std::string formatToString(MMFormat f) {
         switch (f) {
             case UtilsStructs::GLTF: return "GLTF";
             case UtilsStructs::MGCG: return "MGCG";
@@ -179,13 +179,14 @@ public:
         return "";
     }
 
-    static std::string techniqueToString(Technique t) {
+    static std::string techniqueToString(MMTechnique t) {
         switch (t) {
             case UtilsStructs::CookTorranceChar: return "CookTorranceChar";
             case UtilsStructs::CookTorranceNoiseSimp: return "CookTorranceNoiseSimp";
             case UtilsStructs::SkyBox: return "SkyBox";
             case UtilsStructs::PBR: return "PBR";
             case UtilsStructs::Vegetation: return "Vegetation";
+            case UtilsStructs::CBoxDebug: return "DebugCollisionBoxes";
         }
         return "";
     }
@@ -194,7 +195,7 @@ public:
     // SERIALIZATION FUNCTIONS
     // -------------------------------------------------------
 
-    static json writeAssetFile(const AssetFile &a) {
+    static json writeAssetFile(const MMAssetFile &a) {
         json j;
         j["id"] = a.id;
         j["file"] = a.file;
@@ -202,7 +203,7 @@ public:
         return j;
     }
 
-    static json writeModel(const Model &m) {
+    static json writeModel(const MMModel &m) {
         json j;
         j["id"] = m.id;
         j["VD"] = m.VD;
@@ -216,7 +217,7 @@ public:
         return j;
     }
 
-    static json writeTexture(const Texture &t) {
+    static json writeTexture(const MMTexture &t) {
         json j;
         j["id"] = t.id;
         j["texture"] = t.texture;
@@ -224,7 +225,7 @@ public:
         return j;
     }
 
-    static json writeElement(const Element &e) {
+    static json writeElement(const MMElement &e) {
         json j;
         j["id"] = e.id;
         j["model"] = e.model;
@@ -243,7 +244,7 @@ public:
         return j;
     }
 
-    static json writeInstance(const Instance &inst) {
+    static json writeInstance(const MMInstance &inst) {
         json j;
         j["technique"] = techniqueToString(inst.technique);
 
@@ -257,9 +258,9 @@ public:
         return j;
     }
 
-    static std::vector<Element> placeGrassGround(float hight = 100.0, float lenght = 200.0, float x_offset = 50.0,
-                                                 float z_offset = 50.0, float scale = 20.0) {
-        std::vector<Element> elements;
+    static std::vector<MMElement> placeGrassGround(float hight = 100.0, float lenght = 200.0, float x_offset = 50.0,
+                                                   float z_offset = 50.0, float scale = 20.0) {
+        std::vector<MMElement> elements;
         int count_x = hight / scale;
         int count_z = lenght / scale;
         int idNumber = 0;
@@ -277,10 +278,10 @@ public:
         return elements;
     }
 
-    static std::vector<Element> createPaths(std::vector<float> starting_pos, std::vector<float> ending_pos,
-                                            float x_pass, float z_pass, std::vector<float> scale = {1, 0.5, 1},
-                                            int idNumber = 0) {
-        std::vector<Element> elements;
+    static std::vector<MMElement> createPaths(std::vector<float> starting_pos, std::vector<float> ending_pos,
+                                              float x_pass, float z_pass, std::vector<float> scale = {1, 0.5, 1},
+                                              int idNumber = 0) {
+        std::vector<MMElement> elements;
         float diff_x = fabs(starting_pos[0] - ending_pos[0]);
         float diff_z = fabs(starting_pos[2] - ending_pos[2]);
         int x_step = x_pass != 0 ? diff_x / x_pass : 0;
@@ -315,10 +316,10 @@ public:
         return dist(gen);
     }
 
-    static std::vector<Element> placeHouses(float hight = 200.0, float lenght = 200.0, float x_offset = 50.0,
-                                            float z_offset = 50.0, float scale = 20.0, int idNumber = 0,
-                                            std::vector<float> rotation = {90, 0, 0}) {
-        std::vector<Element> elements;
+    static std::vector<MMElement> placeHouses(float hight = 200.0, float lenght = 200.0, float x_offset = 50.0,
+                                              float z_offset = 50.0, float scale = 20.0, int idNumber = 0,
+                                              std::vector<float> rotation = {90, 0, 0}) {
+        std::vector<MMElement> elements;
         int count_x = hight / scale;
         int count_z = lenght / scale;
         std::string idName = "house";
@@ -333,13 +334,13 @@ public:
         return elements;
     }
 
-    static std::vector<Element> placeVegetationInGrid(float height = 200.0, float length = 200.0,
-                                                      float x_offset = 50.0, float z_offset = 50.0,
-                                                      float minDistance = 2.5f,
-                                                      std::vector<std::string> modelIds = {"tree"},
-                                                      std::string textureId = "tree_tex",
-                                                      const std::vector<Element> &obstacles = {}) {
-        std::vector<Element> elements;
+    static std::vector<MMElement> placeVegetationInGrid(float height = 200.0, float length = 200.0,
+                                                        float x_offset = 50.0, float z_offset = 50.0,
+                                                        float minDistance = 2.5f,
+                                                        std::vector<std::string> modelIds = {"tree"},
+                                                        std::string textureId = "tree_tex",
+                                                        const std::vector<MMElement> &obstacles = {}) {
+        std::vector<MMElement> elements;
 
         // --- MODIFICA QUI ---
         // Usa 0.1 (10%) o addirittura 0.05 (5%) se ne vuoi pochissimi.
@@ -402,11 +403,11 @@ public:
     // -------------------------------------------------------
     // HELPER FUNCTION: Place rocks STRICTLY ON THE ROAD (Randomized & Tiny)
     // -------------------------------------------------------
-    static std::vector<Element> placeRocksOnRoad(int count = 40,
-                                                 float mapLimit = 200.0f,
-                                                 std::vector<std::string> modelIds = {"rocks1"},
-                                                 std::string textureId = "medieval_buildings") {
-        std::vector<Element> elements;
+    static std::vector<MMElement> placeRocksOnRoad(int count = 40,
+                                                   float mapLimit = 200.0f,
+                                                   std::vector<std::string> modelIds = {"rocks1"},
+                                                   std::string textureId = "medieval_buildings") {
+        std::vector<MMElement> elements;
 
         // Random Generators
 
@@ -424,7 +425,7 @@ public:
         // 4. Random Rotation
         std::uniform_real_distribution<float> rotDist(0.0f, 360.0f);
 
-        // 5. Model Selector (Picks a random index)
+        // 5. MMModel Selector (Picks a random index)
         std::uniform_int_distribution<int> modelSelector(0, modelIds.size() - 1);
 
         for (int i = 0; i < count; i++) {
@@ -455,11 +456,11 @@ public:
             }
             if (tooClose) { i--; continue; }
 
-            // Pick Random Model
+            // Pick Random MMModel
             int selectedIndex = modelSelector(gen);
             std::string currentModel = modelIds[selectedIndex];
 
-            // Create Element
+            // Create MMElement
             elements.emplace_back(createElement(
                 "rock_" + std::to_string(i) + "_" + std::to_string(rand()),
                 currentModel,
@@ -475,12 +476,12 @@ public:
     // -------------------------------------------------------
     // HELPER FUNCTION: Place Street Lights (EXACTLY ON ROAD EDGE)
     // -------------------------------------------------------
-    static std::vector<Element> placeStreetLights(float mapLimit = 200.0f,
-                                                  int axis = 0,
-                                                  float spacing = 25.0f,
-                                                  std::string modelId = "lamp1",
-                                                  std::string textureId = "lamp_tex") {
-        std::vector<Element> elements;
+    static std::vector<MMElement> placeStreetLights(float mapLimit = 200.0f,
+                                                    int axis = 0,
+                                                    float spacing = 25.0f,
+                                                    std::string modelId = "lamp1",
+                                                    std::string textureId = "lamp_tex") {
+        std::vector<MMElement> elements;
 
         float start = -mapLimit;
         float end = mapLimit;
@@ -545,10 +546,10 @@ public:
     // BUILD JSON DOCUMENT
     // -------------------------------------------------------
 
-    static json buildJson(std::vector<AssetFile> &assets,
-                          std::vector<Model> &models,
-                          std::vector<Texture> &textures,
-                          std::vector<Instance> &instances) {
+    static json buildJson(std::vector<MMAssetFile> &assets,
+                          std::vector<MMModel> &models,
+                          std::vector<MMTexture> &textures,
+                          std::vector<MMInstance> &instances) {
         json doc;
 
         doc["assetfiles"] = json::array();
@@ -630,7 +631,7 @@ public:
         jsonPath = "assets/models/scene.json";
 
         // --- A. ASSETS & MODELS ---
-        std::vector<AssetFile> assetFiles = {
+        std::vector<MMAssetFile> assetFiles = {
             createAssetFile("hm", "assets/models/uomo.gltf", UtilsStructs::GLTF),
             createAssetFile("a1", "assets/models/running.gltf", UtilsStructs::GLTF),
             createAssetFile("a2", "assets/models/idle.gltf", UtilsStructs::GLTF),
@@ -639,24 +640,24 @@ public:
             createAssetFile("ct", "assets/models/MainSceneEnvOnly.gltf", UtilsStructs::GLTF)
         };
 
-        std::vector<Model> models = makeModels();
+        std::vector<MMModel> models = makeModels();
         models.emplace_back(createModel("hm0", "VDchar", "Mesh", UtilsStructs::ASSET, "Ch01_Body", 0, "hm"));
         models.emplace_back(createModel("hm1", "VDchar", "Mesh", UtilsStructs::ASSET, "Ch01_Body", 1, "hm"));
         models.emplace_back(createModel("skybox", "VDskybox", "assets/models/SkyBoxCube.obj", UtilsStructs::OBJ));
 
-        std::vector<Texture> textures = makeTextures();
+        std::vector<MMTexture> textures = makeTextures();
         textures.emplace_back(createTexture("st", "assets/textures/uomo/Ch01_1001_Diffuse.png", UtilsStructs::C));
 
         // --- B. STATIC ELEMENTS (Ground, Roads, Rocks, Lights) ---
-        // Instance Index 1: Static objects
+        // MMInstance Index 1: Static objects
 
-        std::vector<Element> charElements = {
+        std::vector<MMElement> charElements = {
             createElement("hm0", "hm0", {"st"}),
             createElement("hm1", "hm1", {"st"}),
         };
 
         // 1. Grass Ground
-        std::vector<Element> simpElements = placeGrassGround();
+        std::vector<MMElement> simpElements = placeGrassGround();
 
         // 2. Horizontal Road (Gray Color {0.4, 0.4, 0.4})
         float widthH = 0.4f;
@@ -669,36 +670,36 @@ public:
         auto paths2 = createPaths({0, 0, -200}, {0, 0, 200}, 0, 20, {widthV, 2.1f, 1.0f}, 20);
         simpElements.insert(simpElements.end(), paths2.begin(), paths2.end());
 
-        // 4. Rocks on Road (Multi-model & Gray Texture)
+        // 4. Rocks on Road (Multi-model & Gray MMTexture)
         std::vector<std::string> rockModels = {"rocks1", "rocks2", "rocks3"};
-        std::vector<Element> roadRocks = placeRocksOnRoad(40, 200.0f, rockModels, "medieval_buildings");
+        std::vector<MMElement> roadRocks = placeRocksOnRoad(40, 200.0f, rockModels, "medieval_buildings");
         simpElements.insert(simpElements.end(), roadRocks.begin(), roadRocks.end());
 
         // 5. STREET LIGHTS GENERATION
         // Generate lights for Horizontal Road (Axis 0)
         // Note: Logic for "Light only at night" must be handled in the Game Loop/Shader,
         // here we only place the physical 3D model.
-        std::vector<Element> lightsH = placeStreetLights(200.0f, 0, 25.0f, "lamp1", "lamp_tex");
+        std::vector<MMElement> lightsH = placeStreetLights(200.0f, 0, 25.0f, "lamp1", "lamp_tex");
         simpElements.insert(simpElements.end(), lightsH.begin(), lightsH.end());
 
         // Generate lights for Vertical Road (Axis 1)
-        std::vector<Element> lightsV = placeStreetLights(200.0f, 1, 25.0f, "lamp1", "lamp_tex");
+        std::vector<MMElement> lightsV = placeStreetLights(200.0f, 1, 25.0f, "lamp1", "lamp_tex");
         simpElements.insert(simpElements.end(), lightsV.begin(), lightsV.end());
 
 
         // --- C. HOUSES (Obstacles) ---
         float areaW = 150.0f; float areaL = 150.0f; float gridSize = 30.0f;
 
-        std::vector<Element> h1 = placeHouses(areaW, areaL, -20, -20, gridSize, 0, {90, 180, 0});
-        std::vector<Element> h2 = placeHouses(areaW, areaL, -20, 140, gridSize, 25);
-        std::vector<Element> h3 = placeHouses(areaW, areaL, 140, -20, gridSize, 50, {90, 180, 0});
-        std::vector<Element> h4 = placeHouses(areaW, areaL, 140, 140, gridSize, 75);
+        std::vector<MMElement> h1 = placeHouses(areaW, areaL, -20, -20, gridSize, 0, {90, 180, 0});
+        std::vector<MMElement> h2 = placeHouses(areaW, areaL, -20, 140, gridSize, 25);
+        std::vector<MMElement> h3 = placeHouses(areaW, areaL, 140, -20, gridSize, 50, {90, 180, 0});
+        std::vector<MMElement> h4 = placeHouses(areaW, areaL, 140, 140, gridSize, 75);
 
-        std::vector<Element> extras;
+        std::vector<MMElement> extras;
         extras.emplace_back(createElement("ww1", "well", {"medieval_buildings", "pnois"}, {0, 0, 0}, {90, 0, 0}, {1, 1, 1}));
 
         // Master Obstacle List
-        std::vector<Element> allObstacles;
+        std::vector<MMElement> allObstacles;
         allObstacles.insert(allObstacles.end(), h1.begin(), h1.end());
         allObstacles.insert(allObstacles.end(), h2.begin(), h2.end());
         allObstacles.insert(allObstacles.end(), h3.begin(), h3.end());
@@ -710,7 +711,7 @@ public:
         std::vector<std::string> treeModels = {"tree1", "tree2", "tree3", "tree4"};
         float treeSpacing = 5.0f;
 
-        std::vector<Element> vegElements = placeVegetationInGrid(areaW, areaL, -20, -20, treeSpacing, treeModels, "tree_tex", allObstacles);
+        std::vector<MMElement> vegElements = placeVegetationInGrid(areaW, areaL, -20, -20, treeSpacing, treeModels, "tree_tex", allObstacles);
         auto v2 = placeVegetationInGrid(areaW, areaL, -20, 140, treeSpacing, treeModels, "tree_tex", allObstacles);
         vegElements.insert(vegElements.end(), v2.begin(), v2.end());
 
@@ -726,16 +727,21 @@ public:
 
 
         // --- F. INSTANCES ---
-        std::vector<Element> skyboxElements = { createElement("skybox", "skybox", {"skybox"}) };
+        std::vector<MMElement> skyboxElements = {createElement("skybox", "skybox", {"skybox"}) };
 
         CollisionBoxGenerator::fillCollisionsBoxes(simpElements);
         CollisionBoxGenerator::fillCollisionsBoxes(vegElements);
-        Instance debugBox;
+        std::vector<MMElement> debugElements = {
+                createElement("cube", "cube",{"colBox_texture","pnois"},{1,1,0},{0,0,0},{10,10,10}),
+                createElement("cylinder", "cylinder",{"colBox_texture","pnois"},{0,1,1},{0,0,0},{10,10,10}),
+                createElement("sphere", "sphere",{"colBox_texture","pnois"},{-1,1,-1},{0,0,0},{10,10,10})
+        };
+        MMInstance debugBox = createInstance(UtilsStructs::CBoxDebug, debugElements);
         if(debug){
             CollisionBoxGenerator::fillCollisionsBoxesVisual();
             debugBox = CollisionBoxGenerator::collisionInstance;
         }
-        std::vector<Instance> istances;
+        std::vector<MMInstance> istances;
         if(!debug && debugBox.elements.empty())
             istances = {
                 createInstance(UtilsStructs::CookTorranceChar, charElements),       // Idx 0
