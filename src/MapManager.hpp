@@ -731,12 +731,7 @@ public:
 
         CollisionBoxGenerator::fillCollisionsBoxes(simpElements);
         CollisionBoxGenerator::fillCollisionsBoxes(vegElements);
-        std::vector<MMElement> debugElements = {
-                createElement("cube", "cube",{"medieval_nature1","pnois"},{0,3,0},{0,0,0},{10,10,10}),
-                createElement("cylinder", "cylinder",{"medieval_nature1","pnois"},{0,4,0},{0,0,0},{10,10,10}),
-                createElement("sphere", "sphere",{"medieval_nature1","pnois"},{0,5,0},{0,0,0},{10,10,10})
-        };
-        MMInstance debugBox = createInstance(UtilsStructs::CBoxDebug, debugElements);
+        MMInstance debugBox;
         if(debug){
             CollisionBoxGenerator::fillCollisionsBoxesVisual();
             debugBox = CollisionBoxGenerator::collisionInstance;

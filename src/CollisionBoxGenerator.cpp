@@ -42,25 +42,41 @@ CollisionObject CollisionBoxGenerator::createCollisionObject(const UElement& ele
         );
     }
     else if (element.id.find("house2") != std::string::npos) {
-        double a = 3.0, b = 12.0, c = 8.0;
 
-        col.addBox(pos + glm::vec3(a, 2.5f, 0.0f),
+        if (element.eulerAngles[1] == 180.0f)
+        {
+            double a = -4.0, b = 8, c = 15.5;
+
+            col.addBox(pos + glm::vec3(b/2, 2.5f, a),
                    glm::vec3(b, 5.0f, c),
                    CollisionBox::Shape::cube);
 
-        col.addBox(pos + glm::vec3(0.0f, 2.5f, a),
-                   glm::vec3(c, 5.0f, b),
-                   CollisionBox::Shape::cube);
+            col.addBox(pos + glm::vec3(0.0f, 2.5f, 0.0f),
+                       glm::vec3(c, 5.0f, b),
+                       CollisionBox::Shape::cube);
+        }
+        else if (element.eulerAngles[1] == 0.0f)
+        {
+            double a = 4.0, b = 8, c = 15.5;
+
+            col.addBox(pos + glm::vec3(-b/2, 2.5f, a),
+                       glm::vec3(b, 5.0f, c),
+                       CollisionBox::Shape::cube);
+
+            col.addBox(pos + glm::vec3(0.0f, 2.5f, 0.0f),
+                       glm::vec3(c, 5.0f, b),
+                       CollisionBox::Shape::cube);
+        }
     }
     else if (element.id.find("house3") != std::string::npos) {
-        double a = 5.0, b = 8.0, c = 8.0;
+        double a = 8.5, b = 8.0, c = 12.0;
 
-        col.addBox(pos + glm::vec3(0.0f, 2.5f, a),
-                   glm::vec3(b, 5.0f, c),
+        col.addBox(pos + glm::vec3(a, 3.5f, 0.0f),
+                   glm::vec3(b, 7.0f, c),
                    CollisionBox::Shape::cube);
 
-        col.addBox(pos + glm::vec3(0.0f, 2.5f, -a),
-                   glm::vec3(b, 5.0f, c),
+        col.addBox(pos + glm::vec3(-a, 3.5f, 0.0f),
+                   glm::vec3(b, 7.0f, c),
                    CollisionBox::Shape::cube);
     }
     else if (element.id.find("house4") != std::string::npos) {
@@ -71,20 +87,63 @@ CollisionObject CollisionBoxGenerator::createCollisionObject(const UElement& ele
         );
     }
     else if (element.id.find("house5") != std::string::npos) {
-        double a = 3.0, b = 12.0, c = 8.0;
+        if (element.eulerAngles[1] == 180.0f)
+        {
+            double a = -4.0, b = 8, c = 15.5;
 
-        col.addBox(pos + glm::vec3(a, 3.5f, 0.0f),
-                   glm::vec3(b, 7.0f, c),
-                   CollisionBox::Shape::cube);
+            col.addBox(pos + glm::vec3(b/2, 3.5f, a),
+                       glm::vec3(b, 7.0f, c),
+                       CollisionBox::Shape::cube);
 
-        col.addBox(pos + glm::vec3(0.0f, 3.5f, a),
-                   glm::vec3(c, 7.0f, b),
-                   CollisionBox::Shape::cube);
+            col.addBox(pos + glm::vec3(0.0f, 3.5f, 0.0f),
+                       glm::vec3(c, 7.0f, b),
+                       CollisionBox::Shape::cube);
+        }
+        else if (element.eulerAngles[1] == 0.0f)
+        {
+            double a = 4.0, b = 8, c = 15.5;
+
+            col.addBox(pos + glm::vec3(-b/2, 3.5f, a),
+                       glm::vec3(b, 7.0f, c),
+                       CollisionBox::Shape::cube);
+
+            col.addBox(pos + glm::vec3(0.0f, 3.5f, 0.0f),
+                       glm::vec3(c, 7.0f, b),
+                       CollisionBox::Shape::cube);
+        }
     }
     else if (element.id.find("ww") != std::string::npos) {
         col.addBox(
-                pos + glm::vec3(0.0f, 1.0f, 0.0f),
+                pos + glm::vec3(0.0f, 0.5f, 0.0f),
                 glm::vec3(1.0f, 1.0f, 1.0f),
+                CollisionBox::Shape::cylinder
+        );
+    }
+    else if (element.model.find("tree1") != std::string::npos || element.model.find("tree2") != std::string::npos) {
+        col.addBox(
+                pos + glm::vec3(0.0f, 2.5f, 0.0f),
+                glm::vec3(0.2f, 5.0f, 0.2f),
+                CollisionBox::Shape::cylinder
+        );
+    }
+    else if (element.model.find("tree3") != std::string::npos || element.model.find("tree4") != std::string::npos) {
+        col.addBox(
+                pos + glm::vec3(0.0f, 0.0f, 0.0f),
+                glm::vec3(0.5f, 0.5f, 0.5f),
+                CollisionBox::Shape::sphere
+        );
+    }
+    else if (element.model.find("barrel") != std::string::npos) {
+        col.addBox(
+                pos + glm::vec3(0.0f, 0.5f, 0.0f),
+                glm::vec3(1.0f, 1.0f, 0.5f),
+                CollisionBox::Shape::cylinder
+        );
+    }
+    else if (element.model.find("lamp1") != std::string::npos) {
+        col.addBox(
+                pos + glm::vec3(0.0f, 2.5f, 0.0f),
+                glm::vec3(0.1f, 5.0f, 0.1f),
                 CollisionBox::Shape::cylinder
         );
     }
@@ -102,19 +161,33 @@ UElement CollisionBoxGenerator::createCollisionObjectVisual(const CollisionBox& 
             std::to_string(collisionBoxVisualCount++);
 
     element.translate[0] = collision.center.x;
-    element.translate[1] = collision.center.y;
+    element.translate[1] = collision.center.y - collision.halfSize.y;
     element.translate[2] = collision.center.z;
 
-    element.scale[0] = collision.halfSize.x * 2.0f;
-    element.scale[1] = collision.halfSize.y * 2.0f;
-    element.scale[2] = collision.halfSize.z * 2.0f;
 
-    if(collision.shape == CollisionBox::cube)
+
+    if(collision.shape == CollisionBox::cube){
         element.model = "cube";
-    if(collision.shape == CollisionBox::sphere)
+        element.scale[0] = collision.halfSize.x * 2.0f;
+        element.scale[1] = collision.halfSize.y * 2.0f;
+        element.scale[2] = collision.halfSize.z * 2.0f;
+    }
+
+    if(collision.shape == CollisionBox::sphere){
         element.model = "sphere";
-    if(collision.shape == CollisionBox::cylinder)
+        element.scale[0] = collision.halfSize.x * 2.0f * 2.0f;
+        element.scale[1] = collision.halfSize.y * 2.0f * 2.0f;
+        element.scale[2] = collision.halfSize.z * 2.0f * 2.0f;
+    }
+
+    if(collision.shape == CollisionBox::cylinder){
         element.model = "cylinder";
+        element.scale[0] = collision.halfSize.x * 2.0f * 2.0f;
+        element.scale[1] = collision.halfSize.y * 2.0f;
+        element.scale[2] = collision.halfSize.z * 2.0f * 2.0f;
+        //element.translate[1] = collision.center.y - collision.halfSize.y * 2.0f;
+    }
+
 
     element.texture[0] = "colBox_texture";
     element.texture[1] = "pnois";

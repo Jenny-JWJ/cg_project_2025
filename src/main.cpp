@@ -401,7 +401,7 @@ protected:
 
         Pdebug.init(this, &VDsimp, "shaders/SimplePosNormUV.vert.spv", "shaders/CookTorrance.frag.spv",
                     {&DSLglobal, &DSLdebug});
-        Pdebug.setPolygonMode(VK_POLYGON_MODE_LINE);
+        Pdebug.setPolygonMode(VK_POLYGON_MODE_FILL);
 
         PRs.resize(5);
         PRs[0].init("CookTorranceChar", {
@@ -1296,8 +1296,21 @@ protected:
 // This is the main: probably you do not need to touch this!
 int main() {
     E09 app;
-
-    (new MapManager())->makeJson();
+    unsigned char response;
+    std::cout << "Want to activate debug mode? Y/N\n";
+    do {
+        std::cin >> response;
+    } while (
+            std::tolower(static_cast<int>(response)) != 'y' &&
+            std::tolower(static_cast<int>(response)) != 'x'
+            );
+    MapManager* mapManager = new MapManager();
+    if(std::tolower(static_cast<int>(response)) == 'y'){
+        std::cout << "in\n";
+        mapManager->debug = true;
+    }
+    else mapManager->debug = false;
+    mapManager->makeJson();
     try {
         app.run();
     } catch (const std::exception &e) {
