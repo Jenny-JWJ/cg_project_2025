@@ -1,6 +1,6 @@
 // This has been adapted from the Vulkan tutorial
 #include <sstream>
-
+#include <iomanip>
 #include <json.hpp>
 
 #include "modules/Starter.hpp"
@@ -1045,6 +1045,17 @@ protected:
                       false, false, true, TAL_CENTER, TRH_CENTER, TRV_MIDDLE,
                       {1.0f, 1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
         }
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(1)
+            << "Player position  x: " << std::floor(Pos.x * 10) / 10
+            << " y: " << std::floor(Pos.y * 10) / 10
+            << " z: " << std::floor(Pos.z * 10) / 10;
+
+        std::string coordinateTxt = oss.str();
+        txt.print(-1.0,-0.9, coordinateTxt, 4, "CO", false, false, true,
+                  TAL_LEFT, TRH_LEFT, TRV_TOP,
+                  {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
+
         txt.updateCommandBuffer();
     }
 
