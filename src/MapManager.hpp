@@ -594,7 +594,7 @@ public:
             {"assets/models/Castle/SPW_Medieval_Box_01.mgcg", "box1"},
             {"assets/models/Castle/SPW_Medieval_Box_02.mgcg", "box2"},
             {"assets/models/Castle/SPW_Medieval_Box_03.mgcg", "box3"},
-            {"assets/models/Castle/SPW_Medieval_Barrel.mgcg", "barrel"},
+            //{"assets/models/Castle/SPW_Medieval_Barrel.mgcg", "barrel"},
             {"assets/models/Castle/SPW_Medieval_Props_01.mgcg", "well"},
             {"assets/models/Castle/SPW_Terrain_Grass_Flat.mgcg", "ground"},
             {"assets/models/Vegetation/vegetation.016.mgcg", "tree1"},

@@ -1297,12 +1297,12 @@ protected:
 int main() {
     E09 app;
     unsigned char response;
-    std::cout << "Want to activate debug mode? Y/N\n";
+    std::cout << "Want to activate debug mode? Y/n\n";
     do {
         std::cin >> response;
     } while (
             std::tolower(static_cast<int>(response)) != 'y' &&
-            std::tolower(static_cast<int>(response)) != 'x'
+            std::tolower(static_cast<int>(response)) != 'n'
             );
     MapManager* mapManager = new MapManager();
     if(std::tolower(static_cast<int>(response)) == 'y'){
