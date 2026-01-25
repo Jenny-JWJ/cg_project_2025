@@ -63,6 +63,77 @@ public:
         Technique technique;
         std::vector<Element> elements;
     };
+
+    static AssetFile createAssetFile(const std::string &id,
+                                       const std::string &file,
+                                       Format format) {
+        AssetFile a;
+        a.id = id;
+        a.file = file;
+        a.format = format;
+        return a;
+    }
+
+    static Model createModel(const std::string &id,
+                               const std::string &VD,
+                               const std::string &modelPath,
+                               Format format,
+                               const std::string &node = "",
+                               int meshId = -1,
+                               const std::string &asset = "") {
+        Model m;
+        m.id = id;
+        m.VD = VD;
+        m.model = modelPath;
+        m.format = format;
+        m.node = node;
+        m.meshId = meshId;
+        m.asset = asset;
+        return m;
+    }
+
+    static Texture createTexture(const std::string &id,
+                                   const std::string &path,
+                                   Format format) {
+        Texture t;
+        t.id = id;
+        t.texture = path;
+        t.format = format;
+        return t;
+    }
+
+    static Element createElement(const std::string &id,
+                                   const std::string &model,
+                                   const std::vector<std::string> &textures,
+                                   const std::vector<float> &translate = {0, 0, 0},
+                                   const std::vector<float> &eulerAngles = {0, 0, 0},
+                                   const std::vector<float> &scale = {1, 1, 1}) {
+        Element e;
+        e.id = id;
+        e.model = model;
+
+        // Copy textures safely
+        for (int i = 0; i < 4; i++)
+            e.texture[i] = (i < (int) textures.size()) ? textures[i] : "";
+
+        // Copy transform values
+        for (int i = 0; i < 3; i++) {
+            e.translate[i] = i < (int) translate.size() ? translate[i] : 0;
+            e.eulerAngles[i] = i < (int) eulerAngles.size() ? eulerAngles[i] : 0;
+            e.scale[i] = i < (int) scale.size() ? scale[i] : 1;
+        }
+
+        return e;
+    }
+
+    static Instance createInstance(Technique technique,
+                                     const std::vector<Element> &elems) {
+        Instance inst;
+        inst.technique = technique;
+        inst.elements = elems;
+
+        return inst;
+    }
 };
 
 

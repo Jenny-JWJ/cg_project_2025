@@ -121,7 +121,7 @@ protected:
 
     glm::mat4 ViewPrj;
     glm::mat4 World;
-    glm::vec3 Pos = glm::vec3(0, 0, 5);
+    glm::vec3 Pos = glm::vec3(300, 0, 300);
     glm::vec3 cameraPos;
     float Yaw = glm::radians(0.0f);
     float Pitch = glm::radians(0.0f);
@@ -552,7 +552,7 @@ protected:
         txt.pipelinesAndDescriptorSetsCleanup();
     }
 
-    // Here you destroy all the Models, MMTexture and Desc. Set Layouts you created!
+    // Here you destroy all the Models, Texture and Desc. Set Layouts you created!
     // You also have to destroy the pipelines
     void localCleanup() {
         DSLlocalChar.cleanup();

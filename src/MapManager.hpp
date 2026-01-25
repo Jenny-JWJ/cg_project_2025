@@ -17,6 +17,7 @@
 #include <json.hpp>
 #include "CollisionBoxGenerator.hpp"
 #include "UtilsStructs.hpp"
+#include "InteriorManager.hpp"
 
 using json = nlohmann::json;
 
@@ -58,76 +59,7 @@ public:
         return path.substr(dotPos); // Include il punto
     }
 
-    static MMAssetFile createAssetFile(const std::string &id,
-                                       const std::string &file,
-                                       MMFormat format) {
-        MMAssetFile a;
-        a.id = id;
-        a.file = file;
-        a.format = format;
-        return a;
-    }
 
-    static MMModel createModel(const std::string &id,
-                               const std::string &VD,
-                               const std::string &modelPath,
-                               MMFormat format,
-                               const std::string &node = "",
-                               int meshId = -1,
-                               const std::string &asset = "") {
-        MMModel m;
-        m.id = id;
-        m.VD = VD;
-        m.model = modelPath;
-        m.format = format;
-        m.node = node;
-        m.meshId = meshId;
-        m.asset = asset;
-        return m;
-    }
-
-    static MMTexture createTexture(const std::string &id,
-                                   const std::string &path,
-                                   MMFormat format) {
-        MMTexture t;
-        t.id = id;
-        t.texture = path;
-        t.format = format;
-        return t;
-    }
-
-    static MMElement createElement(const std::string &id,
-                                   const std::string &model,
-                                   const std::vector<std::string> &textures,
-                                   const std::vector<float> &translate = {0, 0, 0},
-                                   const std::vector<float> &eulerAngles = {0, 0, 0},
-                                   const std::vector<float> &scale = {1, 1, 1}) {
-        MMElement e;
-        e.id = id;
-        e.model = model;
-
-        // Copy textures safely
-        for (int i = 0; i < 4; i++)
-            e.texture[i] = (i < (int) textures.size()) ? textures[i] : "";
-
-        // Copy transform values
-        for (int i = 0; i < 3; i++) {
-            e.translate[i] = i < (int) translate.size() ? translate[i] : 0;
-            e.eulerAngles[i] = i < (int) eulerAngles.size() ? eulerAngles[i] : 0;
-            e.scale[i] = i < (int) scale.size() ? scale[i] : 1;
-        }
-
-        return e;
-    }
-
-    static MMInstance createInstance(MMTechnique technique,
-                                     const std::vector<MMElement> &elems) {
-        MMInstance inst;
-        inst.technique = technique;
-        inst.elements = elems;
-
-        return inst;
-    }
 
     static MMModel makeModel(std::pair<std::string, std::string> modelPath) {
         std::string extension = getExtension(modelPath.first);
@@ -138,11 +70,11 @@ public:
             format = UtilsStructs::MGCG;
         if (extension == ".gltf" || extension == ".glb")
             format = UtilsStructs::GLTF;
-        return createModel(modelPath.second, "VDsimp", modelPath.first, format);
+        return UtilsStructs::createModel(modelPath.second, "VDsimp", modelPath.first, format);
     }
 
     static MMTexture makeTexture(std::pair<std::string, std::string> texturePath) {
-        return createTexture(texturePath.second, texturePath.first, UtilsStructs::C);
+        return UtilsStructs::createTexture(texturePath.second, texturePath.first, UtilsStructs::C);
     }
 
     static std::vector<MMModel> makeModels() {
@@ -269,7 +201,7 @@ public:
         for (int i = 0; i < count_z; i++) {
             for (int j = 0; j < count_x; j++) {
                 idNumber++;
-                elements.emplace_back(createElement(idName + std::to_string(idNumber), "ground",
+                elements.emplace_back(UtilsStructs::createElement(idName + std::to_string(idNumber), "ground",
                                                     {"medieval_nature2", "pnois"}, {
                                                         j * scale - x_offset, 0, i * scale - z_offset
                                                     }, {90, 0, 0}, {4, 1, 4}));
@@ -294,7 +226,7 @@ public:
 
         for (int i = 0; i < steps; i++) {
             idNumber++;
-            elements.emplace_back(createElement(
+            elements.emplace_back(UtilsStructs::createElement(
                 idName + std::to_string(idNumber),
                 "ground",
                 {"medieval_buildings", "pnois"},
@@ -328,7 +260,7 @@ public:
             for (int j = 0; j < count_x; j++){
                 std::string model_number = std::to_string(rand_int(1,6));
                 idNumber++;
-                elements.emplace_back(createElement(idName + model_number + "_" + std::to_string(idNumber), "bldg" + model_number, {"medieval_buildings", "pnois"},{j*scale-x_offset,0,i*scale-z_offset},rotation,{1,1,1}));
+                elements.emplace_back(UtilsStructs::createElement(idName + model_number + "_" + std::to_string(idNumber), "bldg" + model_number, {"medieval_buildings", "pnois"},{j*scale-x_offset,0,i*scale-z_offset},rotation,{1,1,1}));
             }
         }
         return elements;
@@ -390,7 +322,7 @@ public:
 
             idNumber++;
             int selectedIndex = modelSelector(gen);
-            elements.emplace_back(createElement(
+            elements.emplace_back(UtilsStructs::createElement(
                 "veg_" + std::to_string(idNumber) + "_" + std::to_string(rand()),
                 modelIds[selectedIndex], {textureId, "pnois"},
                 {plantX, 0.0f, plantZ}, {0.0f, rotDist(gen), 0.0f},
@@ -461,7 +393,7 @@ public:
             std::string currentModel = modelIds[selectedIndex];
 
             // Create MMElement
-            elements.emplace_back(createElement(
+            elements.emplace_back(UtilsStructs::createElement(
                 "rock_" + std::to_string(i) + "_" + std::to_string(rand()),
                 currentModel,
                 {textureId, "pnois"},
@@ -522,7 +454,7 @@ public:
             std::vector<float> scaleVec = {1.0f, 1.0f, 1.0f};
 
             // Left Lamp
-            elements.emplace_back(createElement(
+            elements.emplace_back(UtilsStructs::createElement(
                 "lamp_" + std::to_string(axis) + "_L_" + std::to_string(i),
                 modelId, {textureId, "pnois"},
                 {posLeft.x, posLeft.y, posLeft.z},
@@ -531,7 +463,7 @@ public:
             ));
 
             // Right Lamp
-            elements.emplace_back(createElement(
+            elements.emplace_back(UtilsStructs::createElement(
                 "lamp_" + std::to_string(axis) + "_R_" + std::to_string(i),
                 modelId, {textureId, "pnois"},
                 {posRight.x, posRight.y, posRight.z},
@@ -605,6 +537,10 @@ public:
             {"assets/models/Vegetation/vegetation.052.mgcg", "rocks2"},
             {"assets/models/Vegetation/vegetation.053.mgcg", "rocks3"},
             {"assets/models/Castle/SPW_Medieval_Light.mgcg", "lamp1"},
+            {"assets/models/Interiors/door_005_Mesh.119.mgcg", "door"},
+            {"assets/models/Interiors/door_026_Mesh.6709.mgcg", "door_frame"},
+            {"assets/models/Interiors/tunnel.031_Mesh.7927.mgcg", "wall"},
+            {"assets/models/Interiors/Walls_062_Mesh.667.mgcg", "wall_pillar"},
             {"assets/models/CollisionBoxes/cube.obj", "cube"},
             {"assets/models/CollisionBoxes/sphere.obj", "sphere"},
             {"assets/models/CollisionBoxes/cylinder.obj", "cylinder"},
@@ -614,6 +550,8 @@ public:
             {"assets/textures/Castle_Textures/SPW_Medieval.png", "medieval_buildings"},
             {"assets/textures/Castle_Textures/SPW_Natures_01.png", "medieval_nature1"},
             {"assets/textures/Castle_Textures/SPW_Natures_02.png", "medieval_nature2"},
+            {"assets/textures/FornitureTextures.png", "forniture"},
+            {"assets/textures/DungeonTextures.png", "dungeon"},
             {"assets/textures/Perlin_noise.png", "pnois"},
             {"assets/textures/day_sky.png", "skybox"},
             {"assets/textures/Vegetation/Textures_Vegetation.png", "tree_tex"},
@@ -632,28 +570,28 @@ public:
 
         // --- A. ASSETS & MODELS ---
         std::vector<MMAssetFile> assetFiles = {
-            createAssetFile("hm", "assets/models/uomo.gltf", UtilsStructs::GLTF),
-            createAssetFile("a1", "assets/models/running.gltf", UtilsStructs::GLTF),
-            createAssetFile("a2", "assets/models/idle.gltf", UtilsStructs::GLTF),
-            createAssetFile("a3", "assets/models/pointing.gltf", UtilsStructs::GLTF),
-            createAssetFile("a4", "assets/models/waving.gltf", UtilsStructs::GLTF),
-            createAssetFile("ct", "assets/models/MainSceneEnvOnly.gltf", UtilsStructs::GLTF)
+                UtilsStructs::createAssetFile("hm", "assets/models/uomo.gltf", UtilsStructs::GLTF),
+                UtilsStructs::createAssetFile("a1", "assets/models/running.gltf", UtilsStructs::GLTF),
+                UtilsStructs::createAssetFile("a2", "assets/models/idle.gltf", UtilsStructs::GLTF),
+                UtilsStructs::createAssetFile("a3", "assets/models/pointing.gltf", UtilsStructs::GLTF),
+                UtilsStructs::createAssetFile("a4", "assets/models/waving.gltf", UtilsStructs::GLTF),
+                UtilsStructs::createAssetFile("ct", "assets/models/MainSceneEnvOnly.gltf", UtilsStructs::GLTF)
         };
 
         std::vector<MMModel> models = makeModels();
-        models.emplace_back(createModel("hm0", "VDchar", "Mesh", UtilsStructs::ASSET, "Ch01_Body", 0, "hm"));
-        models.emplace_back(createModel("hm1", "VDchar", "Mesh", UtilsStructs::ASSET, "Ch01_Body", 1, "hm"));
-        models.emplace_back(createModel("skybox", "VDskybox", "assets/models/SkyBoxCube.obj", UtilsStructs::OBJ));
+        models.emplace_back(UtilsStructs::createModel("hm0", "VDchar", "Mesh", UtilsStructs::ASSET, "Ch01_Body", 0, "hm"));
+        models.emplace_back(UtilsStructs::createModel("hm1", "VDchar", "Mesh", UtilsStructs::ASSET, "Ch01_Body", 1, "hm"));
+        models.emplace_back(UtilsStructs::createModel("skybox", "VDskybox", "assets/models/SkyBoxCube.obj", UtilsStructs::OBJ));
 
         std::vector<MMTexture> textures = makeTextures();
-        textures.emplace_back(createTexture("st", "assets/textures/uomo/Ch01_1001_Diffuse.png", UtilsStructs::C));
+        textures.emplace_back(UtilsStructs::createTexture("st", "assets/textures/uomo/Ch01_1001_Diffuse.png", UtilsStructs::C));
 
         // --- B. STATIC ELEMENTS (Ground, Roads, Rocks, Lights) ---
         // MMInstance Index 1: Static objects
 
         std::vector<MMElement> charElements = {
-            createElement("hm0", "hm0", {"st"}),
-            createElement("hm1", "hm1", {"st"}),
+                UtilsStructs::createElement("hm0", "hm0", {"st"}),
+                UtilsStructs::createElement("hm1", "hm1", {"st"}),
         };
 
         // 1. Grass Ground
@@ -686,7 +624,8 @@ public:
         std::vector<MMElement> lightsV = placeStreetLights(200.0f, 1, 25.0f, "lamp1", "lamp_tex");
         simpElements.insert(simpElements.end(), lightsV.begin(), lightsV.end());
 
-
+        std::vector<MMElement> interior = InteriorManager::CreateBaseHouseTemplate({300, 0, 300});
+        simpElements.insert(simpElements.end(), interior.begin(), interior.end());
         // --- C. HOUSES (Obstacles) ---
         float areaW = 150.0f; float areaL = 150.0f; float gridSize = 30.0f;
 
@@ -696,7 +635,7 @@ public:
         std::vector<MMElement> h4 = placeHouses(areaW, areaL, 140, 140, gridSize, 75);
 
         std::vector<MMElement> extras;
-        extras.emplace_back(createElement("ww1", "well", {"medieval_buildings", "pnois"}, {0, 0, 0}, {90, 0, 0}, {1, 1, 1}));
+        extras.emplace_back(UtilsStructs::createElement("ww1", "well", {"medieval_buildings", "pnois"}, {0, 0, 0}, {90, 0, 0}, {1, 1, 1}));
 
         // Master Obstacle List
         std::vector<MMElement> allObstacles;
@@ -727,7 +666,7 @@ public:
 
 
         // --- F. INSTANCES ---
-        std::vector<MMElement> skyboxElements = {createElement("skybox", "skybox", {"skybox"}) };
+        std::vector<MMElement> skyboxElements = {UtilsStructs::createElement("skybox", "skybox", {"skybox"}) };
 
         CollisionBoxGenerator::fillCollisionsBoxes(simpElements);
         CollisionBoxGenerator::fillCollisionsBoxes(vegElements);
@@ -739,18 +678,18 @@ public:
         std::vector<MMInstance> istances;
         if(!debug && debugBox.elements.empty())
             istances = {
-                createInstance(UtilsStructs::CookTorranceChar, charElements),       // Idx 0
-                createInstance(UtilsStructs::CookTorranceNoiseSimp, simpElements),  // Idx 1 (Includes Lights)
-                createInstance(UtilsStructs::SkyBox, skyboxElements),               // Idx 2
-                createInstance(UtilsStructs::Vegetation, vegElements)               // Idx 3
+                    UtilsStructs::createInstance(UtilsStructs::CookTorranceChar, charElements),       // Idx 0
+                    UtilsStructs::createInstance(UtilsStructs::CookTorranceNoiseSimp, simpElements),  // Idx 1 (Includes Lights)
+                    UtilsStructs::createInstance(UtilsStructs::SkyBox, skyboxElements),               // Idx 2
+                    UtilsStructs::createInstance(UtilsStructs::Vegetation, vegElements)               // Idx 3
             };
 
         else{
             istances = {
-                    createInstance(UtilsStructs::CookTorranceChar, charElements),       // Idx 0
-                    createInstance(UtilsStructs::CookTorranceNoiseSimp, simpElements),  // Idx 1 (Includes Lights)
-                    createInstance(UtilsStructs::SkyBox, skyboxElements),               // Idx 2
-                    createInstance(UtilsStructs::Vegetation, vegElements),              // Idx 3
+                    UtilsStructs::createInstance(UtilsStructs::CookTorranceChar, charElements),       // Idx 0
+                    UtilsStructs::createInstance(UtilsStructs::CookTorranceNoiseSimp, simpElements),  // Idx 1 (Includes Lights)
+                    UtilsStructs::createInstance(UtilsStructs::SkyBox, skyboxElements),               // Idx 2
+                    UtilsStructs::createInstance(UtilsStructs::Vegetation, vegElements),              // Idx 3
                     debugBox                                                                          // Idx 4
             };
         }
