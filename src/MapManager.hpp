@@ -542,6 +542,8 @@ public:
             {"assets/models/Interiors/tunnel.031_Mesh.7927.mgcg", "wall"},
             {"assets/models/Interiors/SPW_Natures_Wood.mgcg", "wall_pillar"},
             {"assets/models/Interiors/floor_001_Mesh.640.mgcg", "house_floor"},
+            {"assets/models/Interiors/Stairs_013_Mesh.674.mgcg", "stairs"},
+            {"assets/models/Interiors/window_004_Mesh.432.mgcg", "window"},
             {"assets/models/CollisionBoxes/cube.obj", "cube"},
             {"assets/models/CollisionBoxes/sphere.obj", "sphere"},
             {"assets/models/CollisionBoxes/cylinder.obj", "cylinder"},
@@ -558,6 +560,7 @@ public:
             {"assets/textures/Vegetation/Textures_Vegetation.png", "tree_tex"},
             {"assets/textures/Vegetation/Textures_Vegetation.png", "rock_tex"},
             {"assets/textures/Castle_Textures/SPW_Natures_01.png", "lamp_tex"},
+            {"assets/textures/Black.png", "black"},
             {"assets/textures/translucent_lightblue_texture.png", "colBox_texture"}
         };
     }
@@ -625,7 +628,7 @@ public:
         std::vector<MMElement> lightsV = placeStreetLights(200.0f, 1, 25.0f, "lamp1", "lamp_tex");
         simpElements.insert(simpElements.end(), lightsV.begin(), lightsV.end());
 
-        std::vector<MMElement> interior = InteriorManager::CreateBaseHouseTemplate({300, 0, 300});
+        std::vector<MMElement> interior = InteriorManager::CreateDoubleFirstFloorRightTemplate({300, 0, 300});
         simpElements.insert(simpElements.end(), interior.begin(), interior.end());
         // --- C. HOUSES (Obstacles) ---
         float areaW = 150.0f; float areaL = 150.0f; float gridSize = 30.0f;
