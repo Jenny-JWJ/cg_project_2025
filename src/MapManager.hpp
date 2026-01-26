@@ -115,7 +115,7 @@ public:
             case UtilsStructs::CookTorranceChar: return "CookTorranceChar";
             case UtilsStructs::CookTorranceNoiseSimp: return "CookTorranceNoiseSimp";
             case UtilsStructs::SkyBox: return "SkyBox";
-            case UtilsStructs::PBR: return "PBR";
+            //case UtilsStructs::PBR: return "PBR";
             case UtilsStructs::Vegetation: return "Vegetation";
             case UtilsStructs::CBoxDebug: return "DebugCollisionBoxes";
         }
@@ -280,8 +280,8 @@ public:
                                                    float x_offset = 400.0f, float z_offset = 400.0f,
                                                    float scale = 20.0f) {
         std::vector<MMElement> elements;
-        int count_x = (int) (hight / scale);
-        int count_z = (int) (lenght / scale);
+        int count_x = hight / scale;
+        int count_z = lenght / scale;
         int idNumber = 0;
         std::string idName = "grass_ground";
 
@@ -296,8 +296,9 @@ public:
 
                 idNumber++;
                 elements.emplace_back(UtilsStructs::createElement(idName + std::to_string(idNumber), "ground",
-                                                                  {"medieval_nature2", "pnois"},
-                                                                  {posX, 0.0f, posZ}, {90, 0, 0}, {1, 1, 1}));
+                                                    {"medieval_nature2", "pnois"}, {
+                                                        j * scale - x_offset, 0, i * scale - z_offset
+                                                    }, {90, 0, 0}, {4, 1, 4}));
             }
         }
         return elements;
@@ -349,14 +350,11 @@ public:
         int count_z = lenght / scale;
         std::string idName = "house";
 
-        for (int i = 0; i < count_z; i++) {
-            for (int j = 0; j < count_x; j++) {
-                std::string model_number = std::to_string(rand_int(1, 6));
+        for (int i = 0; i < count_z; i++){
+            for (int j = 0; j < count_x; j++){
+                std::string model_number = std::to_string(rand_int(1,6));
                 idNumber++;
-                elements.emplace_back(UtilsStructs::createElement(
-                    idName + model_number + "_" + std::to_string(idNumber), "bldg" + model_number,
-                    {"medieval_buildings", "pnois"}, {j * scale - x_offset, 0, i * scale - z_offset}, rotation,
-                    {1, 1, 1}));
+                elements.emplace_back(UtilsStructs::createElement(idName + model_number + "_" + std::to_string(idNumber), "bldg" + model_number, {"medieval_buildings", "pnois"},{j*scale-x_offset,0,i*scale-z_offset},rotation,{1,1,1}));
             }
         }
         return elements;
@@ -472,19 +470,13 @@ public:
 
             // Overlap check
             bool tooClose = false;
-            for (const auto &el: elements) {
+            for (const auto& el : elements) {
                 float dx = rockX - el.translate[0];
                 float dz = rockZ - el.translate[2];
                 // Distance threshold 0.3 because rocks are small
-                if ((dx * dx + dz * dz) < 0.3f) {
-                    tooClose = true;
-                    break;
-                }
+                if ((dx*dx + dz*dz) < 0.3f) { tooClose = true; break; }
             }
-            if (tooClose) {
-                i--;
-                continue;
-            }
+            if (tooClose) { i--; continue; }
 
             // Pick Random MMModel
             int selectedIndex = modelSelector(gen);
@@ -637,6 +629,8 @@ public:
             {"assets/models/Interiors/tunnel.031_Mesh.7927.mgcg", "wall"},
             {"assets/models/Interiors/SPW_Natures_Wood.mgcg", "wall_pillar"},
             {"assets/models/Interiors/floor_001_Mesh.640.mgcg", "house_floor"},
+            {"assets/models/Interiors/Stairs_013_Mesh.674.mgcg", "stairs"},
+            {"assets/models/Interiors/window_004_Mesh.432.mgcg", "window"},
             {"assets/models/CollisionBoxes/cube.obj", "cube"},
             {"assets/models/CollisionBoxes/sphere.obj", "sphere"},
             {"assets/models/CollisionBoxes/cylinder.obj", "cylinder"},
@@ -658,6 +652,8 @@ public:
             {"assets/textures/Vegetation/Textures_Vegetation.png", "tree_tex"},
             {"assets/textures/Vegetation/Textures_Vegetation.png", "rock_tex"},
             {"assets/textures/Castle_Textures/SPW_Natures_01.png", "lamp_tex"},
+            {"assets/textures/Black.png", "black"},
+            {"assets/textures/translucent_lightblue_texture.png", "colBox_texture"}
             {"assets/textures/translucent_lightblue_texture.png", "colBox_texture"},
             {"assets/textures/Castle_Textures/SPW_Natures_01.png", "river_tex"},
             {"assets/textures/Castle_Textures/SPW_Natures_01.png", "bridge"}
@@ -673,55 +669,32 @@ public:
 
         // --- A. ASSETS & MODELS ---
         std::vector<MMAssetFile> assetFiles = {
-            UtilsStructs::createAssetFile("hm", "assets/models/uomo.gltf", UtilsStructs::GLTF),
-            UtilsStructs::createAssetFile("a1", "assets/models/running.gltf", UtilsStructs::GLTF),
-            UtilsStructs::createAssetFile("a2", "assets/models/idle.gltf", UtilsStructs::GLTF),
-            UtilsStructs::createAssetFile("a3", "assets/models/pointing.gltf", UtilsStructs::GLTF),
-            UtilsStructs::createAssetFile("a4", "assets/models/waving.gltf", UtilsStructs::GLTF),
-            UtilsStructs::createAssetFile("ct", "assets/models/MainSceneEnvOnly.gltf", UtilsStructs::GLTF)
+                UtilsStructs::createAssetFile("hm", "assets/models/uomo.gltf", UtilsStructs::GLTF),
+                UtilsStructs::createAssetFile("a1", "assets/models/running.gltf", UtilsStructs::GLTF),
+                UtilsStructs::createAssetFile("a2", "assets/models/idle.gltf", UtilsStructs::GLTF),
+                UtilsStructs::createAssetFile("a3", "assets/models/pointing.gltf", UtilsStructs::GLTF),
+                UtilsStructs::createAssetFile("a4", "assets/models/waving.gltf", UtilsStructs::GLTF),
+                UtilsStructs::createAssetFile("ct", "assets/models/MainSceneEnvOnly.gltf", UtilsStructs::GLTF)
         };
 
         std::vector<MMModel> models = makeModels();
-        models.emplace_back(
-            UtilsStructs::createModel("hm0", "VDchar", "Mesh", UtilsStructs::ASSET, "Ch01_Body", 0, "hm"));
-        models.emplace_back(
-            UtilsStructs::createModel("hm1", "VDchar", "Mesh", UtilsStructs::ASSET, "Ch01_Body", 1, "hm"));
-        models.emplace_back(
-            UtilsStructs::createModel("skybox", "VDskybox", "assets/models/SkyBoxCube.obj", UtilsStructs::OBJ));
+        models.emplace_back(UtilsStructs::createModel("hm0", "VDchar", "Mesh", UtilsStructs::ASSET, "Ch01_Body", 0, "hm"));
+        models.emplace_back(UtilsStructs::createModel("hm1", "VDchar", "Mesh", UtilsStructs::ASSET, "Ch01_Body", 1, "hm"));
+        models.emplace_back(UtilsStructs::createModel("skybox", "VDskybox", "assets/models/SkyBoxCube.obj", UtilsStructs::OBJ));
 
         std::vector<MMTexture> textures = makeTextures();
-        textures.emplace_back(
-            UtilsStructs::createTexture("st", "assets/textures/uomo/Ch01_1001_Diffuse.png", UtilsStructs::C));
+        textures.emplace_back(UtilsStructs::createTexture("st", "assets/textures/uomo/Ch01_1001_Diffuse.png", UtilsStructs::C));
 
         // --- B. STATIC ELEMENTS (Ground, Roads, Rocks, Lights) ---
         // MMInstance Index 1: Static objects
 
         std::vector<MMElement> charElements = {
-            UtilsStructs::createElement("hm0", "hm0", {"st"}),
-            UtilsStructs::createElement("hm1", "hm1", {"st"}),
+                UtilsStructs::createElement("hm0", "hm0", {"st"}),
+                UtilsStructs::createElement("hm1", "hm1", {"st"}),
         };
 
-        // Create river structure
-        std::vector<MMElement> riverTiles = createRiverPath();
-
-        // Create river ramps
-        std::vector<MMElement> ramps = createRiverRamps();
-
-        //Create grass ground and adapt it with river structure
-        std::vector<MMElement> simpElements = placeGrassGround(riverTiles);
-
-        //Add the river elements to the scene list
-        simpElements.insert(simpElements.end(), riverTiles.begin(), riverTiles.end());
-        //Add the river ramps to the scene list
-        simpElements.insert(simpElements.end(), ramps.begin(), ramps.end());
-
-        //Add the river bridge
-        std::vector<MMElement> bridgeElements = createBridge();
-        simpElements.insert(simpElements.end(), bridgeElements.begin(), bridgeElements.end());
-
-        //Add the castle
-        std::vector<MMElement> castleElements = createCastle();
-        simpElements.insert(simpElements.end(), castleElements.begin(), castleElements.end());
+        // 1. Grass Ground
+        std::vector<MMElement> simpElements = placeGrassGround();
 
         // 2. Horizontal Road (Gray Color {0.4, 0.4, 0.4})
         float widthH = 0.4f;
@@ -753,9 +726,7 @@ public:
         std::vector<MMElement> interior = InteriorManager::CreateBaseHouseTemplate({300, 0, 300});
         simpElements.insert(simpElements.end(), interior.begin(), interior.end());
         // --- C. HOUSES (Obstacles) ---
-        float areaW = 150.0f;
-        float areaL = 150.0f;
-        float gridSize = 30.0f;
+        float areaW = 150.0f; float areaL = 150.0f; float gridSize = 30.0f;
 
         std::vector<MMElement> h1 = placeHouses(areaW, areaL, -20, -20, gridSize, 0, {90, 180, 0});
         std::vector<MMElement> h2 = placeHouses(areaW, areaL, -20, 140, gridSize, 25);
@@ -763,8 +734,7 @@ public:
         std::vector<MMElement> h4 = placeHouses(areaW, areaL, 140, 140, gridSize, 75);
 
         std::vector<MMElement> extras;
-        extras.emplace_back(UtilsStructs::createElement("ww1", "well", {"medieval_buildings", "pnois"}, {0, 0, 0},
-                                                        {90, 0, 0}, {1, 1, 1}));
+        extras.emplace_back(UtilsStructs::createElement("ww1", "well", {"medieval_buildings", "pnois"}, {0, 0, 0}, {90, 0, 0}, {1, 1, 1}));
 
         // Master Obstacle List
         std::vector<MMElement> allObstacles;
@@ -779,8 +749,7 @@ public:
         std::vector<std::string> treeModels = {"tree1", "tree2", "tree3", "tree4"};
         float treeSpacing = 5.0f;
 
-        std::vector<MMElement> vegElements = placeVegetationInGrid(areaW, areaL, -20, -20, treeSpacing, treeModels,
-                                                                   "tree_tex", allObstacles);
+        std::vector<MMElement> vegElements = placeVegetationInGrid(areaW, areaL, -20, -20, treeSpacing, treeModels, "tree_tex", allObstacles);
         auto v2 = placeVegetationInGrid(areaW, areaL, -20, 140, treeSpacing, treeModels, "tree_tex", allObstacles);
         vegElements.insert(vegElements.end(), v2.begin(), v2.end());
 
@@ -795,33 +764,31 @@ public:
 
 
         // --- F. INSTANCES ---
-        std::vector<MMElement> skyboxElements = {UtilsStructs::createElement("skybox", "skybox", {"skybox"})};
+        std::vector<MMElement> skyboxElements = {UtilsStructs::createElement("skybox", "skybox", {"skybox"}) };
 
         CollisionBoxGenerator::fillCollisionsBoxes(simpElements);
         CollisionBoxGenerator::fillCollisionsBoxes(vegElements);
         MMInstance debugBox;
-        if (debug) {
+        if(debug){
             CollisionBoxGenerator::fillCollisionsBoxesVisual();
             debugBox = CollisionBoxGenerator::collisionInstance;
         }
         std::vector<MMInstance> istances;
-        if (!debug && debugBox.elements.empty())
+        if(!debug && debugBox.elements.empty())
             istances = {
-                UtilsStructs::createInstance(UtilsStructs::CookTorranceChar, charElements), // Idx 0
-                UtilsStructs::createInstance(UtilsStructs::CookTorranceNoiseSimp, simpElements),
-                // Idx 1 (Includes Lights)
-                UtilsStructs::createInstance(UtilsStructs::SkyBox, skyboxElements), // Idx 2
-                UtilsStructs::createInstance(UtilsStructs::Vegetation, vegElements) // Idx 3
+                    UtilsStructs::createInstance(UtilsStructs::CookTorranceChar, charElements),       // Idx 0
+                    UtilsStructs::createInstance(UtilsStructs::CookTorranceNoiseSimp, simpElements),  // Idx 1 (Includes Lights)
+                    UtilsStructs::createInstance(UtilsStructs::SkyBox, skyboxElements),               // Idx 2
+                    UtilsStructs::createInstance(UtilsStructs::Vegetation, vegElements)               // Idx 3
             };
 
-        else {
+        else{
             istances = {
-                UtilsStructs::createInstance(UtilsStructs::CookTorranceChar, charElements), // Idx 0
-                UtilsStructs::createInstance(UtilsStructs::CookTorranceNoiseSimp, simpElements),
-                // Idx 1 (Includes Lights)
-                UtilsStructs::createInstance(UtilsStructs::SkyBox, skyboxElements), // Idx 2
-                UtilsStructs::createInstance(UtilsStructs::Vegetation, vegElements), // Idx 3
-                debugBox // Idx 4
+                    UtilsStructs::createInstance(UtilsStructs::CookTorranceChar, charElements),       // Idx 0
+                    UtilsStructs::createInstance(UtilsStructs::CookTorranceNoiseSimp, simpElements),  // Idx 1 (Includes Lights)
+                    UtilsStructs::createInstance(UtilsStructs::SkyBox, skyboxElements),               // Idx 2
+                    UtilsStructs::createInstance(UtilsStructs::Vegetation, vegElements),              // Idx 3
+                    debugBox                                                                          // Idx 4
             };
         }
 
