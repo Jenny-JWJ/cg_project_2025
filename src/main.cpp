@@ -121,7 +121,7 @@ protected:
 
     glm::mat4 ViewPrj;
     glm::mat4 World;
-    glm::vec3 Pos = glm::vec3(300, 0, 300);
+    glm::vec3 Pos = glm::vec3(200, 0, 5);
     glm::vec3 cameraPos;
     float Yaw = glm::radians(0.0f);
     float Pitch = glm::radians(0.0f);
@@ -509,7 +509,7 @@ protected:
         plboData.numActiveLights = 0;
         for (int i = 0; i < SC.TI[1].InstanceCount; i++) {
             auto &inst = SC.TI[1].I[i];
-            if (inst.id->find("lamp") != std::string::npos && plboData.numActiveLights < 70) {
+            if (inst.id->find("lamp") != std::string::npos && plboData.numActiveLights < 100) {
                 plboData.lights[plboData.numActiveLights].position = glm::vec3(inst.Wm[3][0], 4.5f, inst.Wm[3][2]);
                 plboData.lights[plboData.numActiveLights].color = glm::vec3(1.0f, 0.7f, 0.4f);
                 plboData.numActiveLights++;

@@ -60,7 +60,6 @@ public:
     }
 
 
-
     static MMModel makeModel(std::pair<std::string, std::string> modelPath) {
         std::string extension = getExtension(modelPath.first);
         MMFormat format;
@@ -116,7 +115,7 @@ public:
             case UtilsStructs::CookTorranceChar: return "CookTorranceChar";
             case UtilsStructs::CookTorranceNoiseSimp: return "CookTorranceNoiseSimp";
             case UtilsStructs::SkyBox: return "SkyBox";
-            //case UtilsStructs::PBR: return "PBR";
+            case UtilsStructs::PBR: return "PBR";
             case UtilsStructs::Vegetation: return "Vegetation";
             case UtilsStructs::CBoxDebug: return "DebugCollisionBoxes";
         }
@@ -190,21 +189,115 @@ public:
         return j;
     }
 
-    static std::vector<MMElement> placeGrassGround(float hight = 100.0, float lenght = 200.0, float x_offset = 50.0,
-                                                   float z_offset = 50.0, float scale = 20.0) {
+    static std::vector<MMElement> createCastle() {
+        std::vector<MMElement> castles;
+        castles.emplace_back(UtilsStructs::createElement(
+            "the_big_castle",
+            "castle_model",
+            {"medieval_buildings", "pnois"},
+            {330.0f, 0.0f, 0.0f},
+            {90.0f, -90.0f, 0.0f},
+            {1.0f, 1.0f, 1.0f}
+        ));
+
+        return castles;
+    }
+
+    static std::vector<MMElement> createBridge() {
+        std::vector<MMElement> bridges;
+        bridges.emplace_back(UtilsStructs::createElement(
+            "main_bridge",
+            "bridge",
+            {"medieval_buildings", "pnois"},
+            {240.0f, -5.0f, 0.0f},
+            {90.0f, 90.0f, 0.0f},
+            {5.0f, 5.0f, 1.2f}
+        ));
+
+        return bridges;
+    }
+
+    // Generates perfectly straight ramps: two for the Z-river and one for the X-river
+    static std::vector<MMElement> createRiverRamps() {
+        std::vector<MMElement> ramps;
+        float angle = 12.0f;
+        float midHeight = -2.485f;
+
+        // Left Ramp
+        ramps.emplace_back(UtilsStructs::createElement("ramp_v_left", "ground",
+                                                       {"medieval_nature2", "pnois"},
+                                                       {221.71f, midHeight, 0.0f},
+                                                       {90.0f + angle, 90.0f, 0.0f},
+                                                       {100.0f, 1.2f, 4.0f}));
+
+        // Right Ramp
+        ramps.emplace_back(UtilsStructs::createElement("ramp_v_right", "ground",
+                                                       {"medieval_nature2", "pnois"},
+                                                       {258.3f, midHeight, 0.0f},
+                                                       {90.0f - angle, 90.0f, 0.0f},
+                                                       {100.0f, 1.2f, 4.0f}));
+        return ramps;
+    }
+
+    // Generates a simple L-shaped river path turning towards positive X
+    static std::vector<MMElement> createRiverPath() {
+        std::vector<MMElement> river;
+        float startX = 240.0f;
+        float startZ = -250.0f;
+        float depth = -2.3f;
+        float step = 20.0f;
+
+        for (int i = 0; i < 25; i++) {
+            float currentZ = startZ + (i * step);
+            river.emplace_back(UtilsStructs::createElement("river_v_" + std::to_string(i), "river_mid",
+                                                           {"river_tex", "pnois"}, {startX, depth, currentZ},
+                                                           {90, 90, 0}));
+        }
+        return river;
+    }
+
+    // Returns true if the coordinate (x, z) is near the river or the specific ramp locations
+    static bool isRiverZone(float x, float z, const std::vector<MMElement> &riverTiles) {
+        // Scava solo dove ci sono effettivamente i pezzi di fiume
+        for (const auto &river: riverTiles) {
+            if (std::abs(x - river.translate[0]) < 30.0f &&
+                std::abs(z - river.translate[2]) < 19.5f) {
+                return true;
+            }
+        }
+
+        // Mantieni il buco per le rampe (assumendo che siano a Z=0)
+        if (std::abs(z - 0.0f) < 25.0f && (std::abs(x - 220.0f) < 15.0f || std::abs(x - 260.0f) < 15.0f)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    // Modified ground generation to prevent tiles from overlapping and covering the river
+    static std::vector<MMElement> placeGrassGround(const std::vector<MMElement> &riverTiles,
+                                                   float hight = 800.0f, float lenght = 800.0f,
+                                                   float x_offset = 400.0f, float z_offset = 400.0f,
+                                                   float scale = 20.0f) {
         std::vector<MMElement> elements;
-        int count_x = hight / scale;
-        int count_z = lenght / scale;
+        int count_x = (int) (hight / scale);
+        int count_z = (int) (lenght / scale);
         int idNumber = 0;
         std::string idName = "grass_ground";
 
         for (int i = 0; i < count_z; i++) {
             for (int j = 0; j < count_x; j++) {
+                float posX = j * scale - x_offset;
+                float posZ = i * scale - z_offset;
+
+                if (isRiverZone(posX, posZ, riverTiles)) {
+                    continue;
+                }
+
                 idNumber++;
                 elements.emplace_back(UtilsStructs::createElement(idName + std::to_string(idNumber), "ground",
-                                                    {"medieval_nature2", "pnois"}, {
-                                                        j * scale - x_offset, 0, i * scale - z_offset
-                                                    }, {90, 0, 0}, {4, 1, 4}));
+                                                                  {"medieval_nature2", "pnois"},
+                                                                  {posX, 0.0f, posZ}, {90, 0, 0}, {1, 1, 1}));
             }
         }
         return elements;
@@ -256,11 +349,14 @@ public:
         int count_z = lenght / scale;
         std::string idName = "house";
 
-        for (int i = 0; i < count_z; i++){
-            for (int j = 0; j < count_x; j++){
-                std::string model_number = std::to_string(rand_int(1,6));
+        for (int i = 0; i < count_z; i++) {
+            for (int j = 0; j < count_x; j++) {
+                std::string model_number = std::to_string(rand_int(1, 6));
                 idNumber++;
-                elements.emplace_back(UtilsStructs::createElement(idName + model_number + "_" + std::to_string(idNumber), "bldg" + model_number, {"medieval_buildings", "pnois"},{j*scale-x_offset,0,i*scale-z_offset},rotation,{1,1,1}));
+                elements.emplace_back(UtilsStructs::createElement(
+                    idName + model_number + "_" + std::to_string(idNumber), "bldg" + model_number,
+                    {"medieval_buildings", "pnois"}, {j * scale - x_offset, 0, i * scale - z_offset}, rotation,
+                    {1, 1, 1}));
             }
         }
         return elements;
@@ -274,14 +370,10 @@ public:
                                                         const std::vector<MMElement> &obstacles = {}) {
         std::vector<MMElement> elements;
 
-        // --- MODIFICA QUI ---
-        // Usa 0.1 (10%) o addirittura 0.05 (5%) se ne vuoi pochissimi.
-        // Questo riduce drasticamente il numero totale, ma permette loro di stare vicini.
         int targetCount = (int) ((height * length) / (minDistance * minDistance)) * 0.1;
 
         if (targetCount > 1000) targetCount = 1000;
 
-        // ... Il resto rimane UGUALE (copialo dal codice precedente) ...
         int idNumber = 0;
         std::uniform_real_distribution<float> randomX(0.0f, height);
         std::uniform_real_distribution<float> randomZ(0.0f, length);
@@ -380,13 +472,19 @@ public:
 
             // Overlap check
             bool tooClose = false;
-            for (const auto& el : elements) {
+            for (const auto &el: elements) {
                 float dx = rockX - el.translate[0];
                 float dz = rockZ - el.translate[2];
                 // Distance threshold 0.3 because rocks are small
-                if ((dx*dx + dz*dz) < 0.3f) { tooClose = true; break; }
+                if ((dx * dx + dz * dz) < 0.3f) {
+                    tooClose = true;
+                    break;
+                }
             }
-            if (tooClose) { i--; continue; }
+            if (tooClose) {
+                i--;
+                continue;
+            }
 
             // Pick Random MMModel
             int selectedIndex = modelSelector(gen);
@@ -417,11 +515,8 @@ public:
 
         float start = -mapLimit;
         float end = mapLimit;
-        int count = (int)((end - start) / spacing);
+        int count = (int) ((end - start) / spacing);
 
-        // --- FIX DISTANCE: EXACTLY ON EDGE ---
-        // Road width is 20 total (-10 to +10).
-        // Setting this to 10.0f places the origin of the lamp exactly on the road line.
         float offsetFromCenter = 6.0f;
 
         for (int i = 0; i <= count; i++) {
@@ -545,6 +640,11 @@ public:
             {"assets/models/CollisionBoxes/cube.obj", "cube"},
             {"assets/models/CollisionBoxes/sphere.obj", "sphere"},
             {"assets/models/CollisionBoxes/cylinder.obj", "cylinder"},
+            {"assets/models/River/SPW_Terrain_River_Corner.mgcg", "river_corner"},
+            {"assets/models/River/SPW_Terrain_River_Intersection.mgcg", "river_fork"},
+            {"assets/models/River/SPW_Terrain_River_Mid.mgcg", "river_mid"},
+            {"assets/models/Castle/SPW_Medieval_Props_Stand_01.mgcg", "bridge"},
+            {"assets/models/Castle/SPW_Medieval_Castle_01.mgcg", "castle_model"}
         };
 
         texturePaths = {
@@ -558,7 +658,9 @@ public:
             {"assets/textures/Vegetation/Textures_Vegetation.png", "tree_tex"},
             {"assets/textures/Vegetation/Textures_Vegetation.png", "rock_tex"},
             {"assets/textures/Castle_Textures/SPW_Natures_01.png", "lamp_tex"},
-            {"assets/textures/translucent_lightblue_texture.png", "colBox_texture"}
+            {"assets/textures/translucent_lightblue_texture.png", "colBox_texture"},
+            {"assets/textures/Castle_Textures/SPW_Natures_01.png", "river_tex"},
+            {"assets/textures/Castle_Textures/SPW_Natures_01.png", "bridge"}
         };
     }
 
@@ -571,32 +673,55 @@ public:
 
         // --- A. ASSETS & MODELS ---
         std::vector<MMAssetFile> assetFiles = {
-                UtilsStructs::createAssetFile("hm", "assets/models/uomo.gltf", UtilsStructs::GLTF),
-                UtilsStructs::createAssetFile("a1", "assets/models/running.gltf", UtilsStructs::GLTF),
-                UtilsStructs::createAssetFile("a2", "assets/models/idle.gltf", UtilsStructs::GLTF),
-                UtilsStructs::createAssetFile("a3", "assets/models/pointing.gltf", UtilsStructs::GLTF),
-                UtilsStructs::createAssetFile("a4", "assets/models/waving.gltf", UtilsStructs::GLTF),
-                UtilsStructs::createAssetFile("ct", "assets/models/MainSceneEnvOnly.gltf", UtilsStructs::GLTF)
+            UtilsStructs::createAssetFile("hm", "assets/models/uomo.gltf", UtilsStructs::GLTF),
+            UtilsStructs::createAssetFile("a1", "assets/models/running.gltf", UtilsStructs::GLTF),
+            UtilsStructs::createAssetFile("a2", "assets/models/idle.gltf", UtilsStructs::GLTF),
+            UtilsStructs::createAssetFile("a3", "assets/models/pointing.gltf", UtilsStructs::GLTF),
+            UtilsStructs::createAssetFile("a4", "assets/models/waving.gltf", UtilsStructs::GLTF),
+            UtilsStructs::createAssetFile("ct", "assets/models/MainSceneEnvOnly.gltf", UtilsStructs::GLTF)
         };
 
         std::vector<MMModel> models = makeModels();
-        models.emplace_back(UtilsStructs::createModel("hm0", "VDchar", "Mesh", UtilsStructs::ASSET, "Ch01_Body", 0, "hm"));
-        models.emplace_back(UtilsStructs::createModel("hm1", "VDchar", "Mesh", UtilsStructs::ASSET, "Ch01_Body", 1, "hm"));
-        models.emplace_back(UtilsStructs::createModel("skybox", "VDskybox", "assets/models/SkyBoxCube.obj", UtilsStructs::OBJ));
+        models.emplace_back(
+            UtilsStructs::createModel("hm0", "VDchar", "Mesh", UtilsStructs::ASSET, "Ch01_Body", 0, "hm"));
+        models.emplace_back(
+            UtilsStructs::createModel("hm1", "VDchar", "Mesh", UtilsStructs::ASSET, "Ch01_Body", 1, "hm"));
+        models.emplace_back(
+            UtilsStructs::createModel("skybox", "VDskybox", "assets/models/SkyBoxCube.obj", UtilsStructs::OBJ));
 
         std::vector<MMTexture> textures = makeTextures();
-        textures.emplace_back(UtilsStructs::createTexture("st", "assets/textures/uomo/Ch01_1001_Diffuse.png", UtilsStructs::C));
+        textures.emplace_back(
+            UtilsStructs::createTexture("st", "assets/textures/uomo/Ch01_1001_Diffuse.png", UtilsStructs::C));
 
         // --- B. STATIC ELEMENTS (Ground, Roads, Rocks, Lights) ---
         // MMInstance Index 1: Static objects
 
         std::vector<MMElement> charElements = {
-                UtilsStructs::createElement("hm0", "hm0", {"st"}),
-                UtilsStructs::createElement("hm1", "hm1", {"st"}),
+            UtilsStructs::createElement("hm0", "hm0", {"st"}),
+            UtilsStructs::createElement("hm1", "hm1", {"st"}),
         };
 
-        // 1. Grass Ground
-        std::vector<MMElement> simpElements = placeGrassGround();
+        // Create river structure
+        std::vector<MMElement> riverTiles = createRiverPath();
+
+        // Create river ramps
+        std::vector<MMElement> ramps = createRiverRamps();
+
+        //Create grass ground and adapt it with river structure
+        std::vector<MMElement> simpElements = placeGrassGround(riverTiles);
+
+        //Add the river elements to the scene list
+        simpElements.insert(simpElements.end(), riverTiles.begin(), riverTiles.end());
+        //Add the river ramps to the scene list
+        simpElements.insert(simpElements.end(), ramps.begin(), ramps.end());
+
+        //Add the river bridge
+        std::vector<MMElement> bridgeElements = createBridge();
+        simpElements.insert(simpElements.end(), bridgeElements.begin(), bridgeElements.end());
+
+        //Add the castle
+        std::vector<MMElement> castleElements = createCastle();
+        simpElements.insert(simpElements.end(), castleElements.begin(), castleElements.end());
 
         // 2. Horizontal Road (Gray Color {0.4, 0.4, 0.4})
         float widthH = 0.4f;
@@ -628,7 +753,9 @@ public:
         std::vector<MMElement> interior = InteriorManager::CreateBaseHouseTemplate({300, 0, 300});
         simpElements.insert(simpElements.end(), interior.begin(), interior.end());
         // --- C. HOUSES (Obstacles) ---
-        float areaW = 150.0f; float areaL = 150.0f; float gridSize = 30.0f;
+        float areaW = 150.0f;
+        float areaL = 150.0f;
+        float gridSize = 30.0f;
 
         std::vector<MMElement> h1 = placeHouses(areaW, areaL, -20, -20, gridSize, 0, {90, 180, 0});
         std::vector<MMElement> h2 = placeHouses(areaW, areaL, -20, 140, gridSize, 25);
@@ -636,7 +763,8 @@ public:
         std::vector<MMElement> h4 = placeHouses(areaW, areaL, 140, 140, gridSize, 75);
 
         std::vector<MMElement> extras;
-        extras.emplace_back(UtilsStructs::createElement("ww1", "well", {"medieval_buildings", "pnois"}, {0, 0, 0}, {90, 0, 0}, {1, 1, 1}));
+        extras.emplace_back(UtilsStructs::createElement("ww1", "well", {"medieval_buildings", "pnois"}, {0, 0, 0},
+                                                        {90, 0, 0}, {1, 1, 1}));
 
         // Master Obstacle List
         std::vector<MMElement> allObstacles;
@@ -651,7 +779,8 @@ public:
         std::vector<std::string> treeModels = {"tree1", "tree2", "tree3", "tree4"};
         float treeSpacing = 5.0f;
 
-        std::vector<MMElement> vegElements = placeVegetationInGrid(areaW, areaL, -20, -20, treeSpacing, treeModels, "tree_tex", allObstacles);
+        std::vector<MMElement> vegElements = placeVegetationInGrid(areaW, areaL, -20, -20, treeSpacing, treeModels,
+                                                                   "tree_tex", allObstacles);
         auto v2 = placeVegetationInGrid(areaW, areaL, -20, 140, treeSpacing, treeModels, "tree_tex", allObstacles);
         vegElements.insert(vegElements.end(), v2.begin(), v2.end());
 
@@ -661,37 +790,38 @@ public:
         auto v4 = placeVegetationInGrid(areaW, areaL, 140, 140, treeSpacing, treeModels, "tree_tex", allObstacles);
         vegElements.insert(vegElements.end(), v4.begin(), v4.end());
 
-
         // --- E. FINALIZE ---
         simpElements.insert(simpElements.end(), allObstacles.begin(), allObstacles.end());
 
 
         // --- F. INSTANCES ---
-        std::vector<MMElement> skyboxElements = {UtilsStructs::createElement("skybox", "skybox", {"skybox"}) };
+        std::vector<MMElement> skyboxElements = {UtilsStructs::createElement("skybox", "skybox", {"skybox"})};
 
         CollisionBoxGenerator::fillCollisionsBoxes(simpElements);
         CollisionBoxGenerator::fillCollisionsBoxes(vegElements);
         MMInstance debugBox;
-        if(debug){
+        if (debug) {
             CollisionBoxGenerator::fillCollisionsBoxesVisual();
             debugBox = CollisionBoxGenerator::collisionInstance;
         }
         std::vector<MMInstance> istances;
-        if(!debug && debugBox.elements.empty())
+        if (!debug && debugBox.elements.empty())
             istances = {
-                    UtilsStructs::createInstance(UtilsStructs::CookTorranceChar, charElements),       // Idx 0
-                    UtilsStructs::createInstance(UtilsStructs::CookTorranceNoiseSimp, simpElements),  // Idx 1 (Includes Lights)
-                    UtilsStructs::createInstance(UtilsStructs::SkyBox, skyboxElements),               // Idx 2
-                    UtilsStructs::createInstance(UtilsStructs::Vegetation, vegElements)               // Idx 3
+                UtilsStructs::createInstance(UtilsStructs::CookTorranceChar, charElements), // Idx 0
+                UtilsStructs::createInstance(UtilsStructs::CookTorranceNoiseSimp, simpElements),
+                // Idx 1 (Includes Lights)
+                UtilsStructs::createInstance(UtilsStructs::SkyBox, skyboxElements), // Idx 2
+                UtilsStructs::createInstance(UtilsStructs::Vegetation, vegElements) // Idx 3
             };
 
-        else{
+        else {
             istances = {
-                    UtilsStructs::createInstance(UtilsStructs::CookTorranceChar, charElements),       // Idx 0
-                    UtilsStructs::createInstance(UtilsStructs::CookTorranceNoiseSimp, simpElements),  // Idx 1 (Includes Lights)
-                    UtilsStructs::createInstance(UtilsStructs::SkyBox, skyboxElements),               // Idx 2
-                    UtilsStructs::createInstance(UtilsStructs::Vegetation, vegElements),              // Idx 3
-                    debugBox                                                                          // Idx 4
+                UtilsStructs::createInstance(UtilsStructs::CookTorranceChar, charElements), // Idx 0
+                UtilsStructs::createInstance(UtilsStructs::CookTorranceNoiseSimp, simpElements),
+                // Idx 1 (Includes Lights)
+                UtilsStructs::createInstance(UtilsStructs::SkyBox, skyboxElements), // Idx 2
+                UtilsStructs::createInstance(UtilsStructs::Vegetation, vegElements), // Idx 3
+                debugBox // Idx 4
             };
         }
 
