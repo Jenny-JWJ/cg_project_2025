@@ -653,6 +653,7 @@ public:
             {"assets/models/Interiors/floor_001_Mesh.640.mgcg", "house_floor"},
             {"assets/models/Interiors/Stairs_013_Mesh.674.mgcg", "stairs"},
             {"assets/models/Interiors/window_004_Mesh.432.mgcg", "window"},
+            {"assets/models/Interiors/tunnel.024_Mesh.6126.mgcg", "tunnel"},
             {"assets/models/CollisionBoxes/cube.obj", "cube"},
             {"assets/models/CollisionBoxes/sphere.obj", "sphere"},
             {"assets/models/CollisionBoxes/cylinder.obj", "cylinder"},
@@ -760,8 +761,7 @@ public:
         std::vector<MMElement> lightsV = placeStreetLights(200.0f, 1, 25.0f, "lamp1", "tex_medieval_atlas");
         simpElements.insert(simpElements.end(), lightsV.begin(), lightsV.end());
 
-        // --- G. INTERIORS & HOUSES ---
-        std::vector<MMElement> interior = InteriorManager::CreateBaseHouseTemplate({300, 0, 300});
+        std::vector<MMElement> interior = InteriorManager::CreateLShapedTemplate({300, 0, 300});
         simpElements.insert(simpElements.end(), interior.begin(), interior.end());
 
         float areaW = 150.0f;
