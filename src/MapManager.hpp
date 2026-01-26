@@ -88,7 +88,7 @@ public:
         std::vector<MMTexture> textures;
         printf("\n--- [DEBUG] STARTING TEXTURE LOADING ---\n");
 
-        for (const auto &texPair : texturePaths) {
+        for (const auto &texPair: texturePaths) {
             // Check 1: Does the file actually exist?
             std::ifstream file(texPair.first.c_str());
             if (!file.good()) {
@@ -210,7 +210,7 @@ public:
         castles.emplace_back(UtilsStructs::createElement(
             "the_big_castle",
             "castle_model",
-            {"medieval_buildings", "pnois"},
+            {"tex_medieval_atlas", "pnois"},
             {330.0f, 0.0f, 0.0f},
             {90.0f, -90.0f, 0.0f},
             {1.0f, 1.0f, 1.0f}
@@ -224,7 +224,7 @@ public:
         bridges.emplace_back(UtilsStructs::createElement(
             "main_bridge",
             "bridge",
-            {"medieval_buildings", "pnois"},
+            {"tex_medieval_atlas", "pnois"},
             {240.0f, -5.0f, 0.0f},
             {90.0f, 90.0f, 0.0f},
             {5.0f, 5.0f, 1.2f}
@@ -241,14 +241,14 @@ public:
 
         // Left Ramp
         ramps.emplace_back(UtilsStructs::createElement("ramp_v_left", "ground",
-                                                       {"medieval_nature2", "pnois"},
+                                                       {"tex_nature_atlas_2", "pnois"},
                                                        {221.71f, midHeight, 0.0f},
                                                        {90.0f + angle, 90.0f, 0.0f},
                                                        {100.0f, 1.2f, 4.0f}));
 
         // Right Ramp
         ramps.emplace_back(UtilsStructs::createElement("ramp_v_right", "ground",
-                                                       {"medieval_nature2", "pnois"},
+                                                       {"tex_nature_atlas_2", "pnois"},
                                                        {258.3f, midHeight, 0.0f},
                                                        {90.0f - angle, 90.0f, 0.0f},
                                                        {100.0f, 1.2f, 4.0f}));
@@ -266,7 +266,7 @@ public:
         for (int i = 0; i < 25; i++) {
             float currentZ = startZ + (i * step);
             river.emplace_back(UtilsStructs::createElement("river_v_" + std::to_string(i), "river_mid",
-                                                           {"river_tex", "pnois"}, {startX, depth, currentZ},
+                                                           {"tex_medieval_atlas", "pnois"}, {startX, depth, currentZ},
                                                            {90, 90, 0}));
         }
         return river;
@@ -278,7 +278,7 @@ public:
             if (std::abs(x - river.translate[0]) < 30.0f &&
                 std::abs(z - river.translate[2]) < 30.0f) {
                 return true;
-                }
+            }
         }
         // 2. Scava il buco dove poggiano le rampe laterali
         if (std::abs(z - 0.0f) < 25.0f && (std::abs(x - 220.0f) < 15.0f || std::abs(x - 260.0f) < 15.0f)) {
@@ -309,7 +309,7 @@ public:
 
                 idNumber++;
                 elements.emplace_back(UtilsStructs::createElement(idName + std::to_string(idNumber), "ground",
-                                                                  {"medieval_nature2", "pnois"}, {
+                                                                  {"tex_nature_atlas_2", "pnois"}, {
                                                                       j * scale - x_offset, 0, i * scale - z_offset
                                                                   }, {90, 0, 0}, {1, 1, 1}));
             }
@@ -336,7 +336,7 @@ public:
             elements.emplace_back(UtilsStructs::createElement(
                 idName + std::to_string(idNumber),
                 "ground",
-                {"medieval_buildings", "pnois"},
+                {"tex_medieval_atlas", "pnois"},
                 {posx, 0.01f, posz},
                 {90, 0, 0},
                 {scale[0], scale[1], scale[2]}
@@ -369,7 +369,7 @@ public:
                 idNumber++;
                 elements.emplace_back(UtilsStructs::createElement(
                     idName + model_number + "_" + std::to_string(idNumber), "bldg" + model_number,
-                    {"medieval_buildings", "pnois"}, {j * scale - x_offset, 0, i * scale - z_offset}, rotation,
+                    {"tex_medieval_atlas", "pnois"}, {j * scale - x_offset, 0, i * scale - z_offset}, rotation,
                     {1, 1, 1}));
             }
         }
@@ -380,7 +380,7 @@ public:
                                                         float x_offset = 50.0, float z_offset = 50.0,
                                                         float minDistance = 2.5f,
                                                         std::vector<std::string> modelIds = {"tree"},
-                                                        std::string textureId = "tree_tex",
+                                                        std::string textureId = "tex_veg_atlas",
                                                         const std::vector<MMElement> &obstacles = {}) {
         std::vector<MMElement> elements;
 
@@ -444,7 +444,7 @@ public:
     static std::vector<MMElement> placeRocksOnRoad(int count = 40,
                                                    float mapLimit = 200.0f,
                                                    std::vector<std::string> modelIds = {"rocks1"},
-                                                   std::string textureId = "medieval_buildings") {
+                                                   std::string textureId = "tex_veg_atlas") {
         std::vector<MMElement> elements;
 
         // Random Generators
@@ -524,7 +524,7 @@ public:
                                                     int axis = 0,
                                                     float spacing = 25.0f,
                                                     std::string modelId = "lamp1",
-                                                    std::string textureId = "lamp_tex") {
+                                                    std::string textureId = "tex_medieval_atlas") {
         std::vector<MMElement> elements;
 
         float start = -mapLimit;
@@ -664,21 +664,14 @@ public:
         };
 
         texturePaths = {
-            {"assets/textures/Castle_Textures/SPW_Medieval.png", "medieval_buildings"},
-            {"assets/textures/Castle_Textures/SPW_Natures_01.png", "medieval_nature1"},
-            {"assets/textures/Castle_Textures/SPW_Natures_02.png", "medieval_nature2"},
-            {"assets/textures/FornitureTextures.png", "forniture"},
-            {"assets/textures/DungeonTextures.png", "dungeon"},
+            {"assets/textures/Castle_Textures/SPW_Medieval.png", "tex_medieval_atlas"},
+            {"assets/textures/Castle_Textures/SPW_Natures_01.png", "tex_nature_atlas_1"},
+            {"assets/textures/Castle_Textures/SPW_Natures_02.png", "tex_nature_atlas_2"},
+            {"assets/textures/Vegetation/Textures_Vegetation.png", "tex_veg_atlas"},
             {"assets/textures/Perlin_noise.png", "pnois"},
             {"assets/textures/day_sky.png", "skybox"},
-            {"assets/textures/Vegetation/Textures_Vegetation.png", "tree_tex"},
-            {"assets/textures/Vegetation/Textures_Vegetation.png", "rock_tex"},
-            {"assets/textures/Castle_Textures/SPW_Natures_01.png", "lamp_tex"},
             {"assets/textures/Black.png", "black"},
-            {"assets/textures/translucent_lightblue_texture.png", "colBox_texture"},
-            {"assets/textures/translucent_lightblue_texture.png", "colBox_texture"},
-            {"assets/textures/Castle_Textures/SPW_Natures_01.png", "river_tex"},
-            {"assets/textures/Castle_Textures/SPW_Natures_01.png", "bridge"}
+            {"assets/textures/translucent_lightblue_texture.png", "colBox_texture"}
         };
     }
 
@@ -758,13 +751,13 @@ public:
 
         // --- F. PROPS (Rocks & Lights) ---
         std::vector<std::string> rockModels = {"rocks1", "rocks2", "rocks3"};
-        std::vector<MMElement> roadRocks = placeRocksOnRoad(40, 200.0f, rockModels, "medieval_buildings");
+        std::vector<MMElement> roadRocks = placeRocksOnRoad(40, 200.0f, rockModels, "tex_veg_atlas");
         simpElements.insert(simpElements.end(), roadRocks.begin(), roadRocks.end());
 
-        std::vector<MMElement> lightsH = placeStreetLights(200.0f, 0, 25.0f, "lamp1", "lamp_tex");
+        std::vector<MMElement> lightsH = placeStreetLights(200.0f, 0, 25.0f, "lamp1", "tex_medieval_atlas");
         simpElements.insert(simpElements.end(), lightsH.begin(), lightsH.end());
 
-        std::vector<MMElement> lightsV = placeStreetLights(200.0f, 1, 25.0f, "lamp1", "lamp_tex");
+        std::vector<MMElement> lightsV = placeStreetLights(200.0f, 1, 25.0f, "lamp1", "tex_medieval_atlas");
         simpElements.insert(simpElements.end(), lightsV.begin(), lightsV.end());
 
         // --- G. INTERIORS & HOUSES ---
@@ -780,7 +773,7 @@ public:
         std::vector<MMElement> h4 = placeHouses(areaW, areaL, 140, 140, gridSize, 75);
 
         std::vector<MMElement> extras;
-        extras.emplace_back(UtilsStructs::createElement("ww1", "well", {"medieval_buildings", "pnois"}, {0, 0, 0},
+        extras.emplace_back(UtilsStructs::createElement("ww1", "well", {"tex_medieval_atlas", "pnois"}, {0, 0, 0},
                                                         {90, 0, 0}, {1, 1, 1}));
 
         std::vector<MMElement> allObstacles;
@@ -794,10 +787,10 @@ public:
         std::vector<std::string> treeModels = {"tree1", "tree2", "tree3", "tree4"};
         float treeSpacing = 5.0f;
         std::vector<MMElement> vegElements = placeVegetationInGrid(areaW, areaL, -20, -20, treeSpacing, treeModels,
-                                                                   "tree_tex", allObstacles);
-        auto v2 = placeVegetationInGrid(areaW, areaL, -20, 140, treeSpacing, treeModels, "tree_tex", allObstacles);
-        auto v3 = placeVegetationInGrid(areaW, areaL, 140, -20, treeSpacing, treeModels, "tree_tex", allObstacles);
-        auto v4 = placeVegetationInGrid(areaW, areaL, 140, 140, treeSpacing, treeModels, "tree_tex", allObstacles);
+                                                                   "tex_veg_atlas", allObstacles);
+        auto v2 = placeVegetationInGrid(areaW, areaL, -20, 140, treeSpacing, treeModels, "tex_veg_atlas", allObstacles);
+        auto v3 = placeVegetationInGrid(areaW, areaL, 140, -20, treeSpacing, treeModels, "tex_veg_atlas", allObstacles);
+        auto v4 = placeVegetationInGrid(areaW, areaL, 140, 140, treeSpacing, treeModels, "tex_veg_atlas", allObstacles);
         vegElements.insert(vegElements.end(), v2.begin(), v2.end());
         vegElements.insert(vegElements.end(), v3.begin(), v3.end());
         vegElements.insert(vegElements.end(), v4.begin(), v4.end());
