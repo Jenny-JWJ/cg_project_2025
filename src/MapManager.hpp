@@ -88,7 +88,7 @@ public:
         std::vector<MMTexture> textures;
         printf("\n--- [DEBUG] STARTING TEXTURE LOADING ---\n");
 
-        for (const auto &texPair : texturePaths) {
+        for (const auto &texPair: texturePaths) {
             // Check 1: Does the file actually exist?
             std::ifstream file(texPair.first.c_str());
             if (!file.good()) {
@@ -205,12 +205,184 @@ public:
         return j;
     }
 
+
+    static std::vector<MMElement> placeGlobalEnvironment(const std::vector<MMElement> &riverTiles,
+                                                         const std::vector<MMElement> &buildings) {
+        std::vector<MMElement> env;
+
+        // Grid settings for distribution
+        float step = 6.0f; // Density: lower is more dense
+        float mapLimit = 400.0f;
+        float castleBoundary = 220.0f; // Threshold between City and Castle zones
+
+        for (float x = -mapLimit; x <= mapLimit; x += step) {
+            for (float z = -mapLimit; z <= mapLimit; z += step) {
+                // 1. CHECK RIVER (Avoid the hole)
+                if (isRiverZone(x, z, riverTiles)) continue;
+
+                // 2. CHECK ROADS (Avoid X=0 and Z=0 main roads)
+                if (std::abs(x) < 12.0f || std::abs(z) < 12.0f) continue;
+
+                // 3. CHECK BUILDINGS (Avoid houses and castle)
+                bool hitBuilding = false;
+                for (const auto &b: buildings) {
+                    float dx = x - b.translate[0];
+                    float dz = z - b.translate[2];
+                    if ((dx * dx + dz * dz) < 100.0f) {
+                        // 10 units safety radius
+                        hitBuilding = true;
+                        break;
+                    }
+                }
+                if (hitBuilding) continue;
+
+                // 4. ZONE LOGIC
+                // Randomized offset to avoid perfect grid alignment (looks more natural)
+                float offsetX = ((float) rand() / RAND_MAX - 0.5f) * 4.0f;
+                float offsetZ = ((float) rand() / RAND_MAX - 0.5f) * 4.0f;
+
+                if (x > castleBoundary) {
+                    // --- CASTLE ZONE: Only Vegetation (Trees/Plants) ---
+                    std::string model = (rand() % 2 == 0) ? "tree1" : "tree2";
+                    env.emplace_back(UtilsStructs::createElement(
+                        "castle_veg_" + std::to_string(rand()), model,
+                        {"tex_veg_atlas", "pnois"}, {x + offsetX, 0, z + offsetZ},
+                        {0, (float) (rand() % 360), 0}, {0.5f, 0.5f, 0.5f}
+                    ));
+                } else {
+                    // --- CITY ZONE: Only Grass Tufts ---
+                    env.emplace_back(UtilsStructs::createElement(
+                        "city_grass_" + std::to_string(rand()), "grass_tuft",
+                        {"tex_nature_atlas_1", "pnois"}, {x + offsetX, 0, z + offsetZ},
+                        {90, (float) (rand() % 360), 0}, {1.0f, 1.0f, 1.0f}
+                    ));
+                }
+            }
+        }
+        return env;
+    }
+
+    // --- CIRCULAR LIGHTS (Geometric ring around the castle) ---
+    static std::vector<MMElement> createCircularLights() {
+        std::vector<MMElement> elements;
+        float centerX = 330.0f;
+        float centerZ = 0.0f;
+        float radius = 48.0f; // Positioned between the barrels and the tents
+        int numLights = 10; // Number of lamps in the ring
+
+        for (int i = 0; i < numLights; i++) {
+            float angle = i * (2.0f * 3.14159f / numLights);
+            float posX = centerX + radius * cos(angle);
+            float posZ = centerZ + radius * sin(angle);
+
+            // Lamps face the center to light up the courtyard
+            float rotY = -glm::degrees(angle) + 90.0f;
+
+            elements.emplace_back(UtilsStructs::createElement(
+                "castle_lamp_" + std::to_string(i),
+                "lamp1",
+                {"tex_medieval_atlas", "pnois"},
+                {posX, 0.0f, posZ},
+                {90, rotY, 0},
+                {1.0f, 1.0f, 1.0f}
+            ));
+        }
+        return elements;
+    }
+
+    // --- CIRCULAR CAMP GENERATION (Tents in a ring) ---
+    static std::vector<MMElement> createCircularCamp() {
+        std::vector<MMElement> elements;
+        float centerX = 330.0f; // Castle X center
+        float centerZ = 0.0f; // Castle Z center
+        float radius = 55.0f; // Distance from the castle
+        int numTents = 8; // Total number of tents in the circle
+
+        for (int i = 0; i < numTents; i++) {
+            // Calculate the angle for each tent (360 degrees / numTents)
+            float angle = i * (2.0f * 3.14159f / numTents);
+            float posX = centerX + radius * cos(angle);
+            float posZ = centerZ + radius * sin(angle);
+
+            // Rotation: orient tents to face the center (castle)
+            // We take the angle, convert to degrees, and adjust for the model's forward axis
+            float rotY = -glm::degrees(angle) + 90.0f;
+
+            // Alternate models and separate textures for visual variety
+            std::string modelId = (i % 2 == 0) ? "tent1" : "tent2";
+            std::string texId = (i % 2 == 0) ? "tent1_texture" : "tent2_texture";
+
+            elements.emplace_back(UtilsStructs::createElement(
+                "tent_circ_" + std::to_string(i),
+                modelId,
+                {texId, "pnois"},
+                {posX, 0.0f, posZ},
+                {90, rotY, 0},
+                {1.3f, 1.3f, 1.3f} // Scale: Tents should be slightly bigger than the player
+            ));
+        }
+        return elements;
+    }
+
+    // --- CIRCULAR BARRELS (All standing upright on the ground) ---
+    static std::vector<MMElement> createCircularBarrels() {
+        std::vector<MMElement> elements;
+        float centerX = 330.0f;
+        float centerZ = 0.0f;
+        float radius = 42.0f; // Inner ring near the castle walls
+        int numGroups = 6;
+
+        for (int i = 0; i < numGroups; i++) {
+            float angle = (i * (2.0f * 3.14159f / numGroups)) + 0.5f;
+            float posX = centerX + radius * cos(angle);
+            float posZ = centerZ + radius * sin(angle);
+
+            // Group of 3 barrels, all standing (Rotation 90,0,0) and on the ground (Y=0)
+            // Barrel 1
+            elements.emplace_back(UtilsStructs::createElement("bar_a_" + std::to_string(i), "barrel",
+                                                              {"tex_medieval_atlas", "pnois"}, {posX, 0, posZ},
+                                                              {90, 0, 0}, {0.7f, 0.7f, 0.7f}));
+            // Barrel 2 - Slightly offset
+            elements.emplace_back(UtilsStructs::createElement("bar_b_" + std::to_string(i), "barrel",
+                                                              {"tex_medieval_atlas", "pnois"},
+                                                              {posX + 1.2f, 0, posZ + 0.8f}, {90, 0, 0},
+                                                              {0.7f, 0.7f, 0.7f}));
+            // Barrel 3 - Now standing upright next to the others instead of being on top
+            elements.emplace_back(UtilsStructs::createElement("bar_c_" + std::to_string(i), "barrel",
+                                                              {"tex_medieval_atlas", "pnois"},
+                                                              {posX - 0.8f, 0, posZ + 1.2f}, {90, 0, 0},
+                                                              {0.7f, 0.7f, 0.7f}));
+        }
+        return elements;
+    }
+
+    // --- CIRCULAR GRASS FILLER (Detailing the camp ground) ---
+    static std::vector<MMElement> createGrassTufts(int count = 50) {
+        std::vector<MMElement> tufts;
+        // Distribute tufts randomly within the ring area (between radius 35 and 65)
+        std::uniform_real_distribution<float> distRadius(35.0f, 65.0f);
+        std::uniform_real_distribution<float> distAngle(0.0f, 2.0f * 3.14159f);
+
+        for (int i = 0; i < count; i++) {
+            float r = distRadius(gen);
+            float a = distAngle(gen);
+            float posX = 330.0f + r * cos(a);
+            float posZ = 0.0f + r * sin(a);
+
+            // Uses Nature Atlas 1 for detailed grass/bush textures
+            tufts.emplace_back(UtilsStructs::createElement("tuft_circ_" + std::to_string(i), "grass_tuft",
+                                                           {"tex_nature_atlas_1", "pnois"}, {posX, 0.0f, posZ},
+                                                           {90, distAngle(gen) * 50.0f, 0}, {1.0f, 1.0f, 1.0f}));
+        }
+        return tufts;
+    }
+
     static std::vector<MMElement> createCastle() {
         std::vector<MMElement> castles;
         castles.emplace_back(UtilsStructs::createElement(
             "the_big_castle",
             "castle_model",
-            {"medieval_buildings", "pnois"},
+            {"tex_medieval_atlas", "pnois"},
             {330.0f, 0.0f, 0.0f},
             {90.0f, -90.0f, 0.0f},
             {1.0f, 1.0f, 1.0f}
@@ -224,7 +396,7 @@ public:
         bridges.emplace_back(UtilsStructs::createElement(
             "main_bridge",
             "bridge",
-            {"medieval_buildings", "pnois"},
+            {"tex_medieval_atlas", "pnois"},
             {240.0f, -5.0f, 0.0f},
             {90.0f, 90.0f, 0.0f},
             {5.0f, 5.0f, 1.2f}
@@ -241,14 +413,14 @@ public:
 
         // Left Ramp
         ramps.emplace_back(UtilsStructs::createElement("ramp_v_left", "ground",
-                                                       {"medieval_nature2", "pnois"},
+                                                       {"tex_nature_atlas_2", "pnois"},
                                                        {221.71f, midHeight, 0.0f},
                                                        {90.0f + angle, 90.0f, 0.0f},
                                                        {100.0f, 1.2f, 4.0f}));
 
         // Right Ramp
         ramps.emplace_back(UtilsStructs::createElement("ramp_v_right", "ground",
-                                                       {"medieval_nature2", "pnois"},
+                                                       {"tex_nature_atlas_2", "pnois"},
                                                        {258.3f, midHeight, 0.0f},
                                                        {90.0f - angle, 90.0f, 0.0f},
                                                        {100.0f, 1.2f, 4.0f}));
@@ -266,7 +438,7 @@ public:
         for (int i = 0; i < 25; i++) {
             float currentZ = startZ + (i * step);
             river.emplace_back(UtilsStructs::createElement("river_v_" + std::to_string(i), "river_mid",
-                                                           {"river_tex", "pnois"}, {startX, depth, currentZ},
+                                                           {"tex_medieval_atlas", "pnois"}, {startX, depth, currentZ},
                                                            {90, 90, 0}));
         }
         return river;
@@ -278,7 +450,7 @@ public:
             if (std::abs(x - river.translate[0]) < 30.0f &&
                 std::abs(z - river.translate[2]) < 30.0f) {
                 return true;
-                }
+            }
         }
         // 2. Scava il buco dove poggiano le rampe laterali
         if (std::abs(z - 0.0f) < 25.0f && (std::abs(x - 220.0f) < 15.0f || std::abs(x - 260.0f) < 15.0f)) {
@@ -309,7 +481,7 @@ public:
 
                 idNumber++;
                 elements.emplace_back(UtilsStructs::createElement(idName + std::to_string(idNumber), "ground",
-                                                                  {"medieval_nature2", "pnois"}, {
+                                                                  {"tex_nature_atlas_2", "pnois"}, {
                                                                       j * scale - x_offset, 0, i * scale - z_offset
                                                                   }, {90, 0, 0}, {1, 1, 1}));
             }
@@ -336,7 +508,7 @@ public:
             elements.emplace_back(UtilsStructs::createElement(
                 idName + std::to_string(idNumber),
                 "ground",
-                {"medieval_buildings", "pnois"},
+                {"tex_medieval_atlas", "pnois"},
                 {posx, 0.01f, posz},
                 {90, 0, 0},
                 {scale[0], scale[1], scale[2]}
@@ -369,7 +541,7 @@ public:
                 idNumber++;
                 elements.emplace_back(UtilsStructs::createElement(
                     idName + model_number + "_" + std::to_string(idNumber), "bldg" + model_number,
-                    {"medieval_buildings", "pnois"}, {j * scale - x_offset, 0, i * scale - z_offset}, rotation,
+                    {"tex_medieval_atlas", "pnois"}, {j * scale - x_offset, 0, i * scale - z_offset}, rotation,
                     {1, 1, 1}));
             }
         }
@@ -380,7 +552,7 @@ public:
                                                         float x_offset = 50.0, float z_offset = 50.0,
                                                         float minDistance = 2.5f,
                                                         std::vector<std::string> modelIds = {"tree"},
-                                                        std::string textureId = "tree_tex",
+                                                        std::string textureId = "tex_veg_atlas",
                                                         const std::vector<MMElement> &obstacles = {}) {
         std::vector<MMElement> elements;
 
@@ -444,7 +616,7 @@ public:
     static std::vector<MMElement> placeRocksOnRoad(int count = 40,
                                                    float mapLimit = 200.0f,
                                                    std::vector<std::string> modelIds = {"rocks1"},
-                                                   std::string textureId = "medieval_buildings") {
+                                                   std::string textureId = "tex_veg_atlas") {
         std::vector<MMElement> elements;
 
         // Random Generators
@@ -524,7 +696,7 @@ public:
                                                     int axis = 0,
                                                     float spacing = 25.0f,
                                                     std::string modelId = "lamp1",
-                                                    std::string textureId = "lamp_tex") {
+                                                    std::string textureId = "tex_medieval_atlas") {
         std::vector<MMElement> elements;
 
         float start = -mapLimit;
@@ -635,7 +807,6 @@ public:
             {"assets/models/Castle/SPW_Medieval_Box_01.mgcg", "box1"},
             {"assets/models/Castle/SPW_Medieval_Box_02.mgcg", "box2"},
             {"assets/models/Castle/SPW_Medieval_Box_03.mgcg", "box3"},
-            //{"assets/models/Castle/SPW_Medieval_Barrel.mgcg", "barrel"},
             {"assets/models/Castle/SPW_Medieval_Props_01.mgcg", "well"},
             {"assets/models/Castle/SPW_Terrain_Grass_Flat.mgcg", "ground"},
             {"assets/models/Vegetation/vegetation.016.mgcg", "tree1"},
@@ -661,25 +832,24 @@ public:
             {"assets/models/River/SPW_Terrain_River_Intersection.mgcg", "river_fork"},
             {"assets/models/River/SPW_Terrain_River_Mid.mgcg", "river_mid"},
             {"assets/models/Castle/SPW_Medieval_Props_Stand_01.mgcg", "bridge"},
-            {"assets/models/Castle/SPW_Medieval_Castle_01.mgcg", "castle_model"}
+            {"assets/models/Castle/SPW_Medieval_Castle_01.mgcg", "castle_model"},
+            {"assets/models/Castle/SPW_Medieval_Barrel.mgcg", "barrel"},
+            {"assets/models/Castle/SPW_Medieval_Tent_01.mgcg", "tent1"},
+            {"assets/models/Castle/SPW_Medieval_Tent_03.mgcg", "tent2"},
+            {"assets/models/Castle/SPW_Natures_Bush_01.mgcg", "grass_tuft"},
         };
 
         texturePaths = {
-            {"assets/textures/Castle_Textures/SPW_Medieval.png", "medieval_buildings"},
-            {"assets/textures/Castle_Textures/SPW_Natures_01.png", "medieval_nature1"},
-            {"assets/textures/Castle_Textures/SPW_Natures_02.png", "medieval_nature2"},
-            {"assets/textures/FornitureTextures.png", "forniture"},
-            {"assets/textures/DungeonTextures.png", "dungeon"},
+            {"assets/textures/Castle_Textures/SPW_Medieval.png", "tex_medieval_atlas"},
+            {"assets/textures/Castle_Textures/SPW_Natures_01.png", "tex_nature_atlas_1"},
+            {"assets/textures/Castle_Textures/SPW_Natures_02.png", "tex_nature_atlas_2"},
+            {"assets/textures/Vegetation/Textures_Vegetation.png", "tex_veg_atlas"},
             {"assets/textures/Perlin_noise.png", "pnois"},
             {"assets/textures/day_sky.png", "skybox"},
-            {"assets/textures/Vegetation/Textures_Vegetation.png", "tree_tex"},
-            {"assets/textures/Vegetation/Textures_Vegetation.png", "rock_tex"},
-            {"assets/textures/Castle_Textures/SPW_Natures_01.png", "lamp_tex"},
             {"assets/textures/Black.png", "black"},
             {"assets/textures/translucent_lightblue_texture.png", "colBox_texture"},
-            {"assets/textures/translucent_lightblue_texture.png", "colBox_texture"},
-            {"assets/textures/Castle_Textures/SPW_Natures_01.png", "river_tex"},
-            {"assets/textures/Castle_Textures/SPW_Natures_01.png", "bridge"}
+            {"assets/textures/Castle_Textures/SPW_Medieval_Tent_01_Color01.png", "tent1_texture"},
+            {"assets/textures/Castle_Textures/SPW_Medieval_Tent_03_Color02.png", "tent2_texture"}
         };
     }
 
@@ -722,28 +892,31 @@ public:
         // 1. Create the river tiles
         std::vector<MMElement> riverTiles = createRiverPath();
 
-        // 2. Create the river ramps (Discese laterali)
+        // 2. Create the river ramps
         std::vector<MMElement> ramps = createRiverRamps();
 
         // 3. Create the bridge (Il Pontos)
         std::vector<MMElement> bridgeElements = createBridge();
 
-        // 4. Create the castle (Il Castellos)
+        // 4. Create the castle
         std::vector<MMElement> castleElements = createCastle();
 
+        auto campTents = createCircularCamp();
+        auto campBarrels = createCircularBarrels();
+        auto campTufts = createGrassTufts(60); // Higher count for better density
+        auto campLights = createCircularLights();
+
         // --- D. GROUND GENERATION ---
-        // Genera il prato (assicurati che isRiverZone usi riverTiles)
         std::vector<MMElement> simpElements = placeGrassGround(riverTiles);
 
-        // Inserisci i pezzi del fiume e infrastrutture
-        if (!riverTiles.empty())
-            simpElements.insert(simpElements.end(), riverTiles.begin(), riverTiles.end());
-        if (!ramps.empty())
-            simpElements.insert(simpElements.end(), ramps.begin(), ramps.end());
-        if (!bridgeElements.empty())
-            simpElements.insert(simpElements.end(), bridgeElements.begin(), bridgeElements.end());
-        if (!castleElements.empty())
-            simpElements.insert(simpElements.end(), castleElements.begin(), castleElements.end());
+        simpElements.insert(simpElements.end(), riverTiles.begin(), riverTiles.end());
+        simpElements.insert(simpElements.end(), ramps.begin(), ramps.end());
+        simpElements.insert(simpElements.end(), bridgeElements.begin(), bridgeElements.end());
+        simpElements.insert(simpElements.end(), castleElements.begin(), castleElements.end());
+        simpElements.insert(simpElements.end(), campTents.begin(), campTents.end());
+        simpElements.insert(simpElements.end(), campBarrels.begin(), campBarrels.end());
+        simpElements.insert(simpElements.end(), campTufts.begin(), campTufts.end());
+        simpElements.insert(simpElements.end(), campLights.begin(), campLights.end());
 
         // --- E. ROADS & PATHS ---
         float widthH = 0.4f;
@@ -759,13 +932,13 @@ public:
 
         // --- F. PROPS (Rocks & Lights) ---
         std::vector<std::string> rockModels = {"rocks1", "rocks2", "rocks3"};
-        std::vector<MMElement> roadRocks = placeRocksOnRoad(40, 200.0f, rockModels, "medieval_buildings");
+        std::vector<MMElement> roadRocks = placeRocksOnRoad(40, 200.0f, rockModels, "tex_veg_atlas");
         simpElements.insert(simpElements.end(), roadRocks.begin(), roadRocks.end());
 
-        std::vector<MMElement> lightsH = placeStreetLights(200.0f, 0, 25.0f, "lamp1", "lamp_tex");
+        std::vector<MMElement> lightsH = placeStreetLights(200.0f, 0, 25.0f, "lamp1", "tex_medieval_atlas");
         simpElements.insert(simpElements.end(), lightsH.begin(), lightsH.end());
 
-        std::vector<MMElement> lightsV = placeStreetLights(200.0f, 1, 25.0f, "lamp1", "lamp_tex");
+        std::vector<MMElement> lightsV = placeStreetLights(200.0f, 1, 25.0f, "lamp1", "tex_medieval_atlas");
         simpElements.insert(simpElements.end(), lightsV.begin(), lightsV.end());
 
         std::vector<MMElement> interior = InteriorManager::CreateHighLShapedSecondFloorTemplate({900, 0, 900});
@@ -780,7 +953,7 @@ public:
         std::vector<MMElement> h4 = placeHouses(areaW, areaL, 140, 140, gridSize, 75);
 
         std::vector<MMElement> extras;
-        extras.emplace_back(UtilsStructs::createElement("ww1", "well", {"medieval_buildings", "pnois"}, {0, 0, 0},
+        extras.emplace_back(UtilsStructs::createElement("ww1", "well", {"tex_medieval_atlas", "pnois"}, {0, 0, 0},
                                                         {90, 0, 0}, {1, 1, 1}));
 
         std::vector<MMElement> allObstacles;
@@ -794,10 +967,10 @@ public:
         std::vector<std::string> treeModels = {"tree1", "tree2", "tree3", "tree4"};
         float treeSpacing = 5.0f;
         std::vector<MMElement> vegElements = placeVegetationInGrid(areaW, areaL, -20, -20, treeSpacing, treeModels,
-                                                                   "tree_tex", allObstacles);
-        auto v2 = placeVegetationInGrid(areaW, areaL, -20, 140, treeSpacing, treeModels, "tree_tex", allObstacles);
-        auto v3 = placeVegetationInGrid(areaW, areaL, 140, -20, treeSpacing, treeModels, "tree_tex", allObstacles);
-        auto v4 = placeVegetationInGrid(areaW, areaL, 140, 140, treeSpacing, treeModels, "tree_tex", allObstacles);
+                                                                   "tex_veg_atlas", allObstacles);
+        auto v2 = placeVegetationInGrid(areaW, areaL, -20, 140, treeSpacing, treeModels, "tex_veg_atlas", allObstacles);
+        auto v3 = placeVegetationInGrid(areaW, areaL, 140, -20, treeSpacing, treeModels, "tex_veg_atlas", allObstacles);
+        auto v4 = placeVegetationInGrid(areaW, areaL, 140, 140, treeSpacing, treeModels, "tex_veg_atlas", allObstacles);
         vegElements.insert(vegElements.end(), v2.begin(), v2.end());
         vegElements.insert(vegElements.end(), v3.begin(), v3.end());
         vegElements.insert(vegElements.end(), v4.begin(), v4.end());
