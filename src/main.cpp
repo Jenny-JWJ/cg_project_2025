@@ -121,7 +121,7 @@ protected:
 
     glm::mat4 ViewPrj;
     glm::mat4 World;
-    glm::vec3 Pos = glm::vec3(200, 0, 5);
+    glm::vec3 Pos = glm::vec3(900, 0, 900);
     glm::vec3 cameraPos;
     float Yaw = glm::radians(0.0f);
     float Pitch = glm::radians(0.0f);

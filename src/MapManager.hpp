@@ -768,7 +768,7 @@ public:
         std::vector<MMElement> lightsV = placeStreetLights(200.0f, 1, 25.0f, "lamp1", "lamp_tex");
         simpElements.insert(simpElements.end(), lightsV.begin(), lightsV.end());
 
-        std::vector<MMElement> interior = InteriorManager::CreateLShapedTemplate({300, 0, 300});
+        std::vector<MMElement> interior = InteriorManager::CreateHighLShapedSecondFloorTemplate({900, 0, 900});
         simpElements.insert(simpElements.end(), interior.begin(), interior.end());
 
         float areaW = 150.0f;
