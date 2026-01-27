@@ -844,6 +844,8 @@ public:
             {"assets/textures/Castle_Textures/SPW_Natures_01.png", "tex_nature_atlas_1"},
             {"assets/textures/Castle_Textures/SPW_Natures_02.png", "tex_nature_atlas_2"},
             {"assets/textures/Vegetation/Textures_Vegetation.png", "tex_veg_atlas"},
+            {"assets/textures/FornitureTextures.png", "forniture"},
+            {"assets/textures/DungeonTextures.png", "dungeon"},
             {"assets/textures/Perlin_noise.png", "pnois"},
             {"assets/textures/day_sky.png", "skybox"},
             {"assets/textures/Black.png", "black"},
@@ -941,7 +943,7 @@ public:
         std::vector<MMElement> lightsV = placeStreetLights(200.0f, 1, 25.0f, "lamp1", "tex_medieval_atlas");
         simpElements.insert(simpElements.end(), lightsV.begin(), lightsV.end());
 
-        std::vector<MMElement> interior = InteriorManager::CreateHighLShapedSecondFloorTemplate({900, 0, 900});
+        std::vector<MMElement> interior = InteriorManager::CreateBaseHouseTemplate({900, 0, 900});
         simpElements.insert(simpElements.end(), interior.begin(), interior.end());
 
         float areaW = 150.0f;

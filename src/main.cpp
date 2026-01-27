@@ -813,7 +813,7 @@ protected:
         static float sunAngle = 0.0f;
 
         // Set day duration to 5 minutes (300 seconds)
-        float dayDuration = 300.0f;
+        float dayDuration = 1000000000.0f;
 
         //Calculate rotation speed: 360 degrees divided by total duration
         float rotationSpeed = glm::radians(360.0f) / dayDuration;
@@ -1055,6 +1055,16 @@ protected:
         txt.print(-1.0,-0.9, coordinateTxt, 4, "CO", false, false, true,
                   TAL_LEFT, TRH_LEFT, TRV_TOP,
                   {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
+        std::ostringstream oss2;
+        oss2 << std::fixed << std::setprecision(1)
+            << "Camera direction Yaw: " << std::floor(Yaw * 10) / 10
+            << " Pitch: " << std::floor(Pitch * 10) / 10;
+
+        std::string directionTxt = oss2.str();
+        txt.print(-1.0,-0.8, directionTxt, 5, "CO", false, false, true,
+                  TAL_LEFT, TRH_LEFT, TRV_TOP,
+                  {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
+
 
         txt.updateCommandBuffer();
     }
