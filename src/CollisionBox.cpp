@@ -126,6 +126,15 @@ bool CollisionBox::intersects(const CollisionBox& o) const {
     if (shape == cylinder && o.shape == cube)
         return cubeCylinder(o, *this);
 
+    if (shape == cube && o.shape == cylinder)
+        return cubeCylinder(*this, o);
+
+    if (shape == cylinder && o.shape == sphere)
+        return sphereCylinder(o, *this);
+
+    if (shape == sphere && o.shape == cylinder)
+        return sphereCylinder(*this, o);
+
 }
 
 // ---------------- CollisionObject ----------------

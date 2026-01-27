@@ -11,6 +11,7 @@
 #include "MapManager.hpp"
 #include "CollisionBox.hpp"
 #include "CollisionBoxGenerator.hpp"
+#include "Teleporter.hpp"
 
 // The uniform buffer object used in this example
 struct VertexChar {
@@ -78,7 +79,8 @@ struct PointLightBufferObject {
 class E09 : public BaseProject {
 private:
     std::vector<CollisionObject> houseCollisions;
-
+    std::vector<Teleporter> teleporters;
+    Teleporter* activeTeleporter;
 protected:
     PointLightBufferObject plboData;
     // Here you list all the Vulkan objects you need:
@@ -121,7 +123,7 @@ protected:
 
     glm::mat4 ViewPrj;
     glm::mat4 World;
-    glm::vec3 Pos = glm::vec3(900, 0, 900);
+    glm::vec3 Pos = glm::vec3(0, 0, 5);
     glm::vec3 cameraPos;
     float Yaw = glm::radians(0.0f);
     float Pitch = glm::radians(0.0f);
@@ -133,6 +135,7 @@ protected:
     bool c_pressed = false; //Debounce c clicked
     bool isWideView = false;
     bool v_pressed = false;
+    bool canTeleport = false;
     float currentCamDist = 5.0f;
     bool resetCamera = false; //Flag to reset the camera
 
@@ -199,6 +202,8 @@ protected:
         lastX = windowWidth / 2.0;
         lastY = windowHeight / 2.0;
         firstMouse = true;
+
+        teleporters.emplace_back(Teleporter({0,0,5}, {1,1,1}, {0,0}, {900,0,900},{1,0}));
 
         // Descriptor Layouts [what will be passed to the shaders]
         // Initialize the global Descriptor Set Layout
@@ -759,6 +764,25 @@ protected:
                 curDebounce = 0;
             }
         }
+
+        if (glfwGetKey(window, GLFW_KEY_E) && canTeleport) {
+            if (!debounce) {
+                debounce = true;
+                curDebounce = GLFW_KEY_E;
+
+
+                activeTeleporter->Teleport(Pos,Yaw,Pitch);
+                std::cout << "teleport position x: " + std::to_string(Pos.x) + " y: " + std::to_string(Pos.y) + "z: " + std::to_string(Pos.z) + "\n";
+                std::cout << "player look at Yaw: " + std::to_string(Yaw) + " Pithc: " + std::to_string(Pitch) + "\n";
+
+
+            }
+        } else {
+            if ((curDebounce == GLFW_KEY_E) && debounce) {
+                debounce = false;
+                curDebounce = 0;
+            }
+        }
         /*
         static int curAnim = 0;
         if (glfwGetKey(window, GLFW_KEY_SPACE)) {
@@ -912,6 +936,15 @@ protected:
             AdaptMat = glm::scale(AdaptMat, glm::vec3(0.0f));
         }
 
+        for (Teleporter& tp : teleporters){
+            if (tp.CanTeleport(Pos,{Yaw,Pitch})){
+                canTeleport = true;
+                activeTeleporter = &tp;
+                break;
+            }
+            canTeleport = false;
+        }
+
         int instanceId;
         // character
         for (instanceId = 0; instanceId < SC.TI[0].InstanceCount; instanceId++) {
@@ -1045,6 +1078,16 @@ protected:
                       false, false, true, TAL_CENTER, TRH_CENTER, TRV_MIDDLE,
                       {1.0f, 1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
         }
+
+        if (canTeleport){
+            txt.print(-1.0f, -0.9f, "E to enter", 4, "CO",
+                      false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
+                      {1.0f, 1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
+        } else {
+            txt.print(0.0f, 0.0f, " ", 4, "CO",
+                      false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
+                      {1.0f, 1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
+        }
         std::ostringstream oss;
         oss << std::fixed << std::setprecision(1)
             << "Player position  x: " << std::floor(Pos.x * 10) / 10
@@ -1052,7 +1095,7 @@ protected:
             << " z: " << std::floor(Pos.z * 10) / 10;
 
         std::string coordinateTxt = oss.str();
-        txt.print(-1.0,-0.9, coordinateTxt, 4, "CO", false, false, true,
+        txt.print(-1.0,-0.8, coordinateTxt, 5, "CO", false, false, true,
                   TAL_LEFT, TRH_LEFT, TRV_TOP,
                   {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
         std::ostringstream oss2;
@@ -1061,7 +1104,7 @@ protected:
             << " Pitch: " << std::floor(Pitch * 10) / 10;
 
         std::string directionTxt = oss2.str();
-        txt.print(-1.0,-0.8, directionTxt, 5, "CO", false, false, true,
+        txt.print(-1.0,-0.7, directionTxt, 6, "CO", false, false, true,
                   TAL_LEFT, TRH_LEFT, TRV_TOP,
                   {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
 
