@@ -444,6 +444,43 @@ public:
         return river;
     }
 
+    // -------------------------------------------------------
+    // WATER LAYER: generate water tiles on top of river bed
+    // -------------------------------------------------------
+    static std::vector<MMElement>
+    createRiverWaterFromBed(const std::vector<MMElement>& riverBed) {
+
+        std::vector<MMElement> water;
+        float waterOffsetY = 0.15f; // avoid z-fighting
+
+        for (const auto& bed : riverBed) {
+
+            water.emplace_back(UtilsStructs::createElement(
+                    bed.id + "_water",
+                    "river_water",
+                    {"tex_water", "pnois"},
+                    {
+                            bed.translate[0],
+                            bed.translate[1] + waterOffsetY,
+                            bed.translate[2]
+                    },
+                    {
+                            bed.eulerAngles[0],
+                            bed.eulerAngles[1],
+                            bed.eulerAngles[2]
+                    },
+                    {
+                            bed.scale[0],
+                            bed.scale[1],
+                            bed.scale[2]
+                    }
+            ));
+        }
+        return water;
+    }
+
+
+
     static bool isRiverZone(float x, float z, const std::vector<MMElement> &riverTiles) {
         // 1. Scava lungo tutto il percorso del fiume (X=240)
         for (const auto &river: riverTiles) {
@@ -837,6 +874,8 @@ public:
             {"assets/models/Castle/SPW_Medieval_Tent_01.mgcg", "tent1"},
             {"assets/models/Castle/SPW_Medieval_Tent_03.mgcg", "tent2"},
             {"assets/models/Castle/SPW_Natures_Bush_01.mgcg", "grass_tuft"},
+            {"assets/models/River/SPW_Terrain_Water.mgcg", "river_water"},
+
         };
 
         texturePaths = {
@@ -894,13 +933,16 @@ public:
         // 1. Create the river tiles
         std::vector<MMElement> riverTiles = createRiverPath();
 
-        // 2. Create the river ramps
+        // 3. Create the river water
+        std::vector<MMElement> riverWater = createRiverWaterFromBed(riverTiles);
+
+        // 3. Create the river ramps
         std::vector<MMElement> ramps = createRiverRamps();
 
-        // 3. Create the bridge (Il Pontos)
+        // 4. Create the bridge (Il Pontos)
         std::vector<MMElement> bridgeElements = createBridge();
 
-        // 4. Create the castle
+        // 5. Create the castle
         std::vector<MMElement> castleElements = createCastle();
 
         auto campTents = createCircularCamp();
@@ -912,6 +954,7 @@ public:
         std::vector<MMElement> simpElements = placeGrassGround(riverTiles);
 
         simpElements.insert(simpElements.end(), riverTiles.begin(), riverTiles.end());
+        simpElements.insert(simpElements.end(), riverWater.begin(), riverWater.end());
         simpElements.insert(simpElements.end(), ramps.begin(), ramps.end());
         simpElements.insert(simpElements.end(), bridgeElements.begin(), bridgeElements.end());
         simpElements.insert(simpElements.end(), castleElements.begin(), castleElements.end());
