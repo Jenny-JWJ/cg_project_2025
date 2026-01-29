@@ -452,13 +452,14 @@ public:
 
         std::vector<MMElement> water;
         float waterOffsetY = 0.15f; // avoid z-fighting
+        float widthScale = 2.25f;
 
         for (const auto& bed : riverBed) {
 
             water.emplace_back(UtilsStructs::createElement(
                     bed.id + "_water",
                     "river_water",
-                    {"tex_water", "pnois"},
+                    {"water_river_texture", "pnois"},
                     {
                             bed.translate[0],
                             bed.translate[1] + waterOffsetY,
@@ -471,8 +472,8 @@ public:
                     },
                     {
                             bed.scale[0],
-                            bed.scale[1],
-                            bed.scale[2]
+                            bed.scale[1]* widthScale,
+                            bed.scale[2]* widthScale
                     }
             ));
         }
@@ -890,7 +891,9 @@ public:
             {"assets/textures/Black.png", "black"},
             {"assets/textures/translucent_lightblue_texture.png", "colBox_texture"},
             {"assets/textures/Castle_Textures/SPW_Medieval_Tent_01_Color01.png", "tent1_texture"},
-            {"assets/textures/Castle_Textures/SPW_Medieval_Tent_03_Color02.png", "tent2_texture"}
+            {"assets/textures/Castle_Textures/SPW_Medieval_Tent_03_Color02.png", "tent2_texture"},
+            {"assets/textures/water_river.png", "water_river_texture"},
+
         };
     }
 
