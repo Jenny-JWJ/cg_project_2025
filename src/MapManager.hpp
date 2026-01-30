@@ -18,6 +18,8 @@
 #include "CollisionBoxGenerator.hpp"
 #include "UtilsStructs.hpp"
 #include "InteriorManager.hpp"
+#include "TeleporterList.hpp"
+#include "RoomManager.hpp"
 
 using json = nlohmann::json;
 
@@ -565,6 +567,36 @@ public:
         return dist(gen);
     }
 
+    static std::vector<int> CreatePathVector(int modelNumber, int thisIdNumber = 0);
+
+    static glm::vec3 getTeleporterPos(glm::vec3 housePos, float houseRotY, int modelNumber);
+
+    static void AddTeleporter(glm::vec3 housePos, int modelNumber){
+        if(modelNumber == 3)
+            AddTeleporter(housePos, 6);
+        float houseRotY;
+        glm::vec2 lookDir;
+        if(housePos.z <= 0){
+            lookDir = {0,0};
+            houseRotY = 180;
+        }
+        if(housePos.z > 0){
+            lookDir = {3.0, 0};
+            houseRotY = 0;
+        }
+        glm::vec2 spawnLookDir;
+        if(housePos.z <= 0)
+            spawnLookDir = {3.0,0};
+        if(housePos.z > 0)
+            spawnLookDir = {0, 0};
+        glm::vec3 teleporterPos = getTeleporterPos(housePos, houseRotY,modelNumber);
+        glm::vec3 halfSize = {1,1,1};
+
+        int id = RoomManager::AddRoom(InteriorManager::ExternalEntrance);
+        int tpId = TeleporterList::addTeleporter(teleporterPos,halfSize,lookDir,teleporterPos,spawnLookDir,TeleporterList::TeleportUse::ExternalHouse, id);
+        TeleporterList::teleporters.at(tpId).teleporter->SetTeleportPath(CreatePathVector(modelNumber, id));
+    }
+
     static std::vector<MMElement> placeHouses(float hight = 200.0, float lenght = 200.0, float x_offset = 50.0,
                                               float z_offset = 50.0, float scale = 20.0, int idNumber = 0,
                                               std::vector<float> rotation = {90, 0, 0}) {
@@ -575,12 +607,13 @@ public:
 
         for (int i = 0; i < count_z; i++) {
             for (int j = 0; j < count_x; j++) {
-                std::string model_number = std::to_string(rand_int(1, 6));
+                std::string model_number = std::to_string(rand_int(1, 5));
                 idNumber++;
                 elements.emplace_back(UtilsStructs::createElement(
                     idName + model_number + "_" + std::to_string(idNumber), "bldg" + model_number,
                     {"tex_medieval_atlas", "pnois"}, {j * scale - x_offset, 0, i * scale - z_offset}, rotation,
                     {1, 1, 1}));
+                AddTeleporter({j * scale - x_offset, 0, i * scale - z_offset}, std::strtol(model_number.c_str(), nullptr, 10));
             }
         }
         return elements;
@@ -989,7 +1022,7 @@ public:
         std::vector<MMElement> lightsV = placeStreetLights(200.0f, 1, 25.0f, "lamp1", "tex_medieval_atlas");
         simpElements.insert(simpElements.end(), lightsV.begin(), lightsV.end());
 
-        std::vector<MMElement> interior = InteriorManager::CreateHighLShapedSecondFloorTemplate({900, 0, 900});
+        std::vector<MMElement> interior = InteriorManager::CreateHouseInteriors({900, 0, 900});
         simpElements.insert(simpElements.end(), interior.begin(), interior.end());
 
         float areaW = 150.0f;

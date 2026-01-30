@@ -11,12 +11,15 @@
 #include <map>
 #include "modules/GlobalGML.hpp"
 #include "UtilsStructs.hpp"
+#include "TeleporterList.hpp"
 
 using IMElement = UtilsStructs::Element;
 
 class InteriorManager{
+    static const int housePerType = 3;
 public:
     enum HouseTemplate{
+        ExternalEntrance,
         Base,
         HighBaseFirstFloor,
         HighBaseSecondFloor,
@@ -24,12 +27,12 @@ public:
         DoubleSecondFloorRight,
         DoubleFirstFloorLeft,
         DoubleSecondFloorLeft,
-        DoubleConnectionFromRight,
-        DoubleConnectionFromLeft,
+        DoubleConnection,
         LShaped,
         HighLShapedFirstFloor,
-        HighLshapedSecondFloor,
-        SecretBasement
+        HighLShapedSecondFloor,
+        SecretBasement,
+        Count
     };
 
     struct SpawnPosition{
@@ -37,11 +40,15 @@ public:
         glm::vec2 rotation;
     };
 
-    static std::map<HouseTemplate, SpawnPosition> spawnPositions; //{template, position w.r.t the center, camera rotation(Yaw, Pitch)}
+    static std::map<HouseTemplate, std::vector<SpawnPosition>> spawnPositions; //{template, position w.r.t the center, camera rotation(Yaw, Pitch)}
 
     static glm::vec3 offset;
 
     static int instanceNumber;
+
+    static int AddRoom(HouseTemplate aTemplate);
+
+    static void AddTeleporter(glm::vec3 spawnPos, glm::vec2 spawnDir, TeleporterList::TeleportUse tpUse, int roomId);
 
     static std::vector<IMElement> CreateBaseHouseTemplate(glm::vec3 center){
 
@@ -110,6 +117,9 @@ public:
 
         elements.emplace_back(UtilsStructs::createElement("house_floor_" + std::to_string(instanceNumber),"ground",{"tex_nature_atlas_1","pnois"},{center.x, center.y + 3.1f, center.z},{270,0,0}, {10, 1, 10})); instanceNumber++;
 
+        int id = AddRoom(Base);
+
+        AddTeleporter(center + spawnPositions.at(Base)[0].position, spawnPositions.at(Base)[0].rotation, TeleporterList::TeleportUse::BaseEntrance, id);
 
         return elements;
     }
@@ -184,7 +194,12 @@ public:
             //Stairs
             elements.emplace_back(UtilsStructs::createElement("stairs" + std::to_string(instanceNumber),"stairs",{"forniture","pnois"},{center.x - 4.0f, center.y, center.z + 1},{0,0,0}, {2, 1.5, 1.5f})); instanceNumber++;
 
-            return elements;
+            int id = AddRoom(HighBaseFirstFloor);
+
+            AddTeleporter(center + spawnPositions.at(HighBaseFirstFloor)[0].position, spawnPositions.at(HighBaseFirstFloor)[0].rotation, TeleporterList::TeleportUse::HighBaseEntrance, id);
+            AddTeleporter(center + spawnPositions.at(HighBaseFirstFloor)[1].position, spawnPositions.at(HighBaseFirstFloor)[1].rotation, TeleporterList::TeleportUse::HighBaseStairsUp, id);
+
+        return elements;
         }
 
     static std::vector<IMElement> CreateHighBaseHouseSecondFloorTemplate(glm::vec3 center){
@@ -246,6 +261,10 @@ public:
 
             //Stairs
             elements.emplace_back(UtilsStructs::createElement("stairs" + std::to_string(instanceNumber),"stairs",{"forniture","pnois"},{center.x - 4.0f, center.y - 3, center.z + 0.5f},{0,0,0}, {2.5, 1.5, 1.5f})); instanceNumber++;
+
+            int id = AddRoom(HighBaseSecondFloor);
+
+            AddTeleporter(center + spawnPositions.at(HighBaseSecondFloor)[0].position, spawnPositions.at(HighBaseSecondFloor)[0].rotation, TeleporterList::TeleportUse::HighBaseStairsDown, id);
 
             return elements;
         }
@@ -317,6 +336,13 @@ public:
 
         //Stairs
         elements.emplace_back(UtilsStructs::createElement("stairs" + std::to_string(instanceNumber),"stairs",{"forniture","pnois"},{center.x - 4.0f, center.y, center.z + 1},{0,0,0}, {2, 1.5, 1.5f})); instanceNumber++;
+
+        int id = AddRoom(DoubleFirstFloorLeft);
+
+        AddTeleporter(center + spawnPositions.at(DoubleFirstFloorLeft)[0].position, spawnPositions.at(DoubleFirstFloorLeft)[0].rotation, TeleporterList::TeleportUse::DoubleEntranceLeft, id);
+
+        AddTeleporter(center + spawnPositions.at(DoubleFirstFloorLeft)[1].position, spawnPositions.at(DoubleFirstFloorLeft)[1].rotation, TeleporterList::TeleportUse::DoubleStairsUpLeft, id);
+
 
         return elements;
     }
@@ -390,7 +416,14 @@ public:
             //Stairs
             elements.emplace_back(UtilsStructs::createElement("stairs" + std::to_string(instanceNumber),"stairs",{"forniture","pnois"},{center.x + 4.0f, center.y, center.z - 1},{0,180,0}, {2, 1.5, 1.5f})); instanceNumber++;
 
-            return elements;
+            int id = AddRoom(DoubleFirstFloorRight);
+
+            AddTeleporter(center + spawnPositions.at(DoubleFirstFloorRight)[0].position, spawnPositions.at(DoubleFirstFloorRight)[0].rotation, TeleporterList::TeleportUse::DoubleEntranceRight, id);
+
+            AddTeleporter(center + spawnPositions.at(DoubleFirstFloorRight)[1].position, spawnPositions.at(DoubleFirstFloorRight)[1].rotation, TeleporterList::TeleportUse::DoubleStairsUpRight, id);
+
+
+        return elements;
         }
 
     static std::vector<IMElement> CreateDoubleSecondFloorLeftTemplate(glm::vec3 center){
@@ -456,7 +489,14 @@ public:
             //Stairs
             elements.emplace_back(UtilsStructs::createElement("stairs" + std::to_string(instanceNumber),"stairs",{"forniture","pnois"},{center.x - 4.0f, center.y - 3, center.z + 0.5f},{0,0,0}, {2.5, 1.5, 1.5f})); instanceNumber++;
 
-            return elements;
+            int id = AddRoom(DoubleSecondFloorLeft);
+
+            AddTeleporter(center + spawnPositions.at(DoubleSecondFloorLeft)[0].position, spawnPositions.at(DoubleSecondFloorLeft)[0].rotation, TeleporterList::TeleportUse::DoubleStairsDownLeft, id);
+
+            AddTeleporter(center + spawnPositions.at(DoubleSecondFloorLeft)[1].position, spawnPositions.at(DoubleSecondFloorLeft)[1].rotation, TeleporterList::TeleportUse::DoubleBridgeFromLeft, id);
+
+
+        return elements;
         }
 
     static std::vector<IMElement> CreateDoubleSecondFloorRightTemplate(glm::vec3 center){
@@ -522,10 +562,17 @@ public:
             //Stairs
             elements.emplace_back(UtilsStructs::createElement("stairs" + std::to_string(instanceNumber),"stairs",{"forniture","pnois"},{center.x - 4.0f, center.y - 3, center.z - 0.5f},{0,180,0}, {2.5, 1.5, 1.5f})); instanceNumber++;
 
-            return elements;
+            int id = AddRoom(DoubleSecondFloorRight);
+
+            AddTeleporter(center + spawnPositions.at(DoubleSecondFloorRight)[0].position, spawnPositions.at(DoubleSecondFloorRight)[0].rotation, TeleporterList::TeleportUse::DoubleStairsDownRight, id);
+
+            AddTeleporter(center + spawnPositions.at(DoubleSecondFloorRight)[1].position, spawnPositions.at(DoubleSecondFloorRight)[1].rotation, TeleporterList::TeleportUse::DoubleBridgeFromRight, id);
+
+
+        return elements;
         }
 
-    static std::vector<IMElement> ConnectingBridgeFromRight(glm::vec3 center){
+    static std::vector<IMElement> ConnectingBridge(glm::vec3 center){
 
         std::vector<IMElement> elements;
 
@@ -547,33 +594,16 @@ public:
         //Roof
         elements.emplace_back(UtilsStructs::createElement("house_roof_" + std::to_string(instanceNumber),"house_floor",{"tex_medieval_atlas","pnois"},{center.x, center.y + 2.5f, center.z}, {180,0,0}, {1,1,1.5})); instanceNumber++;
         elements.emplace_back(UtilsStructs::createElement("house_roof_" + std::to_string(instanceNumber),"ground",{"tex_nature_atlas_1","pnois"},{center.x, center.y + 2.6f, center.z},{270,0,0}, {10, 1, 10})); instanceNumber++;
+
+        int id = AddRoom(DoubleConnection);
+
+        AddTeleporter(center + spawnPositions.at(DoubleConnection)[0].position, spawnPositions.at(DoubleConnection)[0].rotation, TeleporterList::TeleportUse::ConnectingBridgeRight, id);
+
+        AddTeleporter(center + spawnPositions.at(DoubleConnection)[1].position, spawnPositions.at(DoubleConnection)[1].rotation, TeleporterList::TeleportUse::ConnectingBridgeLeft, id);
+
+
         return elements;
     }
-
-    static std::vector<IMElement> ConnectingBridgeFromLeft(glm::vec3 center){
-
-            std::vector<IMElement> elements;
-
-            //Door
-            elements.emplace_back(UtilsStructs::createElement("door_"+ std::to_string(instanceNumber),"door",{"forniture","pnois"},{center.x - 0.5f, center.y, center.z + 2.5f}));  instanceNumber++;
-            elements.emplace_back(UtilsStructs::createElement("door_"+ std::to_string(instanceNumber),"door",{"forniture","pnois"},{center.x - 0.5f, center.y, center.z - 2.5f}));  instanceNumber++;
-
-
-            //Windows
-            elements.emplace_back(UtilsStructs::createElement("window_"+ std::to_string(instanceNumber),"window",{"forniture","pnois"},{center.x - 0.9f, center.y + 1.5f, center.z + 1}, {0,90,0}, {0.5,0.5,0.3}));  instanceNumber++;
-            elements.emplace_back(UtilsStructs::createElement("window_"+ std::to_string(instanceNumber),"window",{"forniture","pnois"},{center.x - 0.9f, center.y + 1.5f, center.z - 1}, {0,90,0}, {0.5,0.5,0.3}));  instanceNumber++;
-
-            //Floor and walls
-            elements.emplace_back(UtilsStructs::createElement("wall_" + std::to_string(instanceNumber),"tunnel",{"dungeon","pnois"},{center.x, center.y, center.z}, {0,0,0}, {1,1.5f,1.5})); instanceNumber++;
-            elements.emplace_back(UtilsStructs::createElement("wall_" + std::to_string(instanceNumber),"wall",{"dungeon","pnois"},{center.x, center.y, center.z - 3}, {0,0,0}, {1,1.5f,1})); instanceNumber++;
-            elements.emplace_back(UtilsStructs::createElement("wall_" + std::to_string(instanceNumber),"wall",{"dungeon","pnois"},{center.x, center.y, center.z + 3}, {0,180,0}, {1,1.5f,1})); instanceNumber++;
-            elements.emplace_back(UtilsStructs::createElement("house_floor_" + std::to_string(instanceNumber),"ground",{"tex_nature_atlas_1","pnois"},{center.x, center.y - 0.1f, center.z},{90,0,0}, {10, 1, 10})); instanceNumber++;
-
-            //Roof
-            elements.emplace_back(UtilsStructs::createElement("house_roof_" + std::to_string(instanceNumber),"house_floor",{"tex_medieval_atlas","pnois"},{center.x, center.y + 2.5f, center.z}, {180,0,0}, {1,1,1.5})); instanceNumber++;
-            elements.emplace_back(UtilsStructs::createElement("house_roof_" + std::to_string(instanceNumber),"ground",{"tex_nature_atlas_1","pnois"},{center.x, center.y + 2.6f, center.z},{270,0,0}, {10, 1, 10})); instanceNumber++;
-            return elements;
-        }
 
     static std::vector<IMElement> CreateLShapedTemplate(glm::vec3 center){
 
@@ -666,6 +696,9 @@ public:
 
             elements.emplace_back(UtilsStructs::createElement("house_floor_" + std::to_string(instanceNumber),"ground",{"tex_nature_atlas_1","pnois"},{center.x + 10, center.y + 3.1f, center.z + 10},{270,0,0}, {10, 1, 10})); instanceNumber++;
 
+            int id = AddRoom(LShaped);
+
+            AddTeleporter(center + spawnPositions.at(LShaped)[0].position, spawnPositions.at(LShaped)[0].rotation, TeleporterList::TeleportUse::LShapedEntrance, id);
 
         return elements;
         }
@@ -759,6 +792,11 @@ public:
             //Stairs
             elements.emplace_back(UtilsStructs::createElement("stairs" + std::to_string(instanceNumber),"stairs",{"forniture","pnois"},{center.x + 2, center.y, center.z + 6.05f},{0,180,0}, {2.5, 1.5, 2.0f})); instanceNumber++;
 
+            int id = AddRoom(HighLShapedFirstFloor);
+
+            AddTeleporter(center + spawnPositions.at(HighLShapedFirstFloor)[0].position, spawnPositions.at(HighLShapedFirstFloor)[0].rotation, TeleporterList::TeleportUse::HighLShapedEntrance, id);
+
+            AddTeleporter(center + spawnPositions.at(HighLShapedFirstFloor)[1].position, spawnPositions.at(HighLShapedFirstFloor)[1].rotation, TeleporterList::TeleportUse::HighLShapedStairsUp, id);
 
         return elements;
         }
@@ -858,27 +896,17 @@ public:
             //Stairs
             elements.emplace_back(UtilsStructs::createElement("stairs" + std::to_string(instanceNumber),"stairs",{"forniture","pnois"},{center.x + 2, center.y - 3, center.z + 6.05f},{0,180,0}, {2.5, 1.5, 2.0f})); instanceNumber++;
 
+        int id = AddRoom(HighLShapedSecondFloor);
+
+        AddTeleporter(center + spawnPositions.at(HighLShapedSecondFloor)[0].position, spawnPositions.at(HighLShapedSecondFloor)[0].rotation, TeleporterList::TeleportUse::HighLShapedStairsDown, id);
 
             return elements;
         }
 
-    static void Initialize(){
-        spawnPositions = {
-                {Base, {{0,0,3.1}, {0,0}}},
-                {HighBaseFirstFloor, {{0,0,3.1}, {0,0}}},
-                {HighBaseSecondFloor, {{-1.7,0,-2.8}, {-1.6,0}}},
-                {DoubleFirstFloorRight, {{-4.8,0,0}, {-1.6,0}}},
-                {DoubleSecondFloorRight, {{-1.4,0,3.2}, {0,0}}},
-                {DoubleFirstFloorLeft, {{4.8,0,0}, {1.5,0}}},
-                {DoubleSecondFloorLeft, {{-1.4,0,-3.2}, {4.6,0}}},
-                {DoubleConnectionFromRight, {{0,0,-2}, {3,0}}},
-                {DoubleConnectionFromLeft, {{0,0,-2}, {3,0}}},
-                {LShaped, {{10,0,7}, {0,0}}},
-                {HighLShapedFirstFloor, {{10,0,7}, {0,0}}},
-                {HighLshapedSecondFloor, {{2.1,0,12.5}, {3,0}}},
-                {SecretBasement, {{0,0,0}, {0,0}}},
-        };
-    }
+    static std::vector<IMElement> CreateHouseInteriors(glm:: vec3 origin, float distance = 20.0f);
+
+    static std::vector<IMElement> CreateHouse(HouseTemplate tmp, glm::vec3 center);
+
 };
 
 #endif //E09_INTERIORMANAGER_HPP
