@@ -86,6 +86,8 @@ private:
     Teleporter* activeTeleporter;
     std::deque<int> path;
 
+    float getGroundHeight(const glm::vec3& pos);
+
     // --- WELL ANIMATION SETTINGS ---
     enum WellState { W_IDLE, W_DOWN, W_UP };
 
@@ -1416,8 +1418,9 @@ protected:
             Pos = Pos - MOVE_SPEED * m.z * front * deltaT;
             Pos = Pos + MOVE_SPEED * m.x * ux * deltaT;
 
-            // Force Y position at a fixed number
-            Pos.y = 0.0f;
+            // Y position
+            float groundY = getGroundHeight(Pos);
+            Pos.y = groundY;
 
             // Camera is at eye height
             cameraPos = Pos + glm::vec3(0.0f, camHeight, 0.0f);
@@ -1430,6 +1433,9 @@ protected:
             Pos = Pos + MOVE_SPEED * m.x * ux * deltaT;
             Pos = Pos - MOVE_SPEED * m.z * uz * deltaT;
 
+            float groundY = getGroundHeight(Pos);
+            Pos.y = groundY;
+            
             camHeight += MOVE_SPEED * m.y * deltaT;
 
             // MMModel rotation
@@ -1449,9 +1455,9 @@ protected:
                                      glm::mat4(1.0f), Yaw, glm::vec3(0, 1, 0));
             cameraPos = camWorld * glm::vec4(0.0f, camHeight + camDist * sin(Pitch), camDist * cos(Pitch), 1.0);
 
-            if (cameraPos.y < 0.2f) {
-                cameraPos.y = 0.2f;
-            }
+            //if (cameraPos.y < 0.2f) {
+            //    cameraPos.y = 0.2f;
+            //}
 
             //Start reset to improve camera movement when changing
             if (resetCamera) {
@@ -1466,6 +1472,8 @@ protected:
         // ===============================
         // COLLISION CHECK (COMMON)
         // ===============================
+        glm::vec3 colPos = Pos;
+        colPos.y = 0.0f;
         CollisionObject playerCol;
         playerCol.addBox(
             Pos + glm::vec3(0.0f, 1.0f, 0.0f),
@@ -1501,6 +1509,33 @@ protected:
         return deltaT;
     }
 };
+
+float E09::getGroundHeight(const glm::vec3& pos) {
+    // ---------- BRIDGE ----------
+    if (pos.x > 215.0f && pos.x < 270.0f &&
+        pos.z > -10.0f && pos.z < 10.0f) {
+        return 0.0f;
+    }
+    // ---------- RAMP LEFT ----------
+    if (pos.x >= 210.0f && pos.x <= 225.0f) {
+        float t = (pos.x - 215.0f) / 10.0f;   // 0 → 1
+        return glm::mix(0.0f, -2.3f, t);
+    }
+
+    // ---------- RIVER BED ----------
+    if (pos.x > 225.0f && pos.x < 260.0f) {
+        return -2.3f;
+    }
+
+    // ---------- RAMP RIGHT ----------
+    if (pos.x >= 260.0f && pos.x <= 275.0f) {
+        float t = (pos.x - 260.0f) / 10.0f;   // 0 → 1
+        return glm::mix(-2.3f, 0.0f, t);
+    }
+
+    // ---------- NORMAL GROUND ----------
+    return 0.0f;
+}
 
 
 // This is the main: probably you do not need to touch this!
