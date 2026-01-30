@@ -908,6 +908,7 @@ public:
             {"assets/models/Castle/SPW_Medieval_Tent_01.mgcg", "tent1"},
             {"assets/models/Castle/SPW_Medieval_Tent_03.mgcg", "tent2"},
             {"assets/models/Castle/SPW_Natures_Bush_01.mgcg", "grass_tuft"},
+            {"assets/models/Dungeon/prop.001_Mesh.900.mgcg", "bucket"},
             {"assets/models/River/SPW_Terrain_Water.mgcg", "river_water"},
 
         };
@@ -922,8 +923,12 @@ public:
             {"assets/textures/Perlin_noise.png", "pnois"},
             {"assets/textures/day_sky.png", "skybox"},
             {"assets/textures/Black.png", "black"},
+            {"assets/textures/brown.png", "brown"},
             {"assets/textures/translucent_lightblue_texture.png", "colBox_texture"},
             {"assets/textures/Castle_Textures/SPW_Medieval_Tent_01_Color01.png", "tent1_texture"},
+            {"assets/textures/Castle_Textures/SPW_Medieval_Tent_03_Color02.png", "tent2_texture"},
+            {"assets/textures/fillerwell.png", "tex_well_depth"},
+            {"assets/textures/water.png","water_well_texture"},
             {"assets/textures/Castle_Textures/SPW_Medieval_Tent_03_Color02.png", "tent2_texture"},
             {"assets/textures/water_river.png", "water_river_texture"},
 
@@ -1036,6 +1041,64 @@ public:
         std::vector<MMElement> extras;
         extras.emplace_back(UtilsStructs::createElement("ww1", "well", {"tex_medieval_atlas", "pnois"}, {0, 0, 0},
                                                         {90, 0, 0}, {1, 1, 1}));
+
+        // --- Inside makeJson() -> extras section ---
+        for (int i = 0; i < 8; i++) {
+            // Randomize position slightly around the center
+            float angle = i * (2.0f * 3.14159f / 8.0f);
+            float dist = 0.05f + (rand() % 100 / 1000.0f); // Random radius between 0.05 and 0.15
+            float posX = cos(angle) * dist;
+            float posZ = sin(angle) * dist;
+
+            extras.emplace_back(UtilsStructs::createElement(
+                "well_splash_" + std::to_string(i),
+                "cube",
+                {"water_well_texture", "pnois"},
+                {posX, 0.08, posZ}, // Fixed at water level initially
+                {0, 0, 0},
+                {0.04f, 0.04f, 0.04f} // Keep them tiny
+            ));
+        }
+
+        //Basic rope
+        extras.emplace_back(UtilsStructs::createElement(
+            "well_rope_wire",
+            "cylinder",
+            {"brown", "pnois"},
+            {0.0f, 1.38f, 0.0f},
+            {0.0f, 0.0f, 0.0f},
+            {0.025f, 0.6f, 0.025f}
+        ));
+
+        //Bucket surface filler
+        extras.emplace_back(UtilsStructs::createElement(
+            "well_mask",
+            "cylinder",
+            {"tex_well_depth", "pnois"},
+            {0.0f, 1.2f, 0.0f},
+            {0.0f, 0.0f, 0.0f},
+            {0.36f, 0.01f, 0.36f}
+        ));
+
+        //Basic bucket
+        extras.emplace_back(UtilsStructs::createElement(
+            "well_bucket",
+            "bucket",
+            {"dungeon", "pnois"},
+            {0.0f, 1.14f, 0.0f},
+            {0, 0, 0},
+            {1.0f, 1.0f, 1.0f}
+        ));
+
+        //Spawned bucket
+        extras.emplace_back(UtilsStructs::createElement(
+            "spawned_bucket",
+            "bucket",
+            {"dungeon", "pnois"},
+            {2.5f, -100.0f, 2.5f},
+            {0, 0, 0},
+            {1.0f, 1.0f, 1.0f}
+        ));
 
         std::vector<MMElement> allObstacles;
         allObstacles.insert(allObstacles.end(), h1.begin(), h1.end());

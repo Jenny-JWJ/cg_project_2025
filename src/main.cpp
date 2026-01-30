@@ -85,6 +85,39 @@ private:
     std::vector<Teleporter*> teleporters;
     Teleporter* activeTeleporter;
     std::deque<int> path;
+
+    // --- WELL ANIMATION SETTINGS ---
+    enum WellState { W_IDLE, W_DOWN, W_UP };
+
+    WellState currentWellState = W_IDLE;
+
+    // 1. CONSTANTS
+    const float BEAM_Y = 1.85f; // Fixed height of the support beam
+    const float HANDLE_OFFSET = 0.18f; // Distance to subtract from bucket center to reach handle
+
+    // 2. DYNAMIC COORDINATES
+    float bucketAnimY = 1.14f; // Current Y position of the bucket
+    float ropeAnimY = 1.14f; // Separate Y tracker for the rope (for calibration)
+    float maskOffset = 0.06f; // Offset for the water surface mask
+
+    // 3. SEPARATED SPEEDS (Tune these to prevent detachments)
+    float bucketDescSpeed = 0.5f; // Descending speed for the bucket
+    float ropeDescSpeed = 1.0f; // Descending speed for the rope (Adjust if it leads/lags)
+
+    float bucketAscSpeed = 0.8f; // Ascending speed for the bucket
+    float ropeAscSpeed = 1.6f; // Ascending speed for the rope (Adjust if it leads/lags)
+
+    float wellBottomLimit = -2.0f;
+    bool wellDebounce = false; // Input debounce for the 'E' key
+
+    // 4. SPLASH ANIMATION SETTINGS
+    const float WATER_LEVEL = 0.0f; // Y level where splashes occur
+    float splashJump[8] = {0.0f}; // Current vertical offset for each cube
+
+    // 5. BUCKET SWAP SETTINGS
+    bool bucketIsOnGround = false; // Logic flag: is the full bucket near the well?
+    glm::vec3 groundedBucketPos = glm::vec3(1.2f, 0.3f, 0.0f); // Where the full bucket "spawns"
+
 protected:
     PointLightBufferObject plboData;
     // Here you list all the Vulkan objects you need:
@@ -294,14 +327,14 @@ protected:
                     });
 
         DSLdebug.init(this, {
-                {
-                        0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT,
-                        sizeof(UniformBufferObjectSimp), 1
-                },
-                {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 1},
-                // Binding 2: Texture (Noise) - Used in Vertex or Fragment
+                          {
+                              0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT,
+                              sizeof(UniformBufferObjectSimp), 1
+                          },
+                          {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 1},
+                          // Binding 2: Texture (Noise) - Used in Vertex or Fragment
 
-        });
+                      });
 
         VDchar.init(this, {
                         {0, sizeof(VertexChar), VK_VERTEX_INPUT_RATE_VERTEX}
@@ -462,13 +495,14 @@ protected:
                     }, 2, &VDsimp); // Uses 2 textures total
 
         PRs[4].init("DebugCollisionBoxes", {
-                {
-                        &Pdebug, { // Puoi usare PsimpObj o una pipeline dedicata wireframe
-                        {}, // DSLglobal
-                        { {true, 0, {}}, {true, 1, {}} } // DSLlocalSimp (Binding 0 e 1)
-                }
-                }
-        }, 2, &VDsimp);
+                        {
+                            &Pdebug, {
+                                // Puoi usare PsimpObj o una pipeline dedicata wireframe
+                                {}, // DSLglobal
+                                {{true, 0, {}}, {true, 1, {}}} // DSLlocalSimp (Binding 0 e 1)
+                            }
+                        }
+                    }, 2, &VDsimp);
 
         // Uses 2 textures total
         // Models, textures and Descriptors (values assigned to the uniforms)
@@ -837,6 +871,58 @@ protected:
         const float SpeedUpAnimFact = 0.85f;
         AB.Advance(deltaT * SpeedUpAnimFact);
 
+        // --- WELL INTERACTION AND ANIMATION LOGIC ---
+        float distToWell = glm::length(Pos - glm::vec3(0.0f, 0.0f, 0.0f));
+        bool nearWell = (distToWell < 3.5f);
+
+        if (nearWell && glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && !wellDebounce) {
+            if (bucketIsOnGround) {
+                bucketIsOnGround = false; // Swap: Hide ground bucket, show rope bucket
+                maskOffset = 0.06f;
+                currentWellState = W_DOWN;
+                bucketAnimY = 1.14f; // Reset positions
+                ropeAnimY = 1.14f;
+            } else if (currentWellState == W_IDLE) {
+                currentWellState = W_DOWN;
+            }
+            wellDebounce = true;
+        }
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE) wellDebounce = false;
+
+        if (currentWellState == W_DOWN) {
+            bucketAnimY -= deltaT * bucketDescSpeed;
+            ropeAnimY -= deltaT * ropeDescSpeed;
+            if (bucketAnimY <= wellBottomLimit) currentWellState = W_UP;
+        } else if (currentWellState == W_UP) {
+            bucketAnimY += deltaT * bucketAscSpeed;
+            ropeAnimY += deltaT * ropeAscSpeed;
+            if (maskOffset > -0.25f) maskOffset -= deltaT * 2.0f;
+
+            if (bucketAnimY >= 1.14f) {
+                bucketAnimY = 1.14f;
+                ropeAnimY = 1.14f;
+                currentWellState = W_IDLE;
+                bucketIsOnGround = true; // SWAP TRIGGER: Bucket appears on ground
+            }
+        }
+
+        // Rope Geometry
+        float ropeBottomY = ropeAnimY - HANDLE_OFFSET;
+        float currentLength = BEAM_Y - ropeBottomY;
+        float midPointY = (BEAM_Y + ropeBottomY) / 2.0f;
+
+        // --- CHAOTIC SPLASH LOGIC ---
+        if (bucketAnimY <= WATER_LEVEL && !bucketIsOnGround) {
+            float t = (float) glfwGetTime();
+            for (int i = 0; i < 8; i++) {
+                float freq = 12.0f + (i * 1.5f);
+                float phase = (float) i * 0.8f;
+                splashJump[i] = std::max(0.0f, (float) sin(t * freq + phase) * 0.25f);
+            }
+        } else {
+            for (int i = 0; i < 8; i++) splashJump[i] = 0.0f;
+        }
+
         // --- DAY/NIGHT & SUNSET CYCLE START ---
 
         // 1. Time Accumulator
@@ -969,16 +1055,68 @@ protected:
         }
 
         UniformBufferObjectSimp ubos{};
-        // normal objects
+
+        // --- RENDERING STATIC OBJECTS (TI[1]) ---
         for (instanceId = 0; instanceId < SC.TI[1].InstanceCount; instanceId++) {
-            ubos.mMat = SC.TI[1].I[instanceId].Wm;
+            auto &inst = SC.TI[1].I[instanceId];
+            ubos.mMat = glm::mat4(1.0f); // Reset matrix for each object to avoid inheritance glitches
+
+            // 1. THE ROPE
+            if (*inst.id == "well_rope_wire") {
+                if (!bucketIsOnGround) {
+                    ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, midPointY, 0.0f)) *
+                                glm::scale(glm::mat4(1.0f), glm::vec3(0.025f, currentLength * 0.5f, 0.025f));
+                } else {
+                    ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -100.0f, 0.0f)); // YEET to abyss
+                }
+            }
+            // 2. THE BUCKET ON THE ROPE
+            else if (*inst.id == "well_bucket") {
+                if (!bucketIsOnGround) {
+                    ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, bucketAnimY, 0.0f));
+                } else {
+                    ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -100.0f, 0.0f));
+                }
+            }
+            // 3. THE FULL BUCKET ON THE GROUND
+            else if (*inst.id == "spawned_bucket") {
+                if (bucketIsOnGround) {
+                    ubos.mMat = glm::translate(glm::mat4(1.0f), groundedBucketPos);
+                } else {
+                    ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -100.0f, 0.0f));
+                }
+            }
+            // 4. THE WATER MASK
+            else if (*inst.id == "well_mask") {
+                if (!bucketIsOnGround) {
+                    ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, bucketAnimY + maskOffset, 0.0f)) *
+                                glm::scale(glm::mat4(1.0f), glm::vec3(0.36f, 0.01f, 0.36f));
+                } else {
+                    ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -100.0f, 0.0f));
+                }
+            }
+            // 5. THE SPLASHES (Uses FIND because we have 8 indexed IDs)
+            else if (inst.id->find("well_splash_") != std::string::npos) {
+                int idx = std::stoi(inst.id->substr(12)); // Get index after "well_splash_"
+                float jump = splashJump[idx];
+                if (jump > 0.001f) {
+                    ubos.mMat = glm::translate(glm::mat4(1.0f),
+                                               glm::vec3(inst.Wm[3][0], WATER_LEVEL + jump, inst.Wm[3][2])) *
+                                glm::scale(glm::mat4(1.0f), glm::vec3(0.05f));
+                } else {
+                    ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -100.0f, 0.0f));
+                }
+            }
+            // 6. DEFAULT FOR ALL OTHER OBJECTS
+            else {
+                ubos.mMat = inst.Wm;
+            }
+
+            // Standard Uniform Mapping (Do not change)
             ubos.mvpMat = ViewPrj * ubos.mMat;
             ubos.nMat = glm::inverse(glm::transpose(ubos.mMat));
-
-            SC.TI[1].I[instanceId].DS[0][0]->map(currentImage, &gubo, 0); // Set 0
-            // Link the Point Light buffer to Binding 3 for static objects
-            SC.TI[1].I[instanceId].DS[0][0]->map(currentImage, &plboData, 1);
-            SC.TI[1].I[instanceId].DS[0][1]->map(currentImage, &ubos, 0); // Set 1
+            inst.DS[0][0]->map(currentImage, &gubo, 0);
+            inst.DS[0][1]->map(currentImage, &ubos, 0);
         }
 
         // skybox pipeline
@@ -1020,7 +1158,6 @@ protected:
             if (SC.TI[4].InstanceCount > 0) {
                 for (instanceId = 0; instanceId < SC.TI[4].InstanceCount; instanceId++) {
                     if (SC.TI[4].I[instanceId].DS[0][1] != nullptr) {
-
                         // Preparation of the matrices
                         ubos.mMat = SC.TI[4].I[instanceId].Wm;
                         ubos.mvpMat = ViewPrj * ubos.mMat;
@@ -1085,10 +1222,13 @@ protected:
                       {1.0f, 1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
         }
 
-        if (canTeleport){
+        if (canTeleport) {
             txt.print(-1.0f, -0.9f, "E to enter", 4, "CO",
                       false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
                       {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
+        } else if (nearWell && currentWellState == W_IDLE) {
+            txt.print(-1.0f, -0.9f, "E to draw water", 4, "CO", false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
+                      {0.0f, 1.0f, 1.0f, 1.0f}, {0, 0, 0, 1});
         } else {
             txt.print(0.0f, 0.0f, " ", 4, "CO",
                       false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
@@ -1096,21 +1236,21 @@ protected:
         }
         std::ostringstream oss;
         oss << std::fixed << std::setprecision(1)
-            << "Player position  x: " << std::floor(Pos.x * 10) / 10
-            << " y: " << std::floor(Pos.y * 10) / 10
-            << " z: " << std::floor(Pos.z * 10) / 10;
+                << "Player position  x: " << std::floor(Pos.x * 10) / 10
+                << " y: " << std::floor(Pos.y * 10) / 10
+                << " z: " << std::floor(Pos.z * 10) / 10;
 
         std::string coordinateTxt = oss.str();
-        txt.print(-1.0,-0.8, coordinateTxt, 5, "CO", false, false, true,
+        txt.print(-1.0, -0.8, coordinateTxt, 5, "CO", false, false, true,
                   TAL_LEFT, TRH_LEFT, TRV_TOP,
                   {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
         std::ostringstream oss2;
         oss2 << std::fixed << std::setprecision(1)
-            << "Camera direction Yaw: " << std::floor(Yaw * 10) / 10
-            << " Pitch: " << std::floor(Pitch * 10) / 10;
+                << "Camera direction Yaw: " << std::floor(Yaw * 10) / 10
+                << " Pitch: " << std::floor(Pitch * 10) / 10;
 
         std::string directionTxt = oss2.str();
-        txt.print(-1.0,-0.7, directionTxt, 6, "CO", false, false, true,
+        txt.print(-1.0, -0.7, directionTxt, 6, "CO", false, false, true,
                   TAL_LEFT, TRH_LEFT, TRV_TOP,
                   {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
 
@@ -1371,15 +1511,14 @@ int main() {
     do {
         std::cin >> response;
     } while (
-            std::tolower(static_cast<int>(response)) != 'y' &&
-            std::tolower(static_cast<int>(response)) != 'n'
-            );
-    MapManager* mapManager = new MapManager();
-    if(std::tolower(static_cast<int>(response)) == 'y'){
+        std::tolower(static_cast<int>(response)) != 'y' &&
+        std::tolower(static_cast<int>(response)) != 'n'
+    );
+    MapManager *mapManager = new MapManager();
+    if (std::tolower(static_cast<int>(response)) == 'y') {
         std::cout << "in\n";
         mapManager->debug = true;
-    }
-    else mapManager->debug = false;
+    } else mapManager->debug = false;
     mapManager->makeJson();
     try {
         app.run();
