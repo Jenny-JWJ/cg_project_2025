@@ -90,44 +90,44 @@ glm::vec3 MapManager::getTeleporterPos(glm::vec3 housePos,float houseRotY, int m
     glm::vec3 tpPos;
     if (modelNumber == 1){
         if(houseRotY == 180)
-            tpPos = housePos + glm::vec3(0,0,5);
+            tpPos = housePos + glm::vec3(0,0,5.2);
         else if (houseRotY == 0){
-            tpPos = housePos + glm::vec3(0,0,-5);
+            tpPos = housePos + glm::vec3(0,0,-5.2);
         }
     }
     if (modelNumber == 2){
         if(houseRotY == 180)
-            tpPos = housePos + glm::vec3(5.5,0,5.5);
+            tpPos = housePos + glm::vec3(5.5,0,5.7);
         else if (houseRotY == 0){
-            tpPos = housePos + glm::vec3(-5.5,0,-5.5);
+            tpPos = housePos + glm::vec3(-5.5,0,-5.7);
         }
     }
     if (modelNumber == 3){
         if(houseRotY == 180)
-            tpPos = housePos + glm::vec3(8.5,0,7.5);
+            tpPos = housePos + glm::vec3(8.5,0,7.7);
         else if (houseRotY == 0){
-            tpPos = housePos + glm::vec3(-8.5,0,-7.5);
+            tpPos = housePos + glm::vec3(-8.5,0,-7.7);
         }
     }
     if (modelNumber == 4){
         if(houseRotY == 180)
-            tpPos = housePos + glm::vec3(0,0,5);
+            tpPos = housePos + glm::vec3(0,0,5.2);
         else if (houseRotY == 0){
-            tpPos = housePos + glm::vec3(0,0,-5);
+            tpPos = housePos + glm::vec3(0,0,-5.2);
         }
     }
     if (modelNumber == 5){
         if(houseRotY == 180)
-            tpPos = housePos + glm::vec3(5.5,0,4.5);
+            tpPos = housePos + glm::vec3(5.5,0,4.7);
         else if (houseRotY == 0){
-            tpPos = housePos + glm::vec3(-5.5,0,-4.5);
+            tpPos = housePos + glm::vec3(-5.5,0,-4.7);
         }
     }
     if (modelNumber == 6){
         if(houseRotY == 180)
-            tpPos = housePos + glm::vec3(-8.5,0,7.5);
+            tpPos = housePos + glm::vec3(-8.5,0,7.7);
         else if (houseRotY == 0){
-            tpPos = housePos + glm::vec3(8.5,0,-7.5);
+            tpPos = housePos + glm::vec3(8.5,0,-7.7);
         }
     }
     return tpPos;
