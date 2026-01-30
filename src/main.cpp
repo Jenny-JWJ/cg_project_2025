@@ -2,6 +2,8 @@
 #include <sstream>
 #include <iomanip>
 #include <json.hpp>
+#include <list>
+#include <deque>
 
 #include "modules/Starter.hpp"
 #include "modules/TextMaker.hpp"
@@ -12,6 +14,7 @@
 #include "CollisionBox.hpp"
 #include "CollisionBoxGenerator.hpp"
 #include "Teleporter.hpp"
+#include "TeleporterList.hpp"
 
 // The uniform buffer object used in this example
 struct VertexChar {
@@ -79,8 +82,9 @@ struct PointLightBufferObject {
 class E09 : public BaseProject {
 private:
     std::vector<CollisionObject> houseCollisions;
-    std::vector<Teleporter> teleporters;
+    std::vector<Teleporter*> teleporters;
     Teleporter* activeTeleporter;
+    std::deque<int> path;
 protected:
     PointLightBufferObject plboData;
     // Here you list all the Vulkan objects you need:
@@ -203,7 +207,9 @@ protected:
         lastY = windowHeight / 2.0;
         firstMouse = true;
 
-        teleporters.emplace_back(Teleporter({0,0,5}, {1,1,1}, {0,0}, {900,0,900},{1,0}));
+        for (auto& [id, info] : TeleporterList::teleporters) {
+            teleporters.push_back(info.teleporter.get());
+        }
 
         // Descriptor Layouts [what will be passed to the shaders]
         // Initialize the global Descriptor Set Layout
@@ -770,12 +776,12 @@ protected:
                 debounce = true;
                 curDebounce = GLFW_KEY_E;
 
+                if (!activeTeleporter->pathVector.empty()){
+                    path.assign(activeTeleporter ->pathVector.begin(), activeTeleporter ->pathVector.end());
+                    TeleporterList::SetupTeleportPath(activeTeleporter,path);
+                }
 
                 activeTeleporter->Teleport(Pos,Yaw,Pitch);
-                std::cout << "teleport position x: " + std::to_string(Pos.x) + " y: " + std::to_string(Pos.y) + "z: " + std::to_string(Pos.z) + "\n";
-                std::cout << "player look at Yaw: " + std::to_string(Yaw) + " Pithc: " + std::to_string(Pitch) + "\n";
-
-
             }
         } else {
             if ((curDebounce == GLFW_KEY_E) && debounce) {
@@ -936,10 +942,10 @@ protected:
             AdaptMat = glm::scale(AdaptMat, glm::vec3(0.0f));
         }
 
-        for (Teleporter& tp : teleporters){
-            if (tp.CanTeleport(Pos,{Yaw,Pitch})){
+        for (Teleporter* tp : teleporters){
+            if (tp->CanTeleport(Pos,{Yaw,Pitch})){
                 canTeleport = true;
-                activeTeleporter = &tp;
+                activeTeleporter = tp;
                 break;
             }
             canTeleport = false;
@@ -1082,11 +1088,11 @@ protected:
         if (canTeleport){
             txt.print(-1.0f, -0.9f, "E to enter", 4, "CO",
                       false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
-                      {1.0f, 1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
+                      {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
         } else {
             txt.print(0.0f, 0.0f, " ", 4, "CO",
                       false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
-                      {1.0f, 1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
+                      {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
         }
         std::ostringstream oss;
         oss << std::fixed << std::setprecision(1)
