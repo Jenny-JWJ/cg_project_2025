@@ -550,7 +550,80 @@ public:
                 }
             }
         }
+
+        float graveYardWidth = gridSize*spacing + 7.0f;
+
+        // Create fence perimeter using fence2 model
+        float fenceSpacing = 3.0f; // Distance between fence segments
+        int fenceSegmentsPerSide = (int)((2.0f * graveYardWidth) / fenceSpacing);
         
+        // Top side (Z = graveYardWidth) - with entrance in the middle
+        for (int i = 0; i <= fenceSegmentsPerSide; i++) {
+            if (i == 0 || i == fenceSegmentsPerSide) continue; // Skip corners
+            if (i == fenceSegmentsPerSide / 2) continue; // Skip middle segment for entrance
+            float posX = center.x - graveYardWidth + (i * fenceSpacing);
+            
+            // Use fence1 for the segment to the left of the entrance
+            std::string fenceModel = (i == fenceSegmentsPerSide / 2 - 1) ? "fence1" : "fence2";
+            
+            elements.emplace_back(UtilsStructs::createElement(
+                "graveFence_top_" + std::to_string(i),
+                fenceModel,
+                {"dungeon", "pnois"},
+                {posX, 2.25f, center.z + graveYardWidth},
+                {0.0f, 180.0f, 0.0f},
+                {1.0f, 1.5f, 1.0f}
+            ));
+        }
+        
+        // Bottom side (Z = -graveYardWidth)
+        for (int i = 0; i <= fenceSegmentsPerSide; i++) {
+            if (i == 0 || i == fenceSegmentsPerSide) continue; // Skip corners
+            float posX = center.x - graveYardWidth + (i * fenceSpacing);
+            elements.emplace_back(UtilsStructs::createElement(
+                "graveFence_bottom_" + std::to_string(i),
+                "fence2",
+                {"dungeon", "pnois"},
+                {posX, 2.25f, center.z - graveYardWidth},
+                {0.0f, 180.0f, 0.0f},
+                {1.0f, 1.5f, 1.0f}
+            ));
+        }
+        
+        // Left side (X = -graveYardWidth)
+        for (int i = 0; i <= fenceSegmentsPerSide; i++) {
+            if (i == 0 || i == fenceSegmentsPerSide) continue; // Skip corners
+            float posZ = center.z - graveYardWidth + (i * fenceSpacing);
+            elements.emplace_back(UtilsStructs::createElement(
+                "graveFence_left_" + std::to_string(i),
+                "fence2",
+                {"dungeon", "pnois"},
+                {center.x - graveYardWidth, 2.25f, posZ},
+                {0.0f, 90.0f, 0.0f},
+                {1.0f, 1.5f, 1.0f}
+            ));
+        }
+        
+        // Right side (X = graveYardWidth)
+        for (int i = 0; i <= fenceSegmentsPerSide; i++) {
+            if (i == 0 || i == fenceSegmentsPerSide) continue; // Skip corners
+            float posZ = center.z - graveYardWidth + (i * fenceSpacing);
+            elements.emplace_back(UtilsStructs::createElement(
+                "graveFence_right_" + std::to_string(i),
+                "fence2",
+                {"dungeon", "pnois"},
+                {center.x + graveYardWidth, 2.25f, posZ},
+                {0.0f, 90.0f, 0.0f},
+                {1.0f, 1.5f, 1.0f}
+            ));
+        }
+
+        // Add corner fence3 posts
+        elements.emplace_back(UtilsStructs::createElement("graveWall1", "fence3", {"dungeon", "pnois"}, {center.x + graveYardWidth, 6, center.z + graveYardWidth}, {0.0f, 0.0f, 0.0f}, {4.0f, 4.0f, 4.0f}));
+        elements.emplace_back(UtilsStructs::createElement("graveWall2", "fence3", {"dungeon", "pnois"}, {center.x - graveYardWidth, 6, center.z + graveYardWidth}, {0.0f, 0.0f, 0.0f}, {4.0f, 4.0f, 4.0f}));
+        elements.emplace_back(UtilsStructs::createElement("graveWall3", "fence3", {"dungeon", "pnois"}, {center.x + graveYardWidth, 6, center.z - graveYardWidth}, {0.0f, 0.0f, 0.0f}, {4.0f, 4.0f, 4.0f}));
+        elements.emplace_back(UtilsStructs::createElement("graveWall4", "fence3", {"dungeon", "pnois"}, {center.x - graveYardWidth, 6, center.z - graveYardWidth}, {0.0f, 0.0f, 0.0f}, {4.0f, 4.0f, 4.0f}));
+
         // Add statue at the center
         elements.emplace_back(UtilsStructs::createElement(
             "cemetery_statue",
