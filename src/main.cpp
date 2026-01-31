@@ -652,6 +652,29 @@ protected:
         RP.end(commandBuffer);
     }
 
+    void repositionCameraImmediately()
+    {
+        static float camHeight = 1.5;
+        static float camDist = 5;
+        // Ricalcola la posizione ideale della camera
+        glm::mat4 camWorld =
+                glm::translate(glm::mat4(1), Pos) *
+                glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0, 1, 0));
+
+        cameraPos = camWorld *
+                    glm::vec4(0.0f,
+                              camHeight + camDist * sin(Pitch),
+                              camDist * cos(Pitch),
+                              1.0f);
+
+        if (cameraPos.y < 0.2f)
+            cameraPos.y = 0.2f;
+
+        // Force the damped state
+        dampedCamPos = cameraPos;
+        dampedRelDir = relDir;
+    }
+
     // Here is where you update the uniforms.
     // Very likely this will be where you will be writing the logic of your application.
     void updateUniformBuffer(uint32_t currentImage) {
@@ -818,6 +841,8 @@ protected:
                 }
 
                 activeTeleporter->Teleport(Pos,Yaw,Pitch);
+                characterRotation = Yaw;
+                repositionCameraImmediately();
             }
         } else {
             if ((curDebounce == GLFW_KEY_E) && debounce) {
@@ -877,7 +902,7 @@ protected:
         float distToWell = glm::length(Pos - glm::vec3(0.0f, 0.0f, 0.0f));
         bool nearWell = (distToWell < 3.5f);
 
-        if (nearWell && glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && !wellDebounce) {
+        if (nearWell && !canTeleport && glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && !wellDebounce) {
             if (bucketIsOnGround) {
                 bucketIsOnGround = false; // Swap: Hide ground bucket, show rope bucket
                 maskOffset = 0.06f;
@@ -1118,6 +1143,7 @@ protected:
             ubos.mvpMat = ViewPrj * ubos.mMat;
             ubos.nMat = glm::inverse(glm::transpose(ubos.mMat));
             inst.DS[0][0]->map(currentImage, &gubo, 0);
+            inst.DS[0][0]->map(currentImage, &plboData, 1);
             inst.DS[0][1]->map(currentImage, &ubos, 0);
         }
 
