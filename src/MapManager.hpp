@@ -499,6 +499,71 @@ public:
         return false;
     }
 
+    static std::vector<MMElement> createGraveyard(glm::vec3 center){
+        std::vector<MMElement> elements;
+        
+        // Grid configuration
+        int gridSize = 5; // 5x5 graves per grid
+        float spacing = 4.0f; // Distance between graves
+        float roadWidth = 8.0f; // Distance between grids (like a road)
+        
+        // Calculate offsets for each quadrant
+        // Each grid is 5 graves * 2 spacing = 10 units wide/tall (0 to 8)
+        float gridExtent = (gridSize - 1) * spacing; // 8 units
+        float halfRoad = roadWidth / 2.0f;
+        
+        // Four grid positions relative to center
+        std::vector<std::pair<float, float>> gridOffsets = {
+            {-(gridExtent + halfRoad), (halfRoad)},           // Top-left
+            {(halfRoad), (halfRoad)},                         // Top-right
+            {-(gridExtent + halfRoad), -(gridExtent + halfRoad)}, // Bottom-left
+            {(halfRoad), -(gridExtent + halfRoad)}            // Bottom-right
+        };
+        
+        int idNumber = 0;
+        
+        // Create 4 grids of graves
+        for (int grid = 0; grid < 4; grid++) {
+            float baseX = center.x + gridOffsets[grid].first;
+            float baseZ = center.z + gridOffsets[grid].second;
+            
+            for (int i = 0; i < gridSize; i++) {
+                for (int j = 0; j < gridSize; j++) {
+                    // Random grave selection (1 to 21)
+                    int graveNumber = rand_int(1, 21);
+                    
+                    float posX = baseX + (j * spacing);
+                    float posZ = baseZ + (i * spacing);
+                    
+                    // Random rotation for variety
+                    float rotY = rand_int(0, 3) * 90.0f;
+                    
+                    idNumber++;
+                    elements.emplace_back(UtilsStructs::createElement(
+                        "grave_" + std::to_string(grid) + "_" + std::to_string(idNumber),
+                        "grave" + std::to_string(graveNumber),
+                        {"dungeon", "pnois"},
+                        {posX, 0.5f, posZ},
+                        {0.0f, rotY, 0.0f},
+                        {1.0f, 1.0f, 1.0f}
+                    ));
+                }
+            }
+        }
+        
+        // Add statue at the center
+        elements.emplace_back(UtilsStructs::createElement(
+            "cemetery_statue",
+            "statue",
+            {"dungeon", "pnois"},
+            {center.x, 0.0f, center.z},
+            {0.0f, 0.0f, 0.0f},
+            {1.5f, 1.5f, 1.5f} // Slightly larger for prominence
+        ));
+        
+        return elements;
+    }
+
     // Modified ground generation to prevent tiles from overlapping and covering the river
     static std::vector<MMElement> placeGrassGround(const std::vector<MMElement> &riverTiles,
                                                    float hight = 800.0f, float lenght = 800.0f,
@@ -910,7 +975,43 @@ public:
             {"assets/models/Castle/SPW_Natures_Bush_01.mgcg", "grass_tuft"},
             {"assets/models/Dungeon/prop.001_Mesh.900.mgcg", "bucket"},
             {"assets/models/River/SPW_Terrain_Water.mgcg", "river_water"},
-
+            {"assets/models/Cemetery/grave.002_Mesh.7917.mgcg", "grave1"},
+            {"assets/models/Cemetery/grave.003_Mesh.7906.mgcg", "grave2"},
+            {"assets/models/Cemetery/grave.004_Mesh.7750.mgcg", "grave3"},
+            {"assets/models/Cemetery/grave.005_Mesh.4386.mgcg", "grave4"},
+            {"assets/models/Cemetery/grave.006_Mesh.5495.mgcg", "grave5"},
+            {"assets/models/Cemetery/grave.007_Mesh.5383.mgcg", "grave6"},
+            {"assets/models/Cemetery/grave.008_Mesh.5380.mgcg", "grave7"},
+            {"assets/models/Cemetery/grave.009_Mesh.909.mgcg", "grave8"},
+            {"assets/models/Cemetery/grave.010_Mesh.908.mgcg", "grave9"},
+            {"assets/models/Cemetery/grave.012_Mesh.4385.mgcg", "grave10"},
+            {"assets/models/Cemetery/grave.013_Mesh.6740.mgcg", "grave11"},
+            {"assets/models/Cemetery/grave.015_Mesh.7919.mgcg", "grave12"},
+            {"assets/models/Cemetery/grave.018_Mesh.7873.mgcg", "grave13"},
+            {"assets/models/Cemetery/grave.019_Mesh.4590.mgcg", "grave14"},
+            {"assets/models/Cemetery/grave.020_Mesh.895.mgcg", "grave15"},
+            {"assets/models/Cemetery/grave.022_Mesh.6139.mgcg", "grave16"},
+            {"assets/models/Cemetery/grave.030_Mesh.7845.mgcg", "grave17"},
+            {"assets/models/Cemetery/grave.031_Mesh.5496.mgcg", "grave18"},
+            {"assets/models/Cemetery/grave.039_Mesh.897.mgcg", "grave19"},
+            {"assets/models/Cemetery/grave.041_Mesh.898.mgcg", "grave20"},
+            {"assets/models/Cemetery/grave.045_Mesh.6263.mgcg", "grave21"},
+            {"assets/models/Cemetery/coffin_Mesh.7527.mgcg", "coffin1"},
+            {"assets/models/Cemetery/coffin.002_Mesh.7922.mgcg", "coffin2"},
+            {"assets/models/Cemetery/coffin.003_Mesh.7918.mgcg", "coffin3"},
+            {"assets/models/Cemetery/coffin.004_Mesh.7920.mgcg", "coffin4"},
+            {"assets/models/Cemetery/bones.022_Mesh.6372.mgcg", "bones1"},
+            {"assets/models/Cemetery/bones.025_Mesh.7708.mgcg", "bones2"},
+            {"assets/models/Cemetery/bones.029_Mesh.5843.mgcg", "bones3"},
+            {"assets/models/Cemetery/bones.030_Mesh.5848.mgcg", "bones4"},
+            {"assets/models/Cemetery/cast_Mesh.6268.mgcg", "cast1"},
+            {"assets/models/Cemetery/cast.001_Mesh.8090.mgcg", "cast2"},
+            {"assets/models/Cemetery/cast.002_Mesh.6272.mgcg", "cast3"},
+            {"assets/models/Cemetery/fence.001_Mesh.5505.mgcg", "fence1"},
+            {"assets/models/Cemetery/fence.002_Mesh.5501.mgcg", "fence2"},
+            {"assets/models/Cemetery/fence.003_Mesh.5500.mgcg", "fence3"},
+            {"assets/models/Cemetery/fence.023_Mesh.4424.mgcg", "fence4"},
+            {"assets/models/Cemetery/decoration.017_Mesh.299.mgcg", "statue"},
         };
 
         texturePaths = {
@@ -1029,6 +1130,61 @@ public:
 
         std::vector<MMElement> interior = InteriorManager::CreateHouseInteriors({900, 0, 900});
         simpElements.insert(simpElements.end(), interior.begin(), interior.end());
+
+        // --- G. GRAVEYARD ---
+        glm::vec3 graveyardCenter = {350.0f, 0.0f, -110.0f};
+        std::vector<MMElement> graveYard = createGraveyard(graveyardCenter);
+        simpElements.insert(simpElements.end(), graveYard.begin(), graveYard.end());
+        
+        // Graveyard paths - Cross roads and perimeter
+        // Parameters from createGraveyard: spacing=4, roadWidth=8, gridSize=5
+        float graveyardExtent = 20.0f; // Cross roads through center
+        float perimeterExtent = 24.0f; // Perimeter paths further out
+        float pathInset = 1.5f; // Inset to prevent overlap at corners
+        float pathScale = 0.24f; // Width scale (0.8x narrower)
+        
+        // Horizontal cross path (through center)
+        auto gravePath1 = createPaths(
+            {graveyardCenter.x - graveyardExtent + 2.5f, 0, graveyardCenter.z},
+            {graveyardCenter.x + graveyardExtent, 0, graveyardCenter.z}, 
+            2.0f, 0, {0.8f, pathScale, 1.0f}, 1000);
+        simpElements.insert(simpElements.end(), gravePath1.begin(), gravePath1.end());
+        
+        // Vertical cross path (through center)
+        auto gravePath2 = createPaths(
+            {graveyardCenter.x, 0, graveyardCenter.z - graveyardExtent + 2.5f},
+            {graveyardCenter.x, 0, graveyardCenter.z + graveyardExtent}, 
+            0, 2.0f, {pathScale, 0.8f, 1.0f}, 2000);
+        simpElements.insert(simpElements.end(), gravePath2.begin(), gravePath2.end());
+        
+        // Perimeter square - Top side
+        auto gravePath3 = createPaths(
+            {graveyardCenter.x - perimeterExtent + pathInset + 4.1f, 0, graveyardCenter.z + perimeterExtent},
+            {graveyardCenter.x + perimeterExtent - pathInset -2.0f, 0, graveyardCenter.z + perimeterExtent},
+            2.0f, 0, {0.8f, pathScale, 1.0f}, 3000);
+        simpElements.insert(simpElements.end(), gravePath3.begin(), gravePath3.end());
+        
+        // Perimeter square - Bottom side
+        auto gravePath4 = createPaths(
+            {graveyardCenter.x - perimeterExtent + pathInset + 4.1f, 0, graveyardCenter.z - perimeterExtent},
+            {graveyardCenter.x + perimeterExtent - pathInset -2.0f, 0, graveyardCenter.z - perimeterExtent},
+            2.0f, 0, {0.8f, pathScale, 1.0f}, 4000);
+        simpElements.insert(simpElements.end(), gravePath4.begin(), gravePath4.end());
+        
+        // Perimeter square - Left side
+        auto gravePath5 = createPaths(
+            {graveyardCenter.x - perimeterExtent, 0, graveyardCenter.z - perimeterExtent + pathInset + 5},
+            {graveyardCenter.x - perimeterExtent, 0, graveyardCenter.z + perimeterExtent - pathInset - 2.2f},
+            0, 2.0f, {pathScale, 0.8f, 1.0f}, 5000);
+        simpElements.insert(simpElements.end(), gravePath5.begin(), gravePath5.end());
+        
+        // Perimeter square - Right side
+        auto gravePath6 = createPaths(
+            {graveyardCenter.x + perimeterExtent, 0, graveyardCenter.z - perimeterExtent + pathInset + 4.1f},
+            {graveyardCenter.x + perimeterExtent, 0, graveyardCenter.z + perimeterExtent - pathInset - 0.9f},
+            0, 2.0f, {pathScale, 0.8f, 1.0f}, 6000);
+        gravePath6.emplace_back(UtilsStructs::createElement("pathAdditive", "ground",{"tex_medieval_atlas", "pnois"}, {graveyardCenter.x + perimeterExtent, 0.01f, graveyardCenter.z + perimeterExtent - pathInset - 4.1f}, {90, 0, 0},{pathScale, 0.8f, 1.0f}));
+        simpElements.insert(simpElements.end(), gravePath6.begin(), gravePath6.end());
 
         float areaW = 150.0f;
         float areaL = 150.0f;
