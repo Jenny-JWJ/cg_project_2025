@@ -1047,7 +1047,7 @@ protected:
         glm::mat4 AdaptMat =
                 glm::scale(glm::mat4(1.0f), glm::vec3(0.01f)) * glm::rotate(
                     glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) * glm::translate(
-                    glm::mat4(1.0f), glm::vec3(Pos.x * 100, Pos.z * 100, Pos.y * 100)) * glm::rotate(
+                    glm::mat4(1.0f), glm::vec3(Pos.x * 100, Pos.z * 100, -Pos.y * 100)) * glm::rotate(
                     glm::mat4(1.0f), characterRotation, glm::vec3(0.0f, 0.0f, 1.0f));
 
         // Hides player model when in FPV
@@ -1498,8 +1498,6 @@ protected:
         // ===============================
         // COLLISION CHECK (COMMON)
         // ===============================
-        glm::vec3 colPos = Pos;
-        colPos.y = 0.0f;
         CollisionObject playerCol;
         playerCol.addBox(
             Pos + glm::vec3(0.0f, 1.0f, 0.0f),
@@ -1538,25 +1536,25 @@ protected:
 
 float E09::getGroundHeight(const glm::vec3& pos) {
     // ---------- BRIDGE ----------
-    if (pos.x > 215.0f && pos.x < 270.0f &&
+    if (pos.x > 215.0f && pos.x < 265.0f &&
         pos.z > -10.0f && pos.z < 10.0f) {
-        return 0.0f;
+        return -1.1f;
     }
     // ---------- RAMP LEFT ----------
-    if (pos.x >= 210.0f && pos.x <= 225.0f) {
-        float t = (pos.x - 215.0f) / 10.0f;   // 0 → 1
-        return glm::mix(0.0f, -2.3f, t);
+    if (pos.x >= 210.0f && pos.x <= 233.0f) {
+        float t = (pos.x - 210.0f) / 23.0f;   // 0 → 1
+        return glm::mix(0.0f, -4.89f, t);
     }
 
     // ---------- RIVER BED ----------
-    if (pos.x > 225.0f && pos.x < 260.0f) {
-        return -2.3f;
+    if (pos.x > 233.0f && pos.x < 247.0f) {
+        return -4.89f;
     }
 
     // ---------- RAMP RIGHT ----------
-    if (pos.x >= 260.0f && pos.x <= 275.0f) {
-        float t = (pos.x - 260.0f) / 10.0f;   // 0 → 1
-        return glm::mix(-2.3f, 0.0f, t);
+    if (pos.x >= 247.0f && pos.x <= 270.0f) {
+        float t = (pos.x - 247.0f) / 23.0f;   // 0 → 1
+        return glm::mix(-4.89f, 0.0f, t);
     }
 
     // ---------- NORMAL GROUND ----------
