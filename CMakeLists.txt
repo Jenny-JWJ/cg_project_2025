@@ -94,7 +94,7 @@ elseif(WIN32)
 
     # Set paths to libraries (modify these based on your SDK and library installation)
     set(GLFW "C:/VulkanSDK/libs/glfw-3.4.bin.WIN64")
-    set(GLM "C:/VulkanSDK/libs/glm")
+    set(GLM "C:/VulkanSDK/libs/")
     set(GLSLANG_VALIDATOR "C:/VulkanSDK/1.4.304.0/Bin/glslangValidator.exe")
 
 
@@ -151,8 +151,7 @@ elseif(UNIX AND NOT APPLE)
     file(GLOB_RECURSE SOURCES src/*.cpp)
     file(GLOB_RECURSE HEADERS include/*.h include/*.hpp)
 
-    add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} src/MapManager.hpp)
-    add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} src/CollisionBox.hpp src/CollisionBoxGenerator.hpp src/UtilsStructs.hpp)
+    add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
     find_package(Vulkan REQUIRED)
     find_package(glfw3 REQUIRED)
