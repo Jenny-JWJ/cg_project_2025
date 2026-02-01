@@ -46,7 +46,7 @@ struct GlobalUniformBufferObject {
     alignas(16) glm::vec3 lightDir;
     alignas(16) glm::vec4 lightColor;
     alignas(16) glm::vec3 eyePos;
-    alignas(4) float time; //Wind animation
+    alignas(16) float time; //Wind animation
 };
 
 struct UniformBufferObjectChar {
@@ -242,7 +242,7 @@ protected:
         lastY = windowHeight / 2.0;
         firstMouse = true;
 
-        for (auto& [id, info] : TeleporterList::teleporters) {
+        for (auto &[id, info]: TeleporterList::teleporters) {
             teleporters.push_back(info.teleporter.get());
         }
 
@@ -252,12 +252,18 @@ protected:
         // Binding 3: Array of 50 Point Lights for the lamps
         DSLglobal.init(this, {
                            {
-                               0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS,
-                               sizeof(GlobalUniformBufferObject), 1
+                               0,
+                               VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                               VK_SHADER_STAGE_ALL_GRAPHICS,
+                               sizeof(GlobalUniformBufferObject),
+                               1
                            },
                            {
-                               1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, // CAMBIATO DA 3 A 1
-                               sizeof(PointLightBufferObject), 1
+                               1, // <--- BINDING 1: Questo è quello delle luci!
+                               VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                               VK_SHADER_STAGE_ALL_GRAPHICS, // <--- ASSICURATI CHE CI SIA ALL_GRAPHICS
+                               sizeof(PointLightBufferObject),
+                               1
                            }
                        });
 
@@ -267,7 +273,8 @@ protected:
                               // second element : the type of element (buffer or texture)
                               // third  element : the pipeline stage where it will be used
                               {
-                                  0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT,
+                                  0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                                  VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                                   sizeof(UniformBufferObjectChar), 1
                               },
                               {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 1}
@@ -835,9 +842,9 @@ protected:
                 debounce = true;
                 curDebounce = GLFW_KEY_E;
 
-                if (!activeTeleporter->pathVector.empty()){
-                    path.assign(activeTeleporter ->pathVector.begin(), activeTeleporter ->pathVector.end());
-                    TeleporterList::SetupTeleportPath(activeTeleporter,path);
+                if (!activeTeleporter->pathVector.empty()) {
+                    path.assign(activeTeleporter->pathVector.begin(), activeTeleporter->pathVector.end());
+                    TeleporterList::SetupTeleportPath(activeTeleporter, path);
                 }
 
                 activeTeleporter->Teleport(Pos,Yaw,Pitch);
@@ -956,7 +963,7 @@ protected:
         static float sunAngle = 0.0f;
 
         // Set day duration to 5 minutes (300 seconds)
-        float dayDuration = 1000000000.0f;
+        float dayDuration = 300.0f;
 
         //Calculate rotation speed: 360 degrees divided by total duration
         float rotationSpeed = glm::radians(360.0f) / dayDuration;
@@ -972,7 +979,7 @@ protected:
         // 3. Define Colors
         glm::vec4 dayColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // White Day
         glm::vec4 sunsetColor = glm::vec4(1.0f, 0.4f, 0.1f, 1.0f); // Orange/Red Sunset
-        glm::vec4 nightColor = glm::vec4(0.05f, 0.05f, 0.15f, 1.0f); // Dark Blue Night
+        glm::vec4 nightColor = glm::vec4(0.08f, 0.08f, 0.15f, 1.0f); // Dark Blue Night
 
         glm::vec4 currentLightColor;
         float blendFactor = 0.0f; // 0 = Night MMTexture, 1 = Day MMTexture
@@ -985,8 +992,9 @@ protected:
         float lampIntensity = glm::clamp(1.0f - (sunHeight + 0.1f) / 0.3f, 0.0f, 1.0f);
 
         // Moltiplichiamo per 10.0f per renderle MOLTO più luminose
-        float brightness = 1.0f;
-        glm::vec3 currentLampColor = glm::vec3(1.0f, 0.7f, 0.4f) * (lampIntensity * brightness);
+        glm::vec3 warmAmber = glm::vec3(1.0f, 0.5f, 0.1f);
+        float brightness = 3.0f;
+        glm::vec3 currentLampColor = warmAmber * (lampIntensity * brightness);
 
         // Applichiamo il colore/intensità a tutti i lampioni trovati
         for (int i = 0; i < plboData.numActiveLights; i++) {
@@ -1028,16 +1036,25 @@ protected:
         gubo.lightDir = currentLightDir;
         gubo.lightColor = currentLightColor;
         gubo.eyePos = cameraPos;
-
-        gubo.time = (float) glfwGetTime(); // Pass current time to shader for wind animation
+        gubo.time = (float)glfwGetTime();
 
         // --- DAY/NIGHT CYCLE END ---
 
         gubo.eyePos = cameraPos;
 
+        // --- CHARACTER TRANSPARENCY LOGIC ---
+        // Calculate distance between camera and player center
+        float distToPlayer = glm::distance(cameraPos, Pos + glm::vec3(0.0f, 1.2f, 0.0f));
+
+        // Settings: start fading at 1.5m, fully invisible at 0.5m
+        float fadeStart = 1.5f;
+        float fadeEnd = 0.5f;
+        float playerAlpha = glm::clamp((distToPlayer - fadeEnd) / (fadeStart - fadeEnd), 0.0f, 1.0f);
+
         // defines the local parameters for the uniforms
         UniformBufferObjectChar uboc{};
         uboc.debug1 = debug1;
+        uboc.debug1.w = playerAlpha;
 
         SKA.Sample(AB);
         std::vector<glm::mat4> *TMsp = SKA.getTransformMatrices();
@@ -1055,8 +1072,8 @@ protected:
             AdaptMat = glm::scale(AdaptMat, glm::vec3(0.0f));
         }
 
-        for (Teleporter* tp : teleporters){
-            if (tp->CanTeleport(Pos,{Yaw,Pitch})){
+        for (Teleporter *tp: teleporters) {
+            if (tp->CanTeleport(Pos, {Yaw, Pitch})) {
                 canTeleport = true;
                 activeTeleporter = tp;
                 break;
@@ -1456,15 +1473,16 @@ protected:
             // Player model (invisible) rotates with the camera
             World = glm::translate(glm::mat4(1), Pos) * glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0, 1, 0));
         } else {
+            // --- PLAYER MOVEMENT LOGIC ---
             Pos = Pos + MOVE_SPEED * m.x * ux * deltaT;
             Pos = Pos - MOVE_SPEED * m.z * uz * deltaT;
 
             float groundY = getGroundHeight(Pos);
             Pos.y = groundY;
-            
+
             camHeight += MOVE_SPEED * m.y * deltaT;
 
-            // MMModel rotation
+            // Character Model Rotation handling
             if (glm::length(glm::vec3(m.x, 0.0f, m.z)) > 0.001f) {
                 relDir = Yaw + atan2(m.x, m.z);
                 dampedRelDir = dampedRelDir > relDir + 3.1416f
@@ -1476,22 +1494,70 @@ protected:
             dampedRelDir = ef * dampedRelDir + (1.0f - ef) * relDir;
             World = glm::translate(glm::mat4(1), Pos) * glm::rotate(glm::mat4(1.0f), dampedRelDir, glm::vec3(0, 1, 0));
 
+            // --- CAMERA COLLISION LOGIC (BUMPING) ---
+
+            // 1. Define the target (where the camera looks: player's head area)
             glm::vec3 target = Pos + glm::vec3(0.0f, camHeight, 0.0f);
+
+            // 2. Create a rotation matrix based on current Yaw
             glm::mat4 camWorld = glm::translate(glm::mat4(1), Pos) * glm::rotate(
                                      glm::mat4(1.0f), Yaw, glm::vec3(0, 1, 0));
-            cameraPos = camWorld * glm::vec4(0.0f, camHeight + camDist * sin(Pitch), camDist * cos(Pitch), 1.0);
+
+            // 3. Progressive check along the camera vector to detect obstacles
+            float finalCamDist = camDist; // Start with the desired distance
+            const int SAMPLES = 12; // Number of collision checks along the ray
+            float cameraRadius = 0.4f; // Thickness of the camera's physical presence
+
+            for (int i = 1; i <= SAMPLES; i++) {
+                // Calculate current test distance from player to camera
+                float t = (float) i / (float) SAMPLES;
+                float checkDist = camDist * t;
+
+                // Position of the camera at this specific step
+                glm::vec3 testPos = camWorld * glm::vec4(0.0f, camHeight + checkDist * sin(Pitch),
+                                                         checkDist * cos(Pitch), 1.0);
 
             //if (cameraPos.y < 0.2f) {
             //    cameraPos.y = 0.2f;
             //}
+                // 4. Create a temporary collision volume for the camera
+                CollisionObject camHitbox;
+                camHitbox.addBox(testPos, glm::vec3(cameraRadius), CollisionBox::sphere);
 
-            //Start reset to improve camera movement when changing
+                // 5. Check against all existing house hitboxes
+                bool collisionDetected = false;
+                for (const auto &house: houseCollisions) {
+                    if (camHitbox.collidesWith(house)) {
+                        collisionDetected = true;
+                        break;
+                    }
+                }
+
+                // 6. If a collision is found, shorten the camera distance immediately
+                if (collisionDetected) {
+                    // Stop at the previous safe step (closer to the player)
+                    finalCamDist = camDist * ((float) (i - 1) / (float) SAMPLES);
+                    break;
+                }
+            }
+
+            // 7. Calculate the FINAL position (either the ideal one or the shortened one)
+            cameraPos = camWorld * glm::vec4(0.0f, camHeight + finalCamDist * sin(Pitch), finalCamDist * cos(Pitch),
+                                             1.0);
+
+            // Floor constraint: don't let camera go under the grass
+            if (cameraPos.y < 0.2f) {
+                cameraPos.y = 0.2f;
+            }
+
+            // Camera Teleport logic for respawns or TP
             if (resetCamera) {
-                dampedCamPos = cameraPos; //Teleport
+                dampedCamPos = cameraPos;
                 dampedRelDir = relDir;
                 resetCamera = false;
             }
 
+            // Apply damping for smooth camera tracking
             dampedCamPos = ef * dampedCamPos + (1.0f - ef) * cameraPos;
             View = glm::lookAt(dampedCamPos, target, glm::vec3(0, 1, 0));
         }
