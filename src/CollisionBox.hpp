@@ -17,11 +17,14 @@ struct CollisionBox {
 
     glm::vec3 center;     // world-space center
     glm::vec3 halfSize; // half extents (size * 0.5), for sphere halfSize.x = halfSize.y = halfSize.z = radius, for cylinder halfSize.x = halfsize.y = base radius
+    glm::vec3 eulerAngles; // rotation in degrees (pitch, yaw, roll) - (0,0,0) = no rotation
     Shape shape;
 
-    CollisionBox() = default;
+    CollisionBox() : eulerAngles(0.0f) {}
     CollisionBox(const glm::vec3& c, const glm::vec3& size, Shape shape = cube);
+    CollisionBox(const glm::vec3& c, const glm::vec3& size, const glm::vec3& angles, Shape shape = cube);
 
+    glm::mat3 getRotationMatrix() const; // Helper to convert euler angles to rotation matrix
     bool intersects(const CollisionBox& other) const;
 };
 
@@ -34,6 +37,7 @@ public:
     std::vector<CollisionBox> boxes;
 
     void addBox(const glm::vec3& center, const glm::vec3& size, CollisionBox::Shape shape = CollisionBox::Shape::cube);
+    void addBox(const glm::vec3& center, const glm::vec3& size, const glm::vec3& eulerAngles, CollisionBox::Shape shape = CollisionBox::Shape::cube);
     bool collidesWith(const CollisionObject& other) const;
 };
 

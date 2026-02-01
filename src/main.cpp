@@ -162,7 +162,7 @@ protected:
 
     glm::mat4 ViewPrj;
     glm::mat4 World;
-    glm::vec3 Pos = glm::vec3(350, 0, -50);
+    glm::vec3 Pos = glm::vec3(0, 0, 5);
     glm::vec3 cameraPos;
     float Yaw = glm::radians(0.0f);
     float Pitch = glm::radians(0.0f);
@@ -1501,7 +1501,7 @@ protected:
         CollisionObject playerCol;
         playerCol.addBox(
             Pos + glm::vec3(0.0f, 1.0f, 0.0f),
-            glm::vec3(1.5f, 2.0f, 1.5f),
+            glm::vec3(1, 2.0f, 1),
             CollisionBox::cylinder
         );
 
