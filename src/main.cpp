@@ -120,6 +120,32 @@ private:
     bool bucketIsOnGround = false; // Logic flag: is the full bucket near the well?
     glm::vec3 groundedBucketPos = glm::vec3(1.2f, 0.3f, 0.0f); // Where the full bucket "spawns"
 
+    // --- CAST 3 RISING ANIMATION ---
+    enum CastState { CAST_HIDDEN, CAST_RISING, CAST_VISIBLE, CAST_CHASING, CAST_RETURNING };
+    
+    CastState currentCastState = CAST_HIDDEN;
+    glm::vec3 castCurrentPos = glm::vec3(350.0f, -3.0f, -110.0f); // Current cast3 position
+    float castCurrentRotation = 0;
+    float castTargetHeight = 5.0f;     // How high it rises
+    float castRiseSpeed = 1.0f; // Rising speed
+    float chaseSpeed = 3.0f;
+    float floatingValue = 0.0;
+    float floatMax = 1.2;
+    bool floatUp = true;
+    bool floatDown = false;
+    float rotation_speed = 0.001f;
+    float return_speed = 0.001f;
+    glm::vec3 statuePos = glm::vec3(350.0f, 0.0f, -110.0f); // Statue position in graveyard
+    glm::vec3 castReturnPos = glm::vec3(350.0f, -3.0f, -110.0f); // Where cast3 returns to
+    bool castDebounce = false;         // Input debounce for trigger key
+    float timeBeforeChasing = 3.0f;
+    float chaseTime = 10.0;
+    float chaseTimer = 0.0;
+    bool isCutscene1 = false;          // Cutscene during CAST_RISING
+    bool isCutscene2 = false;          // Cutscene during CAST_VISIBLE
+    bool isCutscene = false;           // Combined cutscene flag (OR of cutscene1 and cutscene2)
+
+
 protected:
     PointLightBufferObject plboData;
     // Here you list all the Vulkan objects you need:
@@ -162,7 +188,7 @@ protected:
 
     glm::mat4 ViewPrj;
     glm::mat4 World;
-    glm::vec3 Pos = glm::vec3(0, 0, 5);
+    glm::vec3 Pos = glm::vec3(350, 0, -80);
     glm::vec3 cameraPos;
     float Yaw = glm::radians(0.0f);
     float Pitch = glm::radians(0.0f);
@@ -734,7 +760,7 @@ protected:
         bool pressedC = glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS;
         bool pressedPadY = hasPad && (padButtons.buttons[GLFW_GAMEPAD_BUTTON_Y] == GLFW_PRESS);
 
-        if ((pressedC || pressedPadY) && !c_pressed) {
+        if (!isCutscene && (pressedC || pressedPadY) && !c_pressed) {
             isFirstPerson = !isFirstPerson;
             c_pressed = true;
             Pitch = -Pitch;
@@ -762,7 +788,7 @@ protected:
         }
 */
 
-        if (glfwGetKey(window, GLFW_KEY_1)) {
+        if (!isCutscene && glfwGetKey(window, GLFW_KEY_1)) {
             if (!debounce) {
                 debounce = true;
                 curDebounce = GLFW_KEY_1;
@@ -776,7 +802,7 @@ protected:
             }
         }
 
-        if (glfwGetKey(window, GLFW_KEY_2)) {
+        if (!isCutscene && glfwGetKey(window, GLFW_KEY_2)) {
             if (!debounce) {
                 debounce = true;
                 curDebounce = GLFW_KEY_2;
@@ -790,7 +816,7 @@ protected:
             }
         }
 
-        if (glfwGetKey(window, GLFW_KEY_P)) {
+        if (!isCutscene && glfwGetKey(window, GLFW_KEY_P)) {
             if (!debounce) {
                 debounce = true;
                 curDebounce = GLFW_KEY_P;
@@ -805,7 +831,7 @@ protected:
             }
         }
 
-        if (glfwGetKey(window, GLFW_KEY_O)) {
+        if (!isCutscene && glfwGetKey(window, GLFW_KEY_O)) {
             if (!debounce) {
                 debounce = true;
                 curDebounce = GLFW_KEY_O;
@@ -823,7 +849,7 @@ protected:
         bool pressedSpace = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
         bool pressedPadA = hasPad && (padButtons.buttons[GLFW_GAMEPAD_BUTTON_A] == GLFW_PRESS);
 
-        if (pressedSpace || pressedPadA) {
+        if (!isCutscene && (pressedSpace || pressedPadA)) {
             if (!debounce) {
                 debounce = true;
                 curDebounce = GLFW_KEY_SPACE;
@@ -837,7 +863,7 @@ protected:
             }
         }
 
-        if (glfwGetKey(window, GLFW_KEY_E) && canTeleport) {
+        if (!isCutscene && glfwGetKey(window, GLFW_KEY_E) && canTeleport) {
             if (!debounce) {
                 debounce = true;
                 curDebounce = GLFW_KEY_E;
@@ -878,7 +904,7 @@ protected:
         bool pressedV = glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS;
         bool pressedPadB = hasPad && (padButtons.buttons[GLFW_GAMEPAD_BUTTON_B] == GLFW_PRESS);
 
-        if ((pressedV || pressedPadB) && !v_pressed) {
+        if (!isCutscene && (pressedV || pressedPadB) && !v_pressed) {
             v_pressed = true;
             if (!isFirstPerson) {
                 isWideView = !isWideView;
@@ -904,6 +930,136 @@ protected:
         // updated the animation
         const float SpeedUpAnimFact = 0.85f;
         AB.Advance(deltaT * SpeedUpAnimFact);
+
+        // Update combined cutscene flag
+        isCutscene = isCutscene1 || isCutscene2;
+
+        // --- CAST 3 RISING ANIMATION LOGIC ---
+        float distToStatue = glm::length(Pos - statuePos);
+        bool nearStatue = (distToStatue < 5.0f);
+
+        if (!isCutscene && nearStatue && glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && !castDebounce) {
+            if (currentCastState == CAST_HIDDEN) {
+                currentCastState = CAST_RISING;
+                castCurrentPos = statuePos; // Reset to statue position
+                chaseTimer = 0.0f;
+                
+                // Start cutscene 1
+                isCutscene1 = true;
+                isFirstPerson = false;
+                // Disable first person
+            }
+            castDebounce = true;
+        }
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE) castDebounce = false;
+
+        if (currentCastState == CAST_RISING) {
+
+            castCurrentPos.y += deltaT * castRiseSpeed;
+            if (castCurrentPos.y >= statuePos.y + castTargetHeight) {
+                castCurrentPos.y = statuePos.y + castTargetHeight;
+                currentCastState = CAST_VISIBLE;
+                chaseTimer = 0.0f;
+                
+                // End cutscene 1, start cutscene 2
+                isCutscene1 = false;
+                isCutscene2 = true;
+                isFirstPerson = false; // Keep camera disabled
+                
+            }
+        }
+        if (currentCastState == CAST_VISIBLE){
+            chaseTimer += deltaT;
+            if(chaseTimer >= timeBeforeChasing){
+                currentCastState = CAST_CHASING;
+                chaseTimer = 0.0f;
+                
+                // End cutscene 2, restore camera
+                isCutscene2 = false;
+                isFirstPerson = false; // Return to third person
+            }
+        }
+
+        if (currentCastState == CAST_CHASING){
+            // Follow player position
+            glm::vec3 targetPos = Pos + glm::vec3(0.0f, 2.0f + floatingValue, 0.0f); // Slightly above player
+            glm::vec3 direction = targetPos - castCurrentPos;
+            if (floatUp){
+                floatingValue += 2*deltaT;
+                if(floatingValue >= floatMax){
+                    floatUp = false;
+                    floatDown = true;
+                }
+            }
+            if (floatDown){
+                floatingValue -= 2*deltaT;
+                if(floatingValue <= -floatMax){
+                    floatUp = true;
+                    floatDown = false;
+                }
+            }
+
+            float distance = glm::length(direction);
+            
+            if (distance > 0.1f) {
+                // Calculate rotation to face player (Y-axis rotation)
+                glm::vec3 directionXZ = glm::normalize(glm::vec3(direction.x, 0.0f, direction.z));
+                castCurrentRotation = atan2(directionXZ.x, directionXZ.z);
+                
+                glm::vec3 movement = glm::normalize(direction) * chaseSpeed * deltaT;
+                if (glm::length(movement) < distance) {
+                    castCurrentPos += movement;
+                } else {
+                    castCurrentPos = targetPos;
+                }
+            }
+            
+            chaseTimer += deltaT;
+            if(chaseTimer >= chaseTime){
+                currentCastState = CAST_RETURNING;
+                chaseTimer = 0.0f;
+            }
+        }
+        
+        if (currentCastState == CAST_RETURNING) {
+            // Return to original position
+            glm::vec3 direction = castReturnPos - castCurrentPos;
+            float distance = glm::length(direction);
+            if (distance > 0.5f) {
+                glm::vec3 movement = glm::normalize(direction) * return_speed * deltaT;
+                if (glm::length(movement) < distance) {
+                    castCurrentPos += movement * deltaT;
+                    castCurrentRotation += rotation_speed * deltaT;
+                    rotation_speed *= 1.1f;
+                    return_speed *= 1.1f;
+                } else {
+                    castCurrentPos = castReturnPos;
+                    currentCastState = CAST_HIDDEN;
+                }
+            } else {
+                castCurrentPos = castReturnPos;
+                currentCastState = CAST_HIDDEN;
+            }
+        }
+        
+        // Apply cast3 animation to the cemetery_cast3 instance
+        for (int k = 0; k < SC.TechniqueInstanceCount; k++) {
+            for (int i = 0; i < SC.TI[k].InstanceCount; i++) {
+                // Find the cemetery_cast3 instance
+                std::string instanceId = *(SC.TI[k].I[i].id);
+                if (instanceId == "cemetery_cast3") {
+                    glm::vec3 baseScale = glm::vec3(1.0f, 1.0f, 1.0f);
+                    
+                    // Use current position and rotation: translate, rotate, scale
+                    glm::mat4 transform = glm::translate(glm::mat4(1.0f), castCurrentPos) *
+                                         glm::rotate(glm::mat4(1.0f), castCurrentRotation, glm::vec3(0.0f, 1.0f, 0.0f)) *
+                                         glm::scale(glm::mat4(1.0f), baseScale);
+                    
+                    SC.TI[k].I[i].Wm = transform;
+                    break;
+                }
+            }
+        }
 
         // --- WELL INTERACTION AND ANIMATION LOGIC ---
         float distToWell = glm::length(Pos - glm::vec3(0.0f, 0.0f, 0.0f));
@@ -1331,6 +1487,13 @@ protected:
         bool fire = false;
         getSixAxis(deltaT, m, r, fire);
 
+        // Disable all movement and rotation during cutscenes
+        if (isCutscene) {
+            m = glm::vec3(0.0f);
+            r = glm::vec3(0.0f);
+            fire = false;
+        }
+
         //Implement Pad visual
         GLFWgamepadstate padState;
         //If the pad is connected
@@ -1342,10 +1505,10 @@ protected:
             float rStickY = padState.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y];
 
             //Update the stick in the dead zone, update Yaw and Pitch
-            if (std::abs(rStickX) > deadzone) {
+            if (!isCutscene && std::abs(rStickX) > deadzone) {
                 Yaw -= rStickX * padRotSpeed;
             }
-            if (std::abs(rStickY) > deadzone) {
+            if (!isCutscene && std::abs(rStickY) > deadzone) {
                 if (isFirstPerson) {
                     Pitch -= rStickY * padRotSpeed;
                 } else {
@@ -1388,6 +1551,12 @@ protected:
         float yoffset = (float) (lastY - ypos); // Y-up
         lastX = xpos;
         lastY = ypos;
+
+        // Disable mouse movement during cutscenes
+        if (isCutscene) {
+            xoffset = 0.0f;
+            yoffset = 0.0f;
+        }
 
         if (m != glm::vec3(0, 0, 0)) {
             walking = true;
@@ -1466,8 +1635,27 @@ protected:
             Pos.y = groundY;
 
             // Camera is at eye height
-            cameraPos = Pos + glm::vec3(0.0f, camHeight, 0.0f);
-            glm::vec3 target = cameraPos + front;
+            glm::vec3 target;
+            if (isCutscene1) {
+                // Cutscene 1: Camera fixed position, follow cast3 with look direction
+                cameraPos = glm::vec3(357, 1, -104);
+                target = castCurrentPos;
+            } else if (isCutscene2) {
+                // Cutscene 2: Camera rotates around cast3
+                glm::vec3 cast3Center = glm::vec3(350, 0, -110);
+                float radius = 4.5f; // Distance from cast3 in XZ plane
+                float rotationSpeed = 0.1f; // Radians per second
+                float angle = rotationSpeed * chaseTimer;
+                
+                float x = cast3Center.x + radius * cos(angle);
+                float z = cast3Center.z + radius * sin(angle);
+                cameraPos = glm::vec3(x, 7, z);
+                target = castCurrentPos;
+            } else {
+                cameraPos = Pos + glm::vec3(0.0f, camHeight, 0.0f);
+                target = cameraPos + front; // Normal forward look
+            }
+            
             View = glm::lookAt(cameraPos, target, up);
 
             // Player model (invisible) rotates with the camera
@@ -1497,16 +1685,45 @@ protected:
             // --- CAMERA COLLISION LOGIC (BUMPING) ---
 
             // 1. Define the target (where the camera looks: player's head area)
-            glm::vec3 target = Pos + glm::vec3(0.0f, camHeight, 0.0f);
+            glm::vec3 target;
+            if (isCutscene1) {
+                // Cutscene 1: Camera fixed position, follow cast3 with look direction
+                target = castCurrentPos;
+            } else if (isCutscene2) {
+                // Cutscene 2: To be implemented
+                target = castCurrentPos;
+            } else {
+                target = Pos + glm::vec3(0.0f, camHeight, 0.0f); // Normal target
+            }
 
             // 2. Create a rotation matrix based on current Yaw
             glm::mat4 camWorld = glm::translate(glm::mat4(1), Pos) * glm::rotate(
                                      glm::mat4(1.0f), Yaw, glm::vec3(0, 1, 0));
 
-            // 3. Progressive check along the camera vector to detect obstacles
-            float finalCamDist = camDist; // Start with the desired distance
-            const int SAMPLES = 12; // Number of collision checks along the ray
-            float cameraRadius = 0.4f; // Thickness of the camera's physical presence
+            // Skip collision detection and camera positioning during cutscenes
+            if (isCutscene1) {
+                // Fixed camera position during cutscenes
+                cameraPos = glm::vec3(357, 1, -104);
+                dampedCamPos = cameraPos;
+                View = glm::lookAt(dampedCamPos, target, glm::vec3(0, 1, 0));
+            } else if (isCutscene2) {
+                // Cutscene 2: Camera rotates around cast3
+                glm::vec3 cast3Center = glm::vec3(350, 0, -110);
+                float radius = 4.5f; // Distance from cast3 in XZ plane
+                float rotationSpeed = 0.1f; // Radians per second
+                float angle = rotationSpeed * chaseTimer;
+                
+                float x = cast3Center.x + radius * cos(angle);
+                float z = cast3Center.z + radius * sin(angle);
+                cameraPos = glm::vec3(x, 7, z);
+                dampedCamPos = cameraPos;
+                View = glm::lookAt(dampedCamPos, target, glm::vec3(0, 1, 0));
+            } else {
+                // Normal camera behavior with collision detection
+                // 3. Progressive check along the camera vector to detect obstacles
+                float finalCamDist = camDist; // Start with the desired distance
+                const int SAMPLES = 12; // Number of collision checks along the ray
+                float cameraRadius = 0.4f; // Thickness of the camera's physical presence
 
             for (int i = 1; i <= SAMPLES; i++) {
                 // Calculate current test distance from player to camera
@@ -1560,6 +1777,7 @@ protected:
             // Apply damping for smooth camera tracking
             dampedCamPos = ef * dampedCamPos + (1.0f - ef) * cameraPos;
             View = glm::lookAt(dampedCamPos, target, glm::vec3(0, 1, 0));
+            } // End of non-cutscene camera behavior
         }
         // ===============================
         // COLLISION CHECK (COMMON)

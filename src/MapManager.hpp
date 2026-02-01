@@ -634,6 +634,16 @@ public:
             {1.5f, 1.5f, 1.5f} // Slightly larger for prominence
         ));
         
+        // Add cast3 under the statue (will animate upward)
+        elements.emplace_back(UtilsStructs::createElement(
+            "cemetery_cast3",
+            "cast3",
+            {"dungeon", "pnois"},
+            {center.x, -4.0f, center.z},
+            {0.0f, 0.0f, 0.0f},
+            {1.0f, 1.0f, 1.0f}
+        ));
+        
         return elements;
     }
 
