@@ -42,91 +42,96 @@ struct VertexTan {
     glm::vec4 tan;
 };
 
+// Global Uniform Buffer Object: Shared data for all shaders
 struct GlobalUniformBufferObject {
-    alignas(16) glm::vec3 lightDir;
-    alignas(16) glm::vec4 lightColor;
-    alignas(16) glm::vec3 eyePos;
-    alignas(16) float time; //Wind animation
+    alignas(16) glm::vec3 lightDir; // Direction of the sun light
+    alignas(16) glm::vec4 lightColor; // Color of the sun (changes during day/night cycle)
+    alignas(16) glm::vec3 eyePos; // Camera position for specular calculations
+    alignas(16) float time; // Total elapsed time for procedural animations (e.g., wind)
 };
 
+// Uniforms for animated characters using skeletal skinning
 struct UniformBufferObjectChar {
-    alignas(16) glm::vec4 debug1;
-    alignas(16) glm::mat4 mvpMat[65];
-    alignas(16) glm::mat4 mMat[65];
-    alignas(16) glm::mat4 nMat[65];
+    alignas(16) glm::vec4 debug1; // Debugging data (e.g., bone indices or transparency)
+    alignas(16) glm::mat4 mvpMat[65]; // Model-View-Projection matrices for up to 65 bones
+    alignas(16) glm::mat4 mMat[65]; // Model matrices (World space) for each bone
+    alignas(16) glm::mat4 nMat[65]; // Normal matrices (inverse-transpose) for correct lighting on bones
 };
 
+// Uniforms for static objects (no skeletal animation)
 struct UniformBufferObjectSimp {
-    alignas(16) glm::mat4 mvpMat;
-    alignas(16) glm::mat4 mMat;
-    alignas(16) glm::mat4 nMat;
+    alignas(16) glm::mat4 mvpMat; // Transforms local coordinates to clip space (Screen)
+    alignas(16) glm::mat4 mMat; // Transforms local coordinates to world space
+    alignas(16) glm::mat4 nMat; // Normal matrix used to calculate lighting directions correctly
 };
 
+// Uniforms for the Skybox environment
 struct skyBoxUniformBufferObject {
-    alignas(16) glm::mat4 mvpMat;
+    alignas(16) glm::mat4 mvpMat; // Position of the skybox
     alignas(16) glm::vec4 settings; // x = blendFactor (0 night , 1 day)
 };
 
-// Matches the GLSL structure for std140 alignment
+// Point Light structure: Defines an individual lamp's properties
 struct PointLight {
-    alignas(16) glm::vec3 position;
-    alignas(16) glm::vec3 color;
+    alignas(16) glm::vec3 position; // World space position of the light source
+    alignas(16) glm::vec3 color; // Light emission color (RGB)
 };
 
+// Buffer for multiple point lights (supports up to 100 lamps)
 struct PointLightBufferObject {
     PointLight lights[100];
-    int numActiveLights;
+    int numActiveLights; // Current count of lights to be processed by the shader
 };
 
 // MAIN !
 class E09 : public BaseProject {
 private:
     std::vector<CollisionObject> houseCollisions;
-    std::vector<Teleporter*> teleporters;
-    Teleporter* activeTeleporter;
+    std::vector<Teleporter *> teleporters;
+    Teleporter *activeTeleporter;
     std::deque<int> path;
 
-    float getGroundHeight(const glm::vec3& pos);
+    float getGroundHeight(const glm::vec3 &pos);
 
     // --- WELL ANIMATION SETTINGS ---
     enum WellState { W_IDLE, W_DOWN, W_UP };
 
     WellState currentWellState = W_IDLE;
 
-    // 1. CONSTANTS
+    // CONSTANTS
     const float BEAM_Y = 1.85f; // Fixed height of the support beam
     const float HANDLE_OFFSET = 0.18f; // Distance to subtract from bucket center to reach handle
 
-    // 2. DYNAMIC COORDINATES
+    // DYNAMIC COORDINATES
     float bucketAnimY = 1.14f; // Current Y position of the bucket
     float ropeAnimY = 1.14f; // Separate Y tracker for the rope (for calibration)
     float maskOffset = 0.06f; // Offset for the water surface mask
 
-    // 3. SEPARATED SPEEDS (Tune these to prevent detachments)
+    // SEPARATED SPEEDS (Tune these to prevent detachments)
     float bucketDescSpeed = 0.5f; // Descending speed for the bucket
-    float ropeDescSpeed = 1.0f; // Descending speed for the rope (Adjust if it leads/lags)
+    float ropeDescSpeed = 1.0f; // Descending speed for the rope
 
     float bucketAscSpeed = 0.8f; // Ascending speed for the bucket
-    float ropeAscSpeed = 1.6f; // Ascending speed for the rope (Adjust if it leads/lags)
+    float ropeAscSpeed = 1.6f; // Ascending speed for the rope
 
     float wellBottomLimit = -2.0f;
     bool wellDebounce = false; // Input debounce for the 'E' key
 
-    // 4. SPLASH ANIMATION SETTINGS
+    // SPLASH ANIMATION SETTINGS
     const float WATER_LEVEL = 0.0f; // Y level where splashes occur
     float splashJump[8] = {0.0f}; // Current vertical offset for each cube
 
-    // 5. BUCKET SWAP SETTINGS
+    // BUCKET SWAP SETTINGS
     bool bucketIsOnGround = false; // Logic flag: is the full bucket near the well?
-    glm::vec3 groundedBucketPos = glm::vec3(1.2f, 0.3f, 0.0f); // Where the full bucket "spawns"
+    glm::vec3 groundedBucketPos = glm::vec3(1.2f, 0.3f, 0.0f); // Where the full bucket spawns
 
     // --- CAST 3 RISING ANIMATION ---
     enum CastState { CAST_HIDDEN, CAST_RISING, CAST_VISIBLE, CAST_CHASING, CAST_RETURNING };
-    
+
     CastState currentCastState = CAST_HIDDEN;
     glm::vec3 castCurrentPos = glm::vec3(350.0f, -3.0f, -110.0f); // Current cast3 position
     float castCurrentRotation = 0;
-    float castTargetHeight = 5.0f;     // How high it rises
+    float castTargetHeight = 5.0f; // How high it rises
     float castRiseSpeed = 1.0f; // Rising speed
     float chaseSpeed = 3.0f;
     float floatingValue = 0.0;
@@ -137,103 +142,111 @@ private:
     float return_speed = 0.001f;
     glm::vec3 statuePos = glm::vec3(350.0f, 0.0f, -110.0f); // Statue position in graveyard
     glm::vec3 castReturnPos = glm::vec3(350.0f, -3.0f, -110.0f); // Where cast3 returns to
-    bool castDebounce = false;         // Input debounce for trigger key
+    bool castDebounce = false; // Input debounce for trigger key
     float timeBeforeChasing = 3.0f;
     float chaseTime = 10.0;
     float chaseTimer = 0.0;
-    bool isCutscene1 = false;          // Cutscene during CAST_RISING
-    bool isCutscene2 = false;          // Cutscene during CAST_VISIBLE
-    bool isCutscene = false;           // Combined cutscene flag (OR of cutscene1 and cutscene2)
+    bool isCutscene1 = false; // Cutscene during CAST_RISING
+    bool isCutscene2 = false; // Cutscene during CAST_VISIBLE
+    bool isCutscene = false; // Combined cutscene flag (OR of cutscene1 and cutscene2)
 
 
 protected:
-    PointLightBufferObject plboData;
-    // Here you list all the Vulkan objects you need:
+    PointLightBufferObject plboData; // Buffer containing data for all point lights (positions/colors)
 
-    // Descriptor Layouts [what will be passed to the shaders]
+    /** * DESCRIPTOR SET LAYOUTS
+ * These act as a "contract" between the C++ code and the Shaders.
+ * They define which buffers and textures the shaders should expect.
+ */
     DescriptorSetLayout DSLlocalChar, DSLlocalSimp, DSLlocalPBR, DSLglobal, DSLskyBox;
-    DescriptorSetLayout DSLveg; // Layout for vegetation
-    DescriptorSetLayout DSLdebug; //Layout for collision box
+    DescriptorSetLayout DSLveg; // Specialized layout for vegetation (swaying logic)
+    DescriptorSetLayout DSLdebug; // Layout used for visualizing collision boxes
 
-    // Vertex formants, Pipelines [Shader couples] and Render passes
-    VertexDescriptor VDchar;
-    VertexDescriptor VDsimp;
-    VertexDescriptor VDskyBox;
-    VertexDescriptor VDtan;
-    RenderPass RP;
+    /** * VERTEX DESCRIPTORS
+ * Define the memory layout of a single vertex (e.g., Position, Normals, UVs, Bone Weights).
+ */
+    VertexDescriptor VDchar; // For animated characters (includes bone weights)
+    VertexDescriptor VDsimp; // For static objects
+    VertexDescriptor VDskyBox; // Minimal layout for the skybox (positions only)
+    VertexDescriptor VDtan; // For PBR objects (includes Tangents for normal mapping)
+    RenderPass RP; // Describes the attachments (Color, Depth) used during a draw call
+
+    /** * PIPELINES
+ * The "State Machine" of the GPU. Includes Shaders, Rasterization, and Blending settings.
+ */
     Pipeline Pchar, PsimpObj, PskyBox, P_PBR;
-    Pipeline Pveg; // Pipeline for vegetation rendering
-    Pipeline Pdebug; // Pipeline for rendering of collision box
-    //*DBG*/Pipeline PDebug;
+    Pipeline Pveg; // Renders moving vegetation
+    Pipeline Pdebug; // Renders wireframe/transparent collision boxes
 
     // Models, textures and Descriptors (values assigned to the uniforms)
-    Scene SC;
-    std::vector<VertexDescriptorRef> VDRs;
-    std::vector<TechniqueRef> PRs;
-    //*DBG*/Model MS;
-    //*DBG*/DescriptorSet SSD;
+    Scene SC; // Container for all 3D models, textures, and instances
+    std::vector<VertexDescriptorRef> VDRs; // References to vertex layouts for the scene loader
+    std::vector<TechniqueRef> PRs; // References to techniques (shader/pipeline combinations)
 
-    // To support animation
-#define N_ANIMATIONS 5
+    /** * ANIMATION SYSTEM
+ * Handles skeletal skinning and blending between different animation states.
+ */
+    #define N_ANIMATIONS 5
+    AnimBlender AB; // Smoothly transitions between animations (e.g., walk to run)
+    Animations Anim[N_ANIMATIONS]; // Array of loaded animation clips
+    SkeletalAnimation SKA; // Computes final bone matrices for the current frame
 
-    AnimBlender AB;
-    Animations Anim[N_ANIMATIONS];
-    SkeletalAnimation SKA;
+    TextMaker txt; // Utility for rendering 2D UI text overlays
 
-    // to provide textual feedback
-    TextMaker txt;
+    // --- OTHER APPLICATION PARAMETERS ---
+    float Ar; // Aspect Ratio (Width / Height)
 
-    // Other application parameters
-    float Ar; // Aspect ratio
-
-    glm::mat4 ViewPrj;
-    glm::mat4 World;
-    glm::vec3 Pos = glm::vec3(350, 0, -80);
-    glm::vec3 cameraPos;
-    float Yaw = glm::radians(0.0f);
-    float Pitch = glm::radians(0.0f);
+    glm::mat4 ViewPrj; // Combined View and Projection matrix
+    glm::mat4 World; // Global world transformation matrix
+    glm::vec3 Pos = glm::vec3(350, 0, -80); // Character's current world position
+    glm::vec3 cameraPos; // Physical location of the camera in 3D space
+    float Yaw = glm::radians(0.0f); // Euler angles for camera/character orientation
+    float Pitch = glm::radians(0.0f); // The Y-axis rotation specifically for the player model
     float Roll = glm::radians(0.0f);
-    float characterRotation = glm::radians(0.0f);
+    float characterRotation = glm::radians(0.0f); // Rotation value for character
 
-    //CAM VARIABLE
-    bool isFirstPerson = false; //State of the cam
-    bool c_pressed = false; //Debounce c clicked
-    bool isWideView = false;
-    bool v_pressed = false;
-    bool canTeleport = false;
-    float currentCamDist = 5.0f;
-    bool resetCamera = false; //Flag to reset the camera
+    // --- CAM VARIABLE ---
+    bool isFirstPerson = false; // Toggles between FPV (First Person) and TPV (Third Person) views
+    bool c_pressed = false; // Debounce flag to prevent rapid-fire camera switching when 'C' is held
+    bool isWideView = false; // Adjusts the Field of View or Camera Distance for a cinematic effect
+    bool v_pressed = false; // Debounce flag to prevent rapid-fire camera switching when 'V' is held
+    bool canTeleport = false; // Boolean flag checked when the player is near a teleportation trigger
+    float currentCamDist = 5.0f; // Smoothly interpolated distance for the third-person camera
+    bool resetCamera = false; // Trigger used to snap the camera back to a default position after an event
 
-    //WINDOW VARIABLE
+    // --- WINDOW VARIABLE ---
     bool f11_pressed = false;
-    bool isFullScreen = false;
-    //Save old window position
+    bool isFullScreen = false; // Tracks if the app is in borderless fullscreen mode
+    // Cache to restore windowed mode
     int savedWindowX = 0;
     int savedWindowY = 0;
     int savedWindowW = 800;
     int savedWindowH = 600;
 
-    //TPV VARIABLE
+    // --- TPV VARIABLE ---
+    // Used to determine which animation (AB) to play
     bool walking = false;
     bool running = false;
 
-    //MOUSE VARIABLE
+    // --- MOUSE VARIABLE ---
+    // Stores previous cursor position to calculate delta movement
     double lastX;
     double lastY;
-    bool firstMouse = true; //Avoids crazy movements at the beginning
-    float mouseSensitivity = 0.1f; //Mouse sensibility
 
-    //Player state variables
-    glm::vec3 oldPos;
-    int currRunState = 1;
-    float relDir = glm::radians(0.0f);
-    float dampedRelDir = glm::radians(0.0f);
-    glm::vec3 dampedCamPos = glm::vec3(0.0, 0.0, 5); //Initialize StartingPosition
-    glm::vec4 debug1 = glm::vec4(0);
+    bool firstMouse = true; // Prevents the camera from "jumping" on the first frame of input
+    float mouseSensitivity = 0.1f; // Multiplier for mouse movement speed
 
-    // Here you set the main application parameters
+    // --- PLAYER STATE VARIABLES ---
+    glm::vec3 oldPos; // Stores position from the previous frame to resolve collisions
+    int currRunState = 1; // Numerical ID for the current movement speed (Idle, Walk, Run)
+    float relDir = glm::radians(0.0f); // The raw direction the player is trying to move in
+    float dampedRelDir = glm::radians(0.0f); // Smoothed direction to prevent the model from snapping instantly
+    glm::vec3 dampedCamPos = glm::vec3(0.0, 0.0, 5); // Lagged camera position for a "smooth follow" effect
+    glm::vec4 debug1 = glm::vec4(0); // General purpose vector for on-screen debugging/testing
+
+
     void setWindowParameters() {
-        // window size, titile and initial background
+        // Window size, title and initial background
         windowWidth = 800;
         windowHeight = 600;
         windowTitle = "E09 - Showing animations";
@@ -260,10 +273,9 @@ protected:
     // Here you load and setup all your Vulkan Models and Texutures.
     // Here you also create your Descriptor set layouts and load the shaders for the pipelines
     void localInit() {
-        // Hides the mouse cursor
+        // --- INITIAL INPUT SETUP ---
+        // Disable the mouse cursor and lock it to the window for camera control
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-        // Force the mouse position at the center
         lastX = windowWidth / 2.0;
         lastY = windowHeight / 2.0;
         firstMouse = true;
@@ -272,11 +284,10 @@ protected:
             teleporters.push_back(info.teleporter.get());
         }
 
-        // Descriptor Layouts [what will be passed to the shaders]
-        // Initialize the global Descriptor Set Layout
-        // Binding 0: Sun/Global data
-        // Binding 3: Array of 50 Point Lights for the lamps
+        // --- GLOBAL DESCRIPTOR SET LAYOUT (DSLglobal) ---
+        // This layout is shared across multiple pipelines (Set 0)
         DSLglobal.init(this, {
+            // Binding 0: Global Uniform Buffer (Sun direction, color, time)
                            {
                                0,
                                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -284,10 +295,11 @@ protected:
                                sizeof(GlobalUniformBufferObject),
                                1
                            },
+            // Binding 1: Point Light Buffer (The array of 100 lamps)
                            {
-                               1, // <--- BINDING 1: Questo è quello delle luci!
+                               1,
                                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                               VK_SHADER_STAGE_ALL_GRAPHICS, // <--- ASSICURATI CHE CI SIA ALL_GRAPHICS
+                               VK_SHADER_STAGE_ALL_GRAPHICS,
                                sizeof(PointLightBufferObject),
                                1
                            }
@@ -318,16 +330,16 @@ protected:
                               {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 1},
                               {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1, 1}
                           });
-
+        // --- SKYBOX LAYOUT (DSLskyBox) ---
         DSLskyBox.init(this, {
-                           // Binding 0: Uniform Buffer (dati ciclo giorno/notte)
+            // Binding 0: Uniform Buffer (Handles the Day/Night blend factor)
                            {
                                0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                                sizeof(skyBoxUniformBufferObject), 1
                            },
 
-                           // Binding 1: Texture Giorno (UNICA TEXTURE)
+            // Binding 1: Sky Texture (The cubemap or panoramic sky image)
                            {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 1}
                        });
 
@@ -347,14 +359,14 @@ protected:
                          });
 
         DSLveg.init(this, {
-                        // Binding 0: Uniform Buffer (Matrices)
+            // Binding 0: Local Matrices (MVP, World, Normal)
                         {
                             0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT,
                             sizeof(UniformBufferObjectSimp), 1
                         },
-                        // Binding 1: Texture (Albedo/Color) - Fragment Shader
+            // Binding 1: Albedo Texture (The actual tree/leaf image)
                         {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 1},
-                        // Binding 2: Texture (Noise) - Used in Vertex or Fragment
+            // Binding 2: Noise Texture (Used for procedural wind swaying)
                         {
                             2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1, 1
@@ -370,7 +382,8 @@ protected:
                           // Binding 2: Texture (Noise) - Used in Vertex or Fragment
 
                       });
-
+        // --- CHARACTER VERTEX DESCRIPTOR (VDchar) ---
+        // Includes extra attributes for skeletal animation (Joint Indices and Weights)
         VDchar.init(this, {
                         {0, sizeof(VertexChar), VK_VERTEX_INPUT_RATE_VERTEX}
                     }, {
@@ -449,15 +462,14 @@ protected:
         VDRs[2].init("VDskybox", &VDskyBox);
         VDRs[3].init("VDtan", &VDtan);
 
-        // initializes the render passes
+        // Initializes the render passes
         RP.init(this);
-        // sets the blue sky
+        // Sets the blue sky
         RP.properties[0].clearValue = {0.0f, 0.9f, 1.0f, 1.0f};
 
 
-        // Pipelines [Shader couples]
-        // The last array, is a vector of pointer to the layouts of the sets that will
-        // be used in this pipeline. The first element will be set 0, and so on..
+        // --- PIPELINE INITIALIZATION ---
+        // Connects the Global and Local layouts to the specific shader files
         Pchar.init(this, &VDchar, "shaders/PosNormUvTanWeights.vert.spv", "shaders/CookTorranceForCharacter.frag.spv",
                    {&DSLglobal, &DSLlocalChar});
 
@@ -515,15 +527,15 @@ protected:
                                 }
                             }
                         }
-                    }, 1, &VDskyBox); // IMPORTANT: Changed TotalNtextures from 1 to
+                    }, 1, &VDskyBox);
         PRs[3].init("Vegetation", {
                         {
                             &Pveg, {
                                 // Use the vegetation pipeline
                                 /*DSLglobal*/ {},
                                 /*DSLlocal*/ {
-                                    {true, 0, {}}, // Texture 0: Albedo (Tree/Bush)
-                                    {true, 1, {}}, // Texture 1: Noise (for Wind)
+                                    {true, 0, {}}, // Texture 0: Tree/Bush
+                                    {true, 1, {}}, // Texture 1: for Wind
                                 }
                             }
                         }
@@ -537,61 +549,66 @@ protected:
                                 {{true, 0, {}}, {true, 1, {}}} // DSLlocalSimp (Binding 0 e 1)
                             }
                         }
-                    }, 2, &VDsimp);
+                    }, 2, &VDsimp); // Uses 2 textures total
 
-        // Uses 2 textures total
         // Models, textures and Descriptors (values assigned to the uniforms)
-
-        // sets the size of the Descriptor Set Pool
+        // Sets the size of the Descriptor Set Pool
         DPSZs.uniformBlocksInPool = 2000;
         DPSZs.texturesInPool = 2000;
         DPSZs.setsInPool = 2000;
 
+        // --- SCENE LOADING ---
+        // This processes the scene.json file and allocates all necessary GPU memory
         std::cout << "\nLoading the scene\n\n";
         if (SC.init(this, /*Npasses*/1, VDRs, PRs, "assets/models/scene.json") != 0) {
             std::cout << "ERROR LOADING THE SCENE\n";
             exit(0);
         }
 
-        //initialize collision box
+        //Initialize collision box
         houseCollisions = CollisionBoxGenerator::collisions;
 
-        // initializes animations
+        // Initializes animations
         for (int ian = 0; ian < N_ANIMATIONS; ian++) {
             Anim[ian].init(*SC.As[ian]);
         }
         AB.init({{0, 32, 0.0f, 0}, {0, 16, 0.0f, 1}, {0, 263, 0.0f, 2}, {0, 83, 0.0f, 3}, {0, 16, 0.0f, 4}});
         //AB.init({{0,31,0.0f}});
+
+        // --- ANIMATION INITIALIZATION ---
+        // Mixamo layer setup for the 5 animation clips
         SKA.init(Anim, 5, "Armature|mixamo.com|Layer0", 0);
 
-        // initializes the textual output
+        // Initializes the textual output
         txt.init(this, windowWidth, windowHeight);
 
-        // submits the main command buffer
+        // Submits the main command buffer
         submitCommandBuffer("main", 0, populateCommandBufferAccess, this);
 
         // Prepares for showing the FPS count
         txt.print(1.0f, 1.0f, "FPS:", 1, "CO", false, false, true, TAL_RIGHT, TRH_RIGHT, TRV_BOTTOM,
                   {1.0f, 0.0f, 0.0f, 1.0f}, {0.8f, 0.8f, 0.0f, 1.0f});
 
-        //Text to indicate current visual mode
+        // Text to indicate current visual mode
         txt.print(-1.0f, -1.0f, "View: Third Person (Press C)", 2, "CO",
                   false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
                   {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
 
-        //Define the FPV crosshair
+        // Define the FPV crosshair
         txt.print(0.0f, 0.0f, "+", 3, "CO",
                   false, false, true, TAL_CENTER, TRH_CENTER, TRV_MIDDLE,
                   {1.0f, 1.0f, 1.0f, 1.0f}, // Colour: White
                   {0.0f, 0.0f, 0.0f, 1.0f}); // Border: Black
 
-        // --- POINT LIGHTS SETUP ---
+        // --- POINT LIGHT DETECTION ---
+        // Automatically finds objects with "lamp" in their name and creates a light source
         plboData.numActiveLights = 0;
         for (int i = 0; i < SC.TI[1].InstanceCount; i++) {
             auto &inst = SC.TI[1].I[i];
             if (inst.id->find("lamp") != std::string::npos && plboData.numActiveLights < 100) {
+                // Position the light at the lamp's X/Z and a height of 4.5
                 plboData.lights[plboData.numActiveLights].position = glm::vec3(inst.Wm[3][0], 4.5f, inst.Wm[3][2]);
-                plboData.lights[plboData.numActiveLights].color = glm::vec3(1.0f, 0.7f, 0.4f);
+                plboData.lights[plboData.numActiveLights].color = glm::vec3(1.0f, 0.7f, 0.4f); // Warm Amber
                 plboData.numActiveLights++;
             }
         }
@@ -600,34 +617,41 @@ protected:
 
     // Here you create your pipelines and Descriptor Sets!
     void pipelinesAndDescriptorSetsInit() {
-        // creates the render pass
+        // Initialize the Render Pass (Defines how color and depth buffers are cleared and stored)
         RP.create();
 
-        // This creates a new pipeline (with the current surface), using its shaders for the provided render pass
-        Pchar.create(&RP);
-        PsimpObj.create(&RP);
-        PskyBox.create(&RP);
-        P_PBR.create(&RP);
+        // Create the Graphics Pipelines
+        // These link the shaders to the render pass and set the GPU's state machine
+        Pchar.create(&RP); // For animated characters (Skeletal Skinning)
+        PsimpObj.create(&RP); // For standard static meshes (Houses, ground)
+        PskyBox.create(&RP); // For the background skybox environment
+        P_PBR.create(&RP); // For Physically Based Rendering (Advanced materials)
 
-        Pveg.create(&RP); // Create the vegetation pipeline
-        Pdebug.create(&RP); //Create the debug pipeline
+        Pveg.create(&RP); // For swaying vegetation (Handles wind and transparency)
+        Pdebug.create(&RP); // For collision box visualization (Usually wireframe/translucent)
 
+        // Delegate Descriptor Set allocation for the scene and UI
+        // This connects the specific textures/buffers to the object instances
         SC.pipelinesAndDescriptorSetsInit();
-        txt.pipelinesAndDescriptorSetsInit();
+        txt.pipelinesAndDescriptorSetsInit(); // Setup resources for screen-space text
     }
 
     // Here you destroy your pipelines and Descriptor Sets!
     void pipelinesAndDescriptorSetsCleanup() {
+        // Destroy Pipeline State Objects (PSOs)
+        // We destroy these first because they depend on the Render Pass
         Pchar.cleanup();
         PsimpObj.cleanup();
         PskyBox.cleanup();
         P_PBR.cleanup();
 
-        Pveg.cleanup(); //Cleanup vegetation pipeline
-        Pdebug.cleanup(); //Cleanup debug pipeline
+        Pveg.cleanup(); // Cleanup vegetation-specific pipeline
+        Pdebug.cleanup(); // Cleanup collision debug pipeline
 
+        // Destroy the Render Pass
         RP.cleanup();
 
+        // Cleanup scene-wide and text-specific descriptors
         SC.pipelinesAndDescriptorSetsCleanup();
         txt.pipelinesAndDescriptorSetsCleanup();
     }
@@ -635,30 +659,33 @@ protected:
     // Here you destroy all the Models, Texture and Desc. Set Layouts you created!
     // You also have to destroy the pipelines
     void localCleanup() {
+        // Destroy the "blueprints" that define the structure of data sent to shaders.
+        // Without these, the engine no longer knows how to bind buffers or textures.
         DSLlocalChar.cleanup();
         DSLlocalSimp.cleanup();
         DSLlocalPBR.cleanup();
         DSLskyBox.cleanup();
+        DSLveg.cleanup(); // Cleanup the specialized vegetation layout
+        DSLdebug.cleanup(); // Cleanup the collision box layout
+        DSLglobal.cleanup(); // Cleanup the global layout (Sun/Lights)
 
-        DSLveg.cleanup(); // Destroy layout
-
-        DSLdebug.cleanup();
-
-        DSLglobal.cleanup();
-
+        // Permanently destroy the Pipeline State Objects (PSOs).
+        // This removes the compiled shader code and fixed-function settings from the GPU.
         Pchar.destroy();
         PsimpObj.destroy();
         PskyBox.destroy();
         P_PBR.destroy();
-
-        Pveg.destroy(); // Destroy pipeline object
+        Pveg.destroy();
         Pdebug.destroy();
 
+        // Destroy the object that defines how attachments (color/depth) are handled.
         RP.destroy();
 
+        // Wipe the Scene (all 3D models, textures, and instances) and the Text module.
         SC.localCleanup();
         txt.localCleanup();
 
+        // Release the memory occupied by each of the N_ANIMATIONS animation clips.
         for (int ian = 0; ian < N_ANIMATIONS; ian++) {
             Anim[ian].cleanup();
         }
@@ -685,8 +712,7 @@ protected:
         RP.end(commandBuffer);
     }
 
-    void repositionCameraImmediately()
-    {
+    void repositionCameraImmediately() {
         static float camHeight = 1.5;
         static float camDist = 5;
         // Ricalcola la posizione ideale della camera
@@ -873,7 +899,7 @@ protected:
                     TeleporterList::SetupTeleportPath(activeTeleporter, path);
                 }
 
-                activeTeleporter->Teleport(Pos,Yaw,Pitch);
+                activeTeleporter->Teleport(Pos, Yaw, Pitch);
                 characterRotation = Yaw;
                 repositionCameraImmediately();
             }
@@ -943,7 +969,7 @@ protected:
                 currentCastState = CAST_RISING;
                 castCurrentPos = statuePos; // Reset to statue position
                 chaseTimer = 0.0f;
-                
+
                 // Start cutscene 1
                 isCutscene1 = true;
                 isFirstPerson = false;
@@ -954,58 +980,56 @@ protected:
         if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE) castDebounce = false;
 
         if (currentCastState == CAST_RISING) {
-
             castCurrentPos.y += deltaT * castRiseSpeed;
             if (castCurrentPos.y >= statuePos.y + castTargetHeight) {
                 castCurrentPos.y = statuePos.y + castTargetHeight;
                 currentCastState = CAST_VISIBLE;
                 chaseTimer = 0.0f;
-                
+
                 // End cutscene 1, start cutscene 2
                 isCutscene1 = false;
                 isCutscene2 = true;
                 isFirstPerson = false; // Keep camera disabled
-                
             }
         }
-        if (currentCastState == CAST_VISIBLE){
+        if (currentCastState == CAST_VISIBLE) {
             chaseTimer += deltaT;
-            if(chaseTimer >= timeBeforeChasing){
+            if (chaseTimer >= timeBeforeChasing) {
                 currentCastState = CAST_CHASING;
                 chaseTimer = 0.0f;
-                
+
                 // End cutscene 2, restore camera
                 isCutscene2 = false;
                 isFirstPerson = false; // Return to third person
             }
         }
 
-        if (currentCastState == CAST_CHASING){
+        if (currentCastState == CAST_CHASING) {
             // Follow player position
             glm::vec3 targetPos = Pos + glm::vec3(0.0f, 2.0f + floatingValue, 0.0f); // Slightly above player
             glm::vec3 direction = targetPos - castCurrentPos;
-            if (floatUp){
-                floatingValue += 2*deltaT;
-                if(floatingValue >= floatMax){
+            if (floatUp) {
+                floatingValue += 2 * deltaT;
+                if (floatingValue >= floatMax) {
                     floatUp = false;
                     floatDown = true;
                 }
             }
-            if (floatDown){
-                floatingValue -= 2*deltaT;
-                if(floatingValue <= -floatMax){
+            if (floatDown) {
+                floatingValue -= 2 * deltaT;
+                if (floatingValue <= -floatMax) {
                     floatUp = true;
                     floatDown = false;
                 }
             }
 
             float distance = glm::length(direction);
-            
+
             if (distance > 0.1f) {
                 // Calculate rotation to face player (Y-axis rotation)
                 glm::vec3 directionXZ = glm::normalize(glm::vec3(direction.x, 0.0f, direction.z));
                 castCurrentRotation = atan2(directionXZ.x, directionXZ.z);
-                
+
                 glm::vec3 movement = glm::normalize(direction) * chaseSpeed * deltaT;
                 if (glm::length(movement) < distance) {
                     castCurrentPos += movement;
@@ -1013,14 +1037,14 @@ protected:
                     castCurrentPos = targetPos;
                 }
             }
-            
+
             chaseTimer += deltaT;
-            if(chaseTimer >= chaseTime){
+            if (chaseTimer >= chaseTime) {
                 currentCastState = CAST_RETURNING;
                 chaseTimer = 0.0f;
             }
         }
-        
+
         if (currentCastState == CAST_RETURNING) {
             // Return to original position
             glm::vec3 direction = castReturnPos - castCurrentPos;
@@ -1041,7 +1065,7 @@ protected:
                 currentCastState = CAST_HIDDEN;
             }
         }
-        
+
         // Apply cast3 animation to the cemetery_cast3 instance
         for (int k = 0; k < SC.TechniqueInstanceCount; k++) {
             for (int i = 0; i < SC.TI[k].InstanceCount; i++) {
@@ -1049,115 +1073,139 @@ protected:
                 std::string instanceId = *(SC.TI[k].I[i].id);
                 if (instanceId == "cemetery_cast3") {
                     glm::vec3 baseScale = glm::vec3(1.0f, 1.0f, 1.0f);
-                    
+
                     // Use current position and rotation: translate, rotate, scale
                     glm::mat4 transform = glm::translate(glm::mat4(1.0f), castCurrentPos) *
-                                         glm::rotate(glm::mat4(1.0f), castCurrentRotation, glm::vec3(0.0f, 1.0f, 0.0f)) *
-                                         glm::scale(glm::mat4(1.0f), baseScale);
-                    
+                                          glm::rotate(glm::mat4(1.0f), castCurrentRotation,
+                                                      glm::vec3(0.0f, 1.0f, 0.0f)) *
+                                          glm::scale(glm::mat4(1.0f), baseScale);
+
                     SC.TI[k].I[i].Wm = transform;
                     break;
                 }
             }
         }
 
-        // --- WELL INTERACTION AND ANIMATION LOGIC ---
+        // --- WELL INTERACTION AND STATE MACHINE ---
+        // Calculate distance to the well (positioned at origin 0,0,0)
         float distToWell = glm::length(Pos - glm::vec3(0.0f, 0.0f, 0.0f));
-        bool nearWell = (distToWell < 3.5f);
+        bool nearWell = (distToWell < 3.5f); // Interaction radius
 
+        // Trigger interaction when 'E' is pressed near the well
         if (nearWell && !canTeleport && glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && !wellDebounce) {
             if (bucketIsOnGround) {
+                // RESET: If the bucket was already full on the ground, reset it to the rope
                 bucketIsOnGround = false; // Swap: Hide ground bucket, show rope bucket
                 maskOffset = 0.06f;
                 currentWellState = W_DOWN;
-                bucketAnimY = 1.14f; // Reset positions
+                bucketAnimY = 1.14f; // Starting height
                 ropeAnimY = 1.14f;
             } else if (currentWellState == W_IDLE) {
+                // START: Begin lowering the bucket
                 currentWellState = W_DOWN;
             }
-            wellDebounce = true;
+            wellDebounce = true; // Prevent multiple triggers from one press
         }
+        // Reset debounce when key is released
         if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE) wellDebounce = false;
 
+        // --- ANIMATION UPDATE LOOP ---
         if (currentWellState == W_DOWN) {
+            // LOWERING: Decrease Y positions based on independent speeds
             bucketAnimY -= deltaT * bucketDescSpeed;
             ropeAnimY -= deltaT * ropeDescSpeed;
+            // Switch to ascending state once the bottom limit is reached
             if (bucketAnimY <= wellBottomLimit) currentWellState = W_UP;
         } else if (currentWellState == W_UP) {
+            // ASCENDING: Move bucket back up
             bucketAnimY += deltaT * bucketAscSpeed;
             ropeAnimY += deltaT * ropeAscSpeed;
+            // Animate the water surface mask (lowering it as the bucket "fills" and rises)
             if (maskOffset > -0.25f) maskOffset -= deltaT * 2.0f;
 
+            // Finish animation when bucket returns to the top
             if (bucketAnimY >= 1.14f) {
                 bucketAnimY = 1.14f;
                 ropeAnimY = 1.14f;
                 currentWellState = W_IDLE;
-                bucketIsOnGround = true; // SWAP TRIGGER: Bucket appears on ground
+                bucketIsOnGround = true; // Swap logic: The full bucket is now "placed" on the floor
             }
         }
 
-        // Rope Geometry
+        // --- DYNAMIC ROPE GEOMETRY CALCULATIONS ---
+        // Adjust the bottom of the rope to the bucket's handle height
         float ropeBottomY = ropeAnimY - HANDLE_OFFSET;
+        // Calculate current rope length for scaling the cylinder mesh
         float currentLength = BEAM_Y - ropeBottomY;
+        // Find the center point to position the rope segment correctly
         float midPointY = (BEAM_Y + ropeBottomY) / 2.0f;
 
-        // --- CHAOTIC SPLASH LOGIC ---
+        // --- PROCEDURAL SPLASH LOGIC (Sine Wave Simulation) ---
+        // If the bucket is hitting the water level, simulate 8 bouncing "splash cubes"
         if (bucketAnimY <= WATER_LEVEL && !bucketIsOnGround) {
             float t = (float) glfwGetTime();
             for (int i = 0; i < 8; i++) {
+                // Create unique frequencies and phases for chaotic movement
                 float freq = 12.0f + (i * 1.5f);
                 float phase = (float) i * 0.8f;
+                // Calculate vertical jump using a sine wave, clamped at 0.0
                 splashJump[i] = std::max(0.0f, (float) sin(t * freq + phase) * 0.25f);
             }
         } else {
+            // Disable splashes when the bucket is above water or on the ground
             for (int i = 0; i < 8; i++) splashJump[i] = 0.0f;
         }
 
         // --- DAY/NIGHT & SUNSET CYCLE START ---
 
-        // 1. Time Accumulator
+        // Time Accumulator
+        // Persistent variable to track the current rotation of the sun
         static float sunAngle = 0.0f;
 
-        // Set day duration to 5 minutes (300 seconds)
+        // Total real-world seconds for one full 360-degree cycle (5 minutes)
         float dayDuration = 300.0f;
 
-        //Calculate rotation speed: 360 degrees divided by total duration
+        // Determine rotation speed: radians per second based on day duration
         float rotationSpeed = glm::radians(360.0f) / dayDuration;
 
+        // Update angle based on frame delta time (deltaT)
         sunAngle += deltaT * rotationSpeed;
 
-        // 2. Sun Position
-        // Rotates around X (Rise/Set) with slight tilt on Y (-30 deg)
+        // Sun Direction Calculation
+        // Rotates the light vector around X (Rise/Set) with a fixed tilt on Y (-30 deg)
+        // to simulate a more natural diagonal solar arc.
         glm::mat4 lightRot = glm::rotate(glm::mat4(1), glm::radians(-30.0f), glm::vec3(0.0f, 1.0f, 0.0f)) *
                              glm::rotate(glm::mat4(1), sunAngle, glm::vec3(1.0f, 0.0f, 0.0f));
+        // Transform the default light vector (0,0,1) into the calculated world direction
         glm::vec3 currentLightDir = glm::vec3(lightRot * glm::vec4(0.0f, 0.0f, 1.0f, 0.0f));
 
-        // 3. Define Colors
-        glm::vec4 dayColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // White Day
-        glm::vec4 sunsetColor = glm::vec4(1.0f, 0.4f, 0.1f, 1.0f); // Orange/Red Sunset
-        glm::vec4 nightColor = glm::vec4(0.08f, 0.08f, 0.15f, 1.0f); // Dark Blue Night
+        // Atmosphere Color Definitions (RGBA)
+        glm::vec4 dayColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // Full Noon (White)
+        glm::vec4 sunsetColor = glm::vec4(1.0f, 0.4f, 0.1f, 1.0f); // Horizon Transition (Orange/Red)
+        glm::vec4 nightColor = glm::vec4(0.08f, 0.08f, 0.15f, 1.0f); // Midnight (Deep Blue)
 
         glm::vec4 currentLightColor;
-        float blendFactor = 0.0f; // 0 = Night MMTexture, 1 = Day MMTexture
+        float blendFactor = 0.0f; // Interpolation factor for Skybox textures: 0 (Night), 1 (Day)
 
-        // 4. Calculate Phase based on Sun Height (Y)
+        // Phase Determination based on Sun Altitude
+        // The 'y' component represents how high the sun is relative to the horizon
         float sunHeight = currentLightDir.y;
 
-        // --- LOGICA LUCI DINAMICHE ---
-        // lampIntensity va a 0 quando il sole è alto, e a 1 quando il sole scende
+        // --- DYNAMIC LAMP LOGIC ---
+        // Calculate lamp intensity: 0.0 when sun is high, 1.0 as the sun drops below the horizon
         float lampIntensity = glm::clamp(1.0f - (sunHeight + 0.1f) / 0.3f, 0.0f, 1.0f);
 
-        // Moltiplichiamo per 10.0f per renderle MOLTO più luminose
+        // Define a warm Amber color for streetlights and boost their intensity for bloom/PBR
         glm::vec3 warmAmber = glm::vec3(1.0f, 0.5f, 0.1f);
         float brightness = 3.0f;
         glm::vec3 currentLampColor = warmAmber * (lampIntensity * brightness);
 
-        // Applichiamo il colore/intensità a tutti i lampioni trovati
+        // Propagate current lamp color/intensity to the Point Light data buffer
         for (int i = 0; i < plboData.numActiveLights; i++) {
             plboData.lights[i].color = currentLampColor;
         }
 
-        // --- LOGIC: DAY vs SUNSET vs NIGHT ---
+        // --- LIGHTING PHASES: DAY vs SUNSET vs NIGHT ---
 
         if (sunHeight > 0.2f) {
             // PHASE: FULL DAY
@@ -1167,63 +1215,61 @@ protected:
 
             blendFactor = 1.0f; // Use Full Day MMTexture
         } else if (sunHeight > -0.2f) {
-            // PHASE: TRANSITION (Sunset / Sunrise)
-            // The sun is crossing the horizon [-0.2 to 0.2]
+            // PHASE: TRANSITION (Sunrise/Sunset)
+            // The sun is currently crossing the horizon line [-0.2 to 0.2]
 
-            // Calculate mix for texture (0 at -0.2, 1 at 0.2)
+            // Normalize sun height to a 0.0 - 1.0 factor for texture blending
             blendFactor = (sunHeight + 0.2f) / 0.4f;
 
             if (sunHeight > 0.0f) {
-                // Upper Horizon: Pure Sunset Orange
+                // Just above the horizon: Locked to Sunset Orange
                 currentLightColor = sunsetColor;
             } else {
-                // Lower Horizon: Fade from Orange to Night Blue
+                // Just below the horizon: Fade from Orange into Night Blue
                 float t = (sunHeight + 0.2f) / 0.2f;
                 currentLightColor = mix(nightColor, sunsetColor, t);
             }
         } else {
             // PHASE: FULL NIGHT
             currentLightColor = nightColor;
-            blendFactor = 0.0f; // Use Full Night MMTexture
+            blendFactor = 0.0f; // Display Night Skybox texture
         }
 
         // 5. Update Global Uniforms
+        // Package all environmental data into the GUBO to be sent to shaders
         GlobalUniformBufferObject gubo{};
-        gubo.lightDir = currentLightDir;
-        gubo.lightColor = currentLightColor;
-        gubo.eyePos = cameraPos;
-        gubo.time = (float)glfwGetTime();
-
-        // --- DAY/NIGHT CYCLE END ---
-
+        gubo.lightDir = currentLightDir; // Updates shadows/light directions
+        gubo.lightColor = currentLightColor; // Updates global ambient/diffuse color
+        gubo.eyePos = cameraPos; // Required for specular highlights
+        gubo.time = (float) glfwGetTime(); // Required for wind/sway vertex animations
         gubo.eyePos = cameraPos;
 
-        // --- CHARACTER TRANSPARENCY LOGIC ---
-        // Calculate distance between camera and player center
+        // --- PLAYER CHARACTER RENDERING LOGIC ---
+        // Calculate transparency based on distance (Dither/Fade effect)
         float distToPlayer = glm::distance(cameraPos, Pos + glm::vec3(0.0f, 1.2f, 0.0f));
-
-        // Settings: start fading at 1.5m, fully invisible at 0.5m
         float fadeStart = 1.5f;
         float fadeEnd = 0.5f;
+        // playerAlpha goes from 1.0 (opaque) to 0.0 (invisible)
         float playerAlpha = glm::clamp((distToPlayer - fadeEnd) / (fadeStart - fadeEnd), 0.0f, 1.0f);
 
-        // defines the local parameters for the uniforms
         UniformBufferObjectChar uboc{};
         uboc.debug1 = debug1;
-        uboc.debug1.w = playerAlpha;
+        uboc.debug1.w = playerAlpha; // Pass transparency to the fragment shader
 
+        // Sample the current frame of the animation blender
         SKA.Sample(AB);
         std::vector<glm::mat4> *TMsp = SKA.getTransformMatrices();
 
         //printMat4("TF[55]", (*TMsp)[55]);
 
+        // Build the base Model Matrix for the character (Scale -> Rotate -> Translate)
         glm::mat4 AdaptMat =
                 glm::scale(glm::mat4(1.0f), glm::vec3(0.01f)) * glm::rotate(
                     glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) * glm::translate(
                     glm::mat4(1.0f), glm::vec3(Pos.x * 100, Pos.z * 100, -Pos.y * 100)) * glm::rotate(
                     glm::mat4(1.0f), characterRotation, glm::vec3(0.0f, 0.0f, 1.0f));
 
-        // Hides player model when in FPV
+        // In First Person View, we scale the player to 0 to hide the model from the camera
         if (isFirstPerson) {
             AdaptMat = glm::scale(AdaptMat, glm::vec3(0.0f));
         }
@@ -1238,7 +1284,7 @@ protected:
         }
 
         int instanceId;
-        // character
+        // Map the 65 bone matrices for skeletal animation
         for (instanceId = 0; instanceId < SC.TI[0].InstanceCount; instanceId++) {
             for (int im = 0; im < TMsp->size(); im++) {
                 uboc.mMat[im] = AdaptMat * (*TMsp)[im];
@@ -1247,38 +1293,37 @@ protected:
                 //std::cout << im << "\t";
                 //printMat4("mMat", ubo.mMat[im]);
             }
-
-            SC.TI[0].I[instanceId].DS[0][0]->map(currentImage, &gubo, 0); // Set 0
-            // Link the Point Light buffer to Binding 3 for the character
-            SC.TI[0].I[instanceId].DS[0][0]->map(currentImage, &plboData, 1);
-            SC.TI[0].I[instanceId].DS[0][1]->map(currentImage, &uboc, 0); // Set 1
+            // Update GPU Descriptor Sets
+            SC.TI[0].I[instanceId].DS[0][0]->map(currentImage, &gubo, 0); // Set 0, Binding 0
+            SC.TI[0].I[instanceId].DS[0][0]->map(currentImage, &plboData, 1); // Set 0, Binding 1 (Lights)
+            SC.TI[0].I[instanceId].DS[0][1]->map(currentImage, &uboc, 0); // Set 1, Binding 0 (Bones)
         }
 
         UniformBufferObjectSimp ubos{};
 
-        // --- RENDERING STATIC OBJECTS (TI[1]) ---
+        // --- STATIC ENVIRONMENT RENDERING (TI[1]) ---
         for (instanceId = 0; instanceId < SC.TI[1].InstanceCount; instanceId++) {
             auto &inst = SC.TI[1].I[instanceId];
-            ubos.mMat = glm::mat4(1.0f); // Reset matrix for each object to avoid inheritance glitches
+            ubos.mMat = glm::mat4(1.0f);
 
-            // 1. THE ROPE
+            // Dynamic Logic: Transform objects based on the Well State
             if (*inst.id == "well_rope_wire") {
+                // Scale the rope cylinder based on the procedural length calculated earlier
                 if (!bucketIsOnGround) {
                     ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, midPointY, 0.0f)) *
                                 glm::scale(glm::mat4(1.0f), glm::vec3(0.025f, currentLength * 0.5f, 0.025f));
                 } else {
-                    ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -100.0f, 0.0f)); // YEET to abyss
+                    ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -100.0f, 0.0f));
                 }
             }
-            // 2. THE BUCKET ON THE ROPE
             else if (*inst.id == "well_bucket") {
+                // Move the bucket attached to the rope
                 if (!bucketIsOnGround) {
                     ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, bucketAnimY, 0.0f));
                 } else {
                     ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -100.0f, 0.0f));
                 }
             }
-            // 3. THE FULL BUCKET ON THE GROUND
             else if (*inst.id == "spawned_bucket") {
                 if (bucketIsOnGround) {
                     ubos.mMat = glm::translate(glm::mat4(1.0f), groundedBucketPos);
@@ -1286,7 +1331,6 @@ protected:
                     ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -100.0f, 0.0f));
                 }
             }
-            // 4. THE WATER MASK
             else if (*inst.id == "well_mask") {
                 if (!bucketIsOnGround) {
                     ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, bucketAnimY + maskOffset, 0.0f)) *
@@ -1295,8 +1339,8 @@ protected:
                     ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -100.0f, 0.0f));
                 }
             }
-            // 5. THE SPLASHES (Uses FIND because we have 8 indexed IDs)
             else if (inst.id->find("well_splash_") != std::string::npos) {
+                // Handle the 8 individual splash particles
                 int idx = std::stoi(inst.id->substr(12)); // Get index after "well_splash_"
                 float jump = splashJump[idx];
                 if (jump > 0.001f) {
@@ -1307,23 +1351,25 @@ protected:
                     ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -100.0f, 0.0f));
                 }
             }
-            // 6. DEFAULT FOR ALL OTHER OBJECTS
             else {
+                // Standard static object position from World Matrix
                 ubos.mMat = inst.Wm;
             }
 
-            // Standard Uniform Mapping (Do not change)
             ubos.mvpMat = ViewPrj * ubos.mMat;
             ubos.nMat = glm::inverse(glm::transpose(ubos.mMat));
+
+            // Map data to GPU
             inst.DS[0][0]->map(currentImage, &gubo, 0);
             inst.DS[0][0]->map(currentImage, &plboData, 1);
             inst.DS[0][1]->map(currentImage, &ubos, 0);
         }
 
-        // skybox pipeline
+        // --- SKYBOX RENDERING ---
+        // Center the skybox on the camera position and scale it to surround the scene
         skyBoxUniformBufferObject sbubo{};
         sbubo.mvpMat = ViewPrj * glm::translate(glm::mat4(1), cameraPos) * glm::scale(glm::mat4(1), glm::vec3(100.0f));
-        sbubo.settings.x = blendFactor;
+        sbubo.settings.x = blendFactor; // Controls Day/Night texture mixing
         SC.TI[2].I[0].DS[0][0]->map(currentImage, &sbubo, 0);
 
         //TODO THIS CAUSED SOME CRASHES WHEN THE PROGRAM WAS COMPILED AND RUNNED IDK WHY SO I COMMENTED IT BECAUSE THEORETICALLY WE DO NOT USE PBR OBJECTS PLS CHECK THIS
@@ -1338,19 +1384,19 @@ protected:
         }
         */
 
-        // vegetation update
+        // --- VEGETATION RENDERING (TI[3]) ---
         for (instanceId = 0; instanceId < SC.TI[3].InstanceCount; instanceId++) {
             ubos.mMat = SC.TI[3].I[instanceId].Wm;
             ubos.mvpMat = ViewPrj * ubos.mMat;
             ubos.nMat = glm::inverse(glm::transpose(ubos.mMat));
 
-            // Set 0: Global Uniforms (Binding 0)
+            // Global Data (Set 0, Binding 0) contains 'time' for the wind sway
             SC.TI[3].I[instanceId].DS[0][0]->map(currentImage, &gubo, 0);
 
-            // --- ADD THIS LINE: You MUST map binding 3 even for trees! ---
+            // Point Lights (Set 0, Binding 1) ensure trees are lit by lamps at night
             SC.TI[3].I[instanceId].DS[0][0]->map(currentImage, &plboData, 1);
 
-            // Set 1: Local Uniforms (Binding 0)
+            // Local Matrices (Set 1, Binding 0)
             SC.TI[3].I[instanceId].DS[0][1]->map(currentImage, &ubos, 0);
         }
 
@@ -1382,7 +1428,7 @@ protected:
             }
         }
 
-        // updates the FPS
+        // Updates the FPS
         static float elapsedT = 0.0f;
         static int countedFrames = 0;
 
@@ -1460,19 +1506,22 @@ protected:
     }
 
     float GameLogic() {
-        // Parameters
-        // Camera FOV-y, Near Plane and Far Plane
+        // --- VIEW PARAMETERS ---
         const float FOVy = glm::radians(45.0f);
-        const float nearPlane = 0.5f; //Fix for house cornering flickering
+        const float nearPlane = 0.5f; // Prevents "near-clipping" inside house walls
         const float farPlane = 100.f;
+
         // Player starting point
         const glm::vec3 StartingPosition = glm::vec3(0.0, 0.0, 5);
+
         // Camera target height and distance
         static float camHeight = 1.5;
         static float camDist = 5;
+
         // Camera Pitch limits
         // const float minPitch = glm::radians(-8.75f);
         // const float maxPitch = glm::radians(60.0f);
+
         // Rotation and motion speed
         const float ROT_SPEED = glm::radians(120.0f);
         const float MOVE_SPEED_BASE = 2.0f;
@@ -1481,11 +1530,11 @@ protected:
         const float MAX_CAM_DIST = 7.5;
         const float MIN_CAM_DIST = 1.5;
 
-        // Integration with the timers and the controllers
+        // --- INPUT ACQUISITION ---
         float deltaT;
         glm::vec3 m = glm::vec3(0.0f), r = glm::vec3(0.0f); // 'r' won't be used for rotation
         bool fire = false;
-        getSixAxis(deltaT, m, r, fire);
+        getSixAxis(deltaT, m, r, fire); // Retrieve keyboard/gamepad stick state
 
         // Disable all movement and rotation during cutscenes
         if (isCutscene) {
@@ -1519,25 +1568,22 @@ protected:
 
         float MOVE_SPEED = fire ? MOVE_SPEED_RUN : MOVE_SPEED_BASE;
 
-        //Desired camera distance
+        // --- DYNAMIC CAMERA DISTANCE (TPV) ---
+        // Smoothly interpolate camera distance when toggling "Wide View"
         const float DIST_NORMAL = 2.5f;
         const float DIST_WIDE = 6.0f;
-
         //Choose the target depending on isWideView status
         float targetDist = isWideView ? DIST_WIDE : DIST_NORMAL;
-
         currentCamDist += (targetDist - currentCamDist) * (1.0f - exp(-5.0f * deltaT));
-
         //Change the camera distance
         camDist = currentCamDist;
 
-        // To be done in the assignment
         ViewPrj = glm::mat4(1);
         World = glm::mat4(1);
 
         oldPos = Pos;
 
-        // Calculates mouse offets
+        // --- MOUSE LOOK & ORIENTATION ---
         double xpos, ypos;
         glfwGetCursorPos(window, &xpos, &ypos);
 
@@ -1582,6 +1628,7 @@ protected:
         }
 
         if (isFirstPerson) {
+            // FPV: Camera rotates directly with the mouse
             Yaw -= xoffset * (ROT_SPEED * mouseSensitivity) * deltaT;
             Pitch += yoffset * (ROT_SPEED * mouseSensitivity) * deltaT;
 
@@ -1589,6 +1636,7 @@ protected:
             const float pitchLimit = glm::radians(89.0f);
             Pitch = Pitch < -pitchLimit ? -pitchLimit : (Pitch > pitchLimit ? pitchLimit : Pitch);
         } else {
+            // TPV: Camera orbit rotation
             Yaw -= xoffset * (ROT_SPEED * mouseSensitivity) * deltaT;
             Pitch -= yoffset * (ROT_SPEED * mouseSensitivity) * deltaT;
 
@@ -1601,7 +1649,7 @@ protected:
 
         float ef = exp(-10.0 * deltaT);
 
-        // Projection matrix
+        // --- PROJECTION & VIEW MATRICES ---
         glm::mat4 Prj = glm::perspective(FOVy, Ar, nearPlane, farPlane);
         Prj[1][1] *= -1;
 
@@ -1646,7 +1694,7 @@ protected:
                 float radius = 4.5f; // Distance from cast3 in XZ plane
                 float rotationSpeed = 0.1f; // Radians per second
                 float angle = rotationSpeed * chaseTimer;
-                
+
                 float x = cast3Center.x + radius * cos(angle);
                 float z = cast3Center.z + radius * sin(angle);
                 cameraPos = glm::vec3(x, 7, z);
@@ -1655,7 +1703,7 @@ protected:
                 cameraPos = Pos + glm::vec3(0.0f, camHeight, 0.0f);
                 target = cameraPos + front; // Normal forward look
             }
-            
+
             View = glm::lookAt(cameraPos, target, up);
 
             // Player model (invisible) rotates with the camera
@@ -1684,7 +1732,7 @@ protected:
 
             // --- CAMERA COLLISION LOGIC (BUMPING) ---
 
-            // 1. Define the target (where the camera looks: player's head area)
+            // Define the target (where the camera looks: player's head area)
             glm::vec3 target;
             if (isCutscene1) {
                 // Cutscene 1: Camera fixed position, follow cast3 with look direction
@@ -1712,7 +1760,7 @@ protected:
                 float radius = 4.5f; // Distance from cast3 in XZ plane
                 float rotationSpeed = 0.1f; // Radians per second
                 float angle = rotationSpeed * chaseTimer;
-                
+
                 float x = cast3Center.x + radius * cos(angle);
                 float z = cast3Center.z + radius * sin(angle);
                 cameraPos = glm::vec3(x, 7, z);
@@ -1720,63 +1768,63 @@ protected:
                 View = glm::lookAt(dampedCamPos, target, glm::vec3(0, 1, 0));
             } else {
                 // Normal camera behavior with collision detection
-                // 3. Progressive check along the camera vector to detect obstacles
+                // Progressive check along the camera vector to detect obstacles
                 float finalCamDist = camDist; // Start with the desired distance
                 const int SAMPLES = 12; // Number of collision checks along the ray
                 float cameraRadius = 0.4f; // Thickness of the camera's physical presence
 
-            for (int i = 1; i <= SAMPLES; i++) {
-                // Calculate current test distance from player to camera
-                float t = (float) i / (float) SAMPLES;
-                float checkDist = camDist * t;
+                for (int i = 1; i <= SAMPLES; i++) {
+                    // Calculate current test distance from player to camera
+                    float t = (float) i / (float) SAMPLES;
+                    float checkDist = camDist * t;
 
-                // Position of the camera at this specific step
-                glm::vec3 testPos = camWorld * glm::vec4(0.0f, camHeight + checkDist * sin(Pitch),
-                                                         checkDist * cos(Pitch), 1.0);
+                    // Position of the camera at this specific step
+                    glm::vec3 testPos = camWorld * glm::vec4(0.0f, camHeight + checkDist * sin(Pitch),
+                                                             checkDist * cos(Pitch), 1.0);
 
-            //if (cameraPos.y < 0.2f) {
-            //    cameraPos.y = 0.2f;
-            //}
-                // 4. Create a temporary collision volume for the camera
-                CollisionObject camHitbox;
-                camHitbox.addBox(testPos, glm::vec3(cameraRadius), CollisionBox::sphere);
+                    //if (cameraPos.y < 0.2f) {
+                    //    cameraPos.y = 0.2f;
+                    //}
+                    // Create a temporary collision volume for the camera
+                    CollisionObject camHitbox;
+                    camHitbox.addBox(testPos, glm::vec3(cameraRadius), CollisionBox::sphere);
 
-                // 5. Check against all existing house hitboxes
-                bool collisionDetected = false;
-                for (const auto &house: houseCollisions) {
-                    if (camHitbox.collidesWith(house)) {
-                        collisionDetected = true;
+                    // Check against all existing house hitboxes
+                    bool collisionDetected = false;
+                    for (const auto &house: houseCollisions) {
+                        if (camHitbox.collidesWith(house)) {
+                            collisionDetected = true;
+                            break;
+                        }
+                    }
+
+                    // If a collision is found, shorten the camera distance immediately
+                    if (collisionDetected) {
+                        // Stop at the previous safe step (closer to the player)
+                        finalCamDist = camDist * ((float) (i - 1) / (float) SAMPLES);
                         break;
                     }
                 }
 
-                // 6. If a collision is found, shorten the camera distance immediately
-                if (collisionDetected) {
-                    // Stop at the previous safe step (closer to the player)
-                    finalCamDist = camDist * ((float) (i - 1) / (float) SAMPLES);
-                    break;
+                // Calculate the FINAL position (either the ideal one or the shortened one)
+                cameraPos = camWorld * glm::vec4(0.0f, camHeight + finalCamDist * sin(Pitch), finalCamDist * cos(Pitch),
+                                                 1.0);
+
+                // Floor constraint: don't let camera go under the grass
+                if (cameraPos.y < 0.2f) {
+                    cameraPos.y = 0.2f;
                 }
-            }
 
-            // 7. Calculate the FINAL position (either the ideal one or the shortened one)
-            cameraPos = camWorld * glm::vec4(0.0f, camHeight + finalCamDist * sin(Pitch), finalCamDist * cos(Pitch),
-                                             1.0);
+                // Camera Teleport logic for respawns or TP
+                if (resetCamera) {
+                    dampedCamPos = cameraPos;
+                    dampedRelDir = relDir;
+                    resetCamera = false;
+                }
 
-            // Floor constraint: don't let camera go under the grass
-            if (cameraPos.y < 0.2f) {
-                cameraPos.y = 0.2f;
-            }
-
-            // Camera Teleport logic for respawns or TP
-            if (resetCamera) {
-                dampedCamPos = cameraPos;
-                dampedRelDir = relDir;
-                resetCamera = false;
-            }
-
-            // Apply damping for smooth camera tracking
-            dampedCamPos = ef * dampedCamPos + (1.0f - ef) * cameraPos;
-            View = glm::lookAt(dampedCamPos, target, glm::vec3(0, 1, 0));
+                // Apply damping for smooth camera tracking
+                dampedCamPos = ef * dampedCamPos + (1.0f - ef) * cameraPos;
+                View = glm::lookAt(dampedCamPos, target, glm::vec3(0, 1, 0));
             } // End of non-cutscene camera behavior
         }
         // ===============================
@@ -1818,7 +1866,7 @@ protected:
     }
 };
 
-float E09::getGroundHeight(const glm::vec3& pos) {
+float E09::getGroundHeight(const glm::vec3 &pos) {
     // ---------- BRIDGE ----------
     if (pos.x > 215.0f && pos.x < 265.0f &&
         pos.z > -10.0f && pos.z < 10.0f) {
@@ -1826,7 +1874,7 @@ float E09::getGroundHeight(const glm::vec3& pos) {
     }
     // ---------- RAMP LEFT ----------
     if (pos.x >= 210.0f && pos.x <= 233.0f) {
-        float t = (pos.x - 210.0f) / 23.0f;   // 0 → 1
+        float t = (pos.x - 210.0f) / 23.0f; // 0 → 1
         return glm::mix(0.0f, -4.89f, t);
     }
 
@@ -1837,7 +1885,7 @@ float E09::getGroundHeight(const glm::vec3& pos) {
 
     // ---------- RAMP RIGHT ----------
     if (pos.x >= 247.0f && pos.x <= 270.0f) {
-        float t = (pos.x - 247.0f) / 23.0f;   // 0 → 1
+        float t = (pos.x - 247.0f) / 23.0f; // 0 → 1
         return glm::mix(-4.89f, 0.0f, t);
     }
 

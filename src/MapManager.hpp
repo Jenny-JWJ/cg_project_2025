@@ -207,92 +207,44 @@ public:
         return j;
     }
 
-
-    static std::vector<MMElement> placeGlobalEnvironment(const std::vector<MMElement> &riverTiles,
-                                                         const std::vector<MMElement> &buildings) {
-        std::vector<MMElement> env;
-
-        // Grid settings for distribution
-        float step = 6.0f; // Density: lower is more dense
-        float mapLimit = 400.0f;
-        float castleBoundary = 220.0f; // Threshold between City and Castle zones
-
-        for (float x = -mapLimit; x <= mapLimit; x += step) {
-            for (float z = -mapLimit; z <= mapLimit; z += step) {
-                // 1. CHECK RIVER (Avoid the hole)
-                if (isRiverZone(x, z, riverTiles)) continue;
-
-                // 2. CHECK ROADS (Avoid X=0 and Z=0 main roads)
-                if (std::abs(x) < 12.0f || std::abs(z) < 12.0f) continue;
-
-                // 3. CHECK BUILDINGS (Avoid houses and castle)
-                bool hitBuilding = false;
-                for (const auto &b: buildings) {
-                    float dx = x - b.translate[0];
-                    float dz = z - b.translate[2];
-                    if ((dx * dx + dz * dz) < 100.0f) {
-                        // 10 units safety radius
-                        hitBuilding = true;
-                        break;
-                    }
-                }
-                if (hitBuilding) continue;
-
-                // 4. ZONE LOGIC
-                // Randomized offset to avoid perfect grid alignment (looks more natural)
-                float offsetX = ((float) rand() / RAND_MAX - 0.5f) * 4.0f;
-                float offsetZ = ((float) rand() / RAND_MAX - 0.5f) * 4.0f;
-
-                if (x > castleBoundary) {
-                    // --- CASTLE ZONE: Only Vegetation (Trees/Plants) ---
-                    std::string model = (rand() % 2 == 0) ? "tree1" : "tree2";
-                    env.emplace_back(UtilsStructs::createElement(
-                        "castle_veg_" + std::to_string(rand()), model,
-                        {"tex_veg_atlas", "pnois"}, {x + offsetX, 0, z + offsetZ},
-                        {0, (float) (rand() % 360), 0}, {0.5f, 0.5f, 0.5f}
-                    ));
-                } else {
-                    // --- CITY ZONE: Only Grass Tufts ---
-                    env.emplace_back(UtilsStructs::createElement(
-                        "city_grass_" + std::to_string(rand()), "grass_tuft",
-                        {"tex_nature_atlas_1", "pnois"}, {x + offsetX, 0, z + offsetZ},
-                        {90, (float) (rand() % 360), 0}, {1.0f, 1.0f, 1.0f}
-                    ));
-                }
-            }
-        }
-        return env;
-    }
-
-    // --- CIRCULAR LIGHTS (Geometric ring around the castle) ---
+    /**
+ * CIRCULAR LIGHTS GENERATION
+ * Places a ring of street lamps around the castle courtyard.
+ * Each lamp is automatically rotated to face the center (330, 0).
+ */
     static std::vector<MMElement> createCircularLights() {
         std::vector<MMElement> elements;
         float centerX = 330.0f;
         float centerZ = 0.0f;
-        float radius = 48.0f; // Positioned between the barrels and the tents
-        int numLights = 10; // Number of lamps in the ring
+        float radius = 48.0f; // Orbit distance between barrels and tents
+        int numLights = 10;
 
         for (int i = 0; i < numLights; i++) {
+            // Distribute lamps evenly (2 * PI = 360 degrees)
             float angle = i * (2.0f * 3.14159f / numLights);
             float posX = centerX + radius * cos(angle);
             float posZ = centerZ + radius * sin(angle);
 
-            // Lamps face the center to light up the courtyard
+            // Calculate rotation so lamps face inward (-angle converted to deg + offset)
             float rotY = -glm::degrees(angle) + 90.0f;
 
             elements.emplace_back(UtilsStructs::createElement(
                 "castle_lamp_" + std::to_string(i),
-                "lamp1",
-                {"tex_medieval_atlas", "pnois"},
+                "lamp1", // Model ID
+                {"tex_medieval_atlas", "pnois"}, // Texture set
                 {posX, 0.0f, posZ},
-                {90, rotY, 0},
+                {90, rotY, 0}, // Rotation: 90 on X for coordinate system correction
                 {1.0f, 1.0f, 1.0f}
             ));
         }
         return elements;
     }
 
-    // --- CIRCULAR CAMP GENERATION (Tents in a ring) ---
+    /**
+ * CIRCULAR CAMP GENERATION
+ * Spawns a ring of tents facing the castle.
+ * Alternates between two different tent models for visual variety.
+ */
     static std::vector<MMElement> createCircularCamp() {
         std::vector<MMElement> elements;
         float centerX = 330.0f; // Castle X center
@@ -307,10 +259,10 @@ public:
             float posZ = centerZ + radius * sin(angle);
 
             // Rotation: orient tents to face the center (castle)
-            // We take the angle, convert to degrees, and adjust for the model's forward axis
+            // Take the angle, convert to degrees, and adjust for the model's forward axis
             float rotY = -glm::degrees(angle) + 90.0f;
 
-            // Alternate models and separate textures for visual variety
+            // Variety logic: select model and texture based on parity (index % 2)
             std::string modelId = (i % 2 == 0) ? "tent1" : "tent2";
             std::string texId = (i % 2 == 0) ? "tent1_texture" : "tent2_texture";
 
@@ -326,7 +278,10 @@ public:
         return elements;
     }
 
-    // --- CIRCULAR BARRELS (All standing upright on the ground) ---
+    /**
+ * CIRCULAR BARRELS
+ * Place circular barrels inside the camp.
+ */
     static std::vector<MMElement> createCircularBarrels() {
         std::vector<MMElement> elements;
         float centerX = 330.0f;
@@ -349,7 +304,7 @@ public:
                                                               {"tex_medieval_atlas", "pnois"},
                                                               {posX + 1.2f, 0, posZ + 0.8f}, {90, 0, 0},
                                                               {0.7f, 0.7f, 0.7f}));
-            // Barrel 3 - Now standing upright next to the others instead of being on top
+            // Barrel 3 - Standing upright next to the others
             elements.emplace_back(UtilsStructs::createElement("bar_c_" + std::to_string(i), "barrel",
                                                               {"tex_medieval_atlas", "pnois"},
                                                               {posX - 0.8f, 0, posZ + 1.2f}, {90, 0, 0},
@@ -358,7 +313,10 @@ public:
         return elements;
     }
 
-    // --- CIRCULAR GRASS FILLER (Detailing the camp ground) ---
+    /**
+ * Grass Tufts generation
+ * Place grass tufts near the castle inside the castle.
+ */
     static std::vector<MMElement> createGrassTufts(int count = 50) {
         std::vector<MMElement> tufts;
         // Distribute tufts randomly within the ring area (between radius 35 and 65)
@@ -379,6 +337,10 @@ public:
         return tufts;
     }
 
+    /**
+ * CASTLE GENERATION
+ * Place castle.
+ */
     static std::vector<MMElement> createCastle() {
         std::vector<MMElement> castles;
         castles.emplace_back(UtilsStructs::createElement(
@@ -393,6 +355,10 @@ public:
         return castles;
     }
 
+    /**
+     * BRIDGE GENERATION
+     * Place bridge.
+     */
     static std::vector<MMElement> createBridge() {
         std::vector<MMElement> bridges;
         bridges.emplace_back(UtilsStructs::createElement(
@@ -407,20 +373,24 @@ public:
         return bridges;
     }
 
-    // Generates perfectly straight ramps: two for the Z-river and one for the X-river
+    /**
+ * RIVER RAMPS GENERATION
+ * Creates two inclined ground meshes to allow player access to the river bed.
+ * Angle is adjusted on the X-axis (90 + angle) to create the slope.
+ */
     static std::vector<MMElement> createRiverRamps() {
         std::vector<MMElement> ramps;
-        float angle = 12.0f;
-        float midHeight = -2.485f;
+        float angle = 12.0f; // Slant angle of the ramp
+        float midHeight = -2.485f; // Middle pivot for height alignment
 
-        // Left Ramp
+        // Left Ramp: Positioned on one side of the river bed
         ramps.emplace_back(UtilsStructs::createElement("ramp_v_left", "ground",
                                                        {"tex_nature_atlas_2", "pnois"},
                                                        {221.71f, midHeight, 0.0f},
                                                        {90.0f + angle, 90.0f, 0.0f},
                                                        {100.0f, 1.2f, 4.0f}));
 
-        // Right Ramp
+        // Right Ramp: Mirrored on the opposite side
         ramps.emplace_back(UtilsStructs::createElement("ramp_v_right", "ground",
                                                        {"tex_nature_atlas_2", "pnois"},
                                                        {258.3f, midHeight, 0.0f},
@@ -429,13 +399,17 @@ public:
         return ramps;
     }
 
-    // Generates a simple L-shaped river path turning towards positive X
+
+    /**
+ * RIVER PATH GENERATION
+ * Loops through a linear path to spawn "river_mid" segments.
+ */
     static std::vector<MMElement> createRiverPath() {
         std::vector<MMElement> river;
         float startX = 240.0f;
         float startZ = -250.0f;
-        float depth = -2.3f;
-        float step = 20.0f;
+        float depth = -2.3f; // Sunken below ground level (0.0)
+        float step = 20.0f; // Gap between each water/riverbed segment
 
         for (int i = 0; i < 25; i++) {
             float currentZ = startZ + (i * step);
@@ -482,21 +456,29 @@ public:
         return water;
     }
 
-
-
+    /**
+ * RIVER ZONE DETECTION
+ * Returns true if the given (x, z) coordinates are part of the river bed or the ramp area.
+ * Used to prevent spawning grass or obstacles where the terrain should be sunken.
+ */
     static bool isRiverZone(float x, float z, const std::vector<MMElement> &riverTiles) {
-        // 1. Scava lungo tutto il percorso del fiume (X=240)
+        // MAIN RIVER BED CHECK
+        // Iterate through all placed river segments (usually aligned along X=240)
         for (const auto &river: riverTiles) {
+            // Create a 60x60 units exclusion zone (30 units radius) around each tile center
             if (std::abs(x - river.translate[0]) < 30.0f &&
                 std::abs(z - river.translate[2]) < 30.0f) {
-                return true;
+                return true; // Point is inside the main river flow
             }
         }
-        // 2. Scava il buco dove poggiano le rampe laterali
+        // LATERAL RAMP EXCAVATION
+        // Check if the coordinates fall within the two specific areas where ramps provide access.
+        // This handles the "cut" into the river banks at Z=0.
+        // Left Bank: Near X=220 | Right Bank: Near X=260
         if (std::abs(z - 0.0f) < 25.0f && (std::abs(x - 220.0f) < 15.0f || std::abs(x - 260.0f) < 15.0f)) {
-            return true;
+            return true; // Point is inside a ramp transition zone
         }
-        return false;
+        return false; // Point is safe to use for standard ground generation
     }
 
     static std::vector<MMElement> createGraveyard(glm::vec3 center){
@@ -767,6 +749,11 @@ public:
         return elements;
     }
 
+    /**
+ * PROCEDURAL VEGETATION PLACEMENT
+ * Generates a randomized list of vegetation elements (trees, bushes) within a defined area.
+ * It automatically avoids obstacles (houses), roads, and overlapping with other plants.
+ */
     static std::vector<MMElement> placeVegetationInGrid(float height = 200.0, float length = 200.0,
                                                         float x_offset = 50.0, float z_offset = 50.0,
                                                         float minDistance = 2.5f,
@@ -775,28 +762,39 @@ public:
                                                         const std::vector<MMElement> &obstacles = {}) {
         std::vector<MMElement> elements;
 
+        // DENSITY CALCULATION
+        // Calculate target count based on area, filling roughly 10% of the available slots.
         int targetCount = (int) ((height * length) / (minDistance * minDistance)) * 0.1;
 
-        if (targetCount > 1000) targetCount = 1000;
+        if (targetCount > 1000) targetCount = 1000; // Hardware safety cap
 
+        // RANDOM DISTRIBUTION SETUP
         int idNumber = 0;
         std::uniform_real_distribution<float> randomX(0.0f, height);
         std::uniform_real_distribution<float> randomZ(0.0f, length);
-        std::uniform_real_distribution<float> scaleDist(0.3f, 0.7f);
-        std::uniform_real_distribution<float> rotDist(0.0f, 360.0f);
+        std::uniform_real_distribution<float> scaleDist(0.3f, 0.7f); // Variation in size
+        std::uniform_real_distribution<float> rotDist(0.0f, 360.0f); // Variation in orientation
         std::uniform_int_distribution<int> modelSelector(0, modelIds.size() - 1);
-        float obstacleSafeRadius = 11.0f;
+
+        float obstacleSafeRadius = 11.0f; // Distance to keep away from houses/props
 
         for (int i = 0; i < targetCount; i++) {
+            // Generate potential coordinates
             float plantX = randomX(gen) - x_offset;
             float plantZ = randomZ(gen) - z_offset;
+
+            // ROAD EXCLUSION ZONE
+            // Prevents trees from spawning in the center of the world (roads/paths)
             float roadSafeZone = 12.0f;
             if (std::abs(plantX) < roadSafeZone || std::abs(plantZ) < roadSafeZone) continue;
 
+            // OBSTACLE COLLISION CHECK
+            // Verify the point is not too close to any house or man-made structure
             bool hitObstacle = false;
             for (const auto &obs: obstacles) {
                 float dx = plantX - obs.translate[0];
                 float dz = plantZ - obs.translate[2];
+                // Using squared distance for performance (avoids expensive sqrt() calls)
                 float distSq = dx * dx + dz * dz;
                 if (distSq < (obstacleSafeRadius * obstacleSafeRadius)) {
                     hitObstacle = true;
@@ -805,6 +803,8 @@ public:
             }
             if (hitObstacle) continue;
 
+            // PROXIMITY CHECK (Self-Collision)
+            // Ensure this new plant isn't on top of a previously placed plant
             bool tooClose = false;
             for (const auto &el: elements) {
                 float dx = plantX - el.translate[0];
@@ -817,6 +817,8 @@ public:
             }
             if (tooClose) continue;
 
+            // ELEMENT CREATION
+            // All checks passed! Add the instance to the list with randomized scale and rotation
             idNumber++;
             int selectedIndex = modelSelector(gen);
             elements.emplace_back(UtilsStructs::createElement(
@@ -829,73 +831,60 @@ public:
         return elements;
     }
 
-    // -------------------------------------------------------
-    // HELPER FUNCTION: Place rocks STRICTLY ON THE ROAD (Randomized & Tiny)
-    // -------------------------------------------------------
+    /**
+ * ROAD DEBRIS GENERATOR (Rocks/Pebbles)
+ * Scatters small, randomized rocks strictly along the road centerlines.
+ */
     static std::vector<MMElement> placeRocksOnRoad(int count = 40,
                                                    float mapLimit = 200.0f,
                                                    std::vector<std::string> modelIds = {"rocks1"},
                                                    std::string textureId = "tex_veg_atlas") {
         std::vector<MMElement> elements;
 
-        // Random Generators
-
-        // 1. Position along the road length (Longitudinal)
-        std::uniform_real_distribution<float> randomPos(-mapLimit, mapLimit);
-
-        // 2. Position across the road width (Lateral)
-        // Keep strictly centered (-1.5 to +1.5) to ensure they stay on the pavement
-        std::uniform_real_distribution<float> randomWidth(-1.5f, 1.5f);
-
-        // 3. Scale: Tiny pebbles/debris
-        // Range 0.08 - 0.20 makes them look like small stones
-        std::uniform_real_distribution<float> scaleDist(0.08f, 0.2f);
-
-        // 4. Random Rotation
-        std::uniform_real_distribution<float> rotDist(0.0f, 360.0f);
-
-        // 5. MMModel Selector (Picks a random index)
+        // RANDOMIZATION PARAMETERS
+        std::uniform_real_distribution<float> randomPos(-mapLimit, mapLimit); // Along road length
+        std::uniform_real_distribution<float> randomWidth(-1.5f, 1.5f); // Strict road width constraint
+        std::uniform_real_distribution<float> scaleDist(0.08f, 0.2f); // Tiny scale for pebbles
+        std::uniform_real_distribution<float> rotDist(0.0f, 360.0f); // Random orientation
         std::uniform_int_distribution<int> modelSelector(0, modelIds.size() - 1);
 
         for (int i = 0; i < count; i++) {
             float rockX, rockZ;
-            int direction = rand() % 2;
+            int direction = rand() % 2; // 0 for Horizontal, 1 for Vertical road
 
             if (direction == 0) {
-                // Horizontal Road
+                // Horizontal alignment (Z is narrow, X is long)
                 rockX = randomPos(gen);
                 rockZ = randomWidth(gen);
             } else {
-                // Vertical Road
+                // Vertical alignment (X is narrow, Z is long)
                 rockX = randomWidth(gen);
                 rockZ = randomPos(gen);
             }
 
-            // Lower Height (Y)
-            // 0.05f ensures tiny rocks sit on the ground and don't float
+            // Set Y height slightly above 0 to prevent "Z-fighting" with the road texture
             float rockY = 0.05f;
 
-            // Overlap check
+            // PROXIMITY CHECK
             bool tooClose = false;
             for (const auto &el: elements) {
                 float dx = rockX - el.translate[0];
                 float dz = rockZ - el.translate[2];
-                // Distance threshold 0.3 because rocks are small
+                // Threshold of 0.3 for small debris overlap detection
                 if ((dx * dx + dz * dz) < 0.3f) {
                     tooClose = true;
                     break;
                 }
             }
             if (tooClose) {
+                // Retry if overlap detected
                 i--;
                 continue;
             }
 
-            // Pick Random MMModel
+            // ELEMENT INSTANTIATION
             int selectedIndex = modelSelector(gen);
             std::string currentModel = modelIds[selectedIndex];
-
-            // Create MMElement
             elements.emplace_back(UtilsStructs::createElement(
                 "rock_" + std::to_string(i) + "_" + std::to_string(rand()),
                 currentModel,
@@ -908,9 +897,10 @@ public:
         return elements;
     }
 
-    // -------------------------------------------------------
-    // HELPER FUNCTION: Place Street Lights (EXACTLY ON ROAD EDGE)
-    // -------------------------------------------------------
+    /**
+ * SYMMETRICAL STREET LIGHT PLACEMENT
+ * Places lamps along the edges of the road at regular intervals.
+ */
     static std::vector<MMElement> placeStreetLights(float mapLimit = 200.0f,
                                                     int axis = 0,
                                                     float spacing = 25.0f,
@@ -922,35 +912,36 @@ public:
         float end = mapLimit;
         int count = (int) ((end - start) / spacing);
 
+        // Distance from the road centerline (road width is roughly 12 units)
         float offsetFromCenter = 6.0f;
 
         for (int i = 0; i <= count; i++) {
             float currentPos = start + (i * spacing);
 
-            // Skip intersection
+            // INTERSECTION CLEARANCE
+            // Do not place lamps in the center of the crossroad (0,0)
             if (std::abs(currentPos) < 15.0f) continue;
 
             glm::vec3 posLeft, posRight;
             glm::vec3 rotLeft, rotRight;
+            float xRot = 90.0f; // Standard X-axis fix for engine coordinates
 
-            float xRot = 90.0f;
-
+            // AXIS-BASED ORIENTATION
             if (axis == 0) {
-                // Horizontal Road
+                // Horizontal Road (Lamps placed on North/South edges)
                 posLeft = {currentPos, 0.0f, offsetFromCenter};
-                rotLeft = {xRot, 180.0f, 0.0f};
+                rotLeft = {xRot, 180.0f, 0.0f}; // Face South
 
                 posRight = {currentPos, 0.0f, -offsetFromCenter};
-                rotRight = {xRot, 0.0f, 0.0f};
+                rotRight = {xRot, 0.0f, 0.0f}; // Face North
             } else {
-                // Vertical Road
+                // Vertical Road (Lamps placed on East/West edges)
                 posLeft = {offsetFromCenter, 0.0f, currentPos};
-                rotLeft = {xRot, 90.0f, 0.0f};
+                rotLeft = {xRot, 90.0f, 0.0f}; // Face West
 
                 posRight = {-offsetFromCenter, 0.0f, currentPos};
-                rotRight = {xRot, -90.0f, 0.0f};
+                rotRight = {xRot, -90.0f, 0.0f}; // Face East
             }
-
             std::vector<float> scaleVec = {1.0f, 1.0f, 1.0f};
 
             // Left Lamp
