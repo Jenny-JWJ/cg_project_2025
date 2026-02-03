@@ -81,7 +81,17 @@ struct PointLight {
 struct PointLightBufferObject {
     PointLight lights[100];
     int numActiveLights; // Current count of lights to be processed by the shader
+    int numLampLights; // Number of lights that are lamps (with dynamic color)
 };
+
+// Storage for candle and study lights (activated based on distance)
+struct StoredLight {
+    glm::vec3 position;
+    glm::vec3 color;
+};
+std::vector<StoredLight> lampLights;
+std::vector<StoredLight> candleLights;
+std::vector<StoredLight> studyLights;
 
 // MAIN !
 class E09 : public BaseProject {
@@ -196,9 +206,10 @@ protected:
     // --- OTHER APPLICATION PARAMETERS ---
     float Ar; // Aspect Ratio (Width / Height)
 
+
     glm::mat4 ViewPrj; // Combined View and Projection matrix
     glm::mat4 World; // Global world transformation matrix
-    glm::vec3 Pos = glm::vec3(350, 0, -80); // Character's current world position
+    glm::vec3 Pos = glm::vec3(0, 0, 5); // Character's current world position
     glm::vec3 cameraPos; // Physical location of the camera in 3D space
     float Yaw = glm::radians(0.0f); // Euler angles for camera/character orientation
     float Pitch = glm::radians(0.0f); // The Y-axis rotation specifically for the player model
@@ -603,16 +614,21 @@ protected:
         // --- POINT LIGHT DETECTION ---
         // Automatically finds objects with "lamp" in their name and creates a light source
         plboData.numActiveLights = 0;
+        plboData.numLampLights = 0;
         for (int i = 0; i < SC.TI[1].InstanceCount; i++) {
             auto &inst = SC.TI[1].I[i];
-            if (inst.id->find("lamp") != std::string::npos && plboData.numActiveLights < 100) {
-                // Position the light at the lamp's X/Z and a height of 4.5
-                plboData.lights[plboData.numActiveLights].position = glm::vec3(inst.Wm[3][0], 4.5f, inst.Wm[3][2]);
-                plboData.lights[plboData.numActiveLights].color = glm::vec3(1.0f, 0.7f, 0.4f); // Warm Amber
-                plboData.numActiveLights++;
+            if (inst.id->find("lamp") != std::string::npos) {
+                lampLights.push_back({{inst.Wm[3][0], 4.5f, inst.Wm[3][2]}, {1.0f, 0.7f, 0.4f}});
+                plboData.numLampLights++;
+            }
+            if (inst.id->find("candle") != std::string::npos) {
+                candleLights.push_back({{inst.Wm[3][0], inst.Wm[3][1], inst.Wm[3][2]}, {0.35f, 0.18f, 0.05f}});
+            }
+            if (inst.id->find("study_table") != std::string::npos) {
+                studyLights.push_back({{inst.Wm[3][0] - 0.4, inst.Wm[3][1] + 0.3, inst.Wm[3][2] + 0.6}, {0.35f, 0.18f, 0.05f}});
             }
         }
-        std::cout << "[Light Setup] Found " << plboData.numActiveLights << " lamps in the scene." << std::endl;
+        std::cout << "[Light Setup] Found " << lampLights.size() << " lamps, " << candleLights.size() << " candles, " << studyLights.size() << " study lights in the scene." << std::endl;
     }
 
     // Here you create your pipelines and Descriptor Sets!
@@ -1191,18 +1207,49 @@ protected:
         // The 'y' component represents how high the sun is relative to the horizon
         float sunHeight = currentLightDir.y;
 
-        // --- DYNAMIC LAMP LOGIC ---
-        // Calculate lamp intensity: 0.0 when sun is high, 1.0 as the sun drops below the horizon
-        float lampIntensity = glm::clamp(1.0f - (sunHeight + 0.1f) / 0.3f, 0.0f, 1.0f);
+        // --- DISTANCE-BASED LIGHT ACTIVATION ---
+        // Switch between lamps (near origin) and candles/study lights (far from origin)
+        float distFromOrigin = glm::length(Pos);
 
-        // Define a warm Amber color for streetlights and boost their intensity for bloom/PBR
-        glm::vec3 warmAmber = glm::vec3(1.0f, 0.5f, 0.1f);
-        float brightness = 3.0f;
-        glm::vec3 currentLampColor = warmAmber * (lampIntensity * brightness);
+        if (distFromOrigin < 800.0f) {
+            // Near origin: activate lamps with dynamic color based on daylight
+            plboData.numActiveLights = 0;
 
-        // Propagate current lamp color/intensity to the Point Light data buffer
-        for (int i = 0; i < plboData.numActiveLights; i++) {
-            plboData.lights[i].color = currentLampColor;
+            // --- LOGICA LUCI DINAMICHE ---
+            // lampIntensity va a 0 quando il sole è alto, e a 1 quando il sole scende
+            float lampIntensity = glm::clamp(1.0f - (sunHeight + 0.1f) / 0.3f, 0.0f, 1.0f);
+
+            // Moltiplichiamo per 10.0f per renderle MOLTO più luminose
+            glm::vec3 warmAmber = glm::vec3(1.0f, 0.5f, 0.1f);
+            float brightness = 3.0f;
+            glm::vec3 currentLampColor = warmAmber * (lampIntensity * brightness);
+
+            // Load lamp lights from storage and apply dynamic color
+            for (const auto& light : lampLights) {
+                if (plboData.numActiveLights >= 100) break;
+                plboData.lights[plboData.numActiveLights].position = light.position;
+                plboData.lights[plboData.numActiveLights].color = currentLampColor;
+                plboData.numActiveLights++;
+            }
+        } else {
+            // Far from origin: activate candles and study lights only
+            plboData.numActiveLights = 0;
+
+            // Add candle lights
+            for (const auto& light : candleLights) {
+                if (plboData.numActiveLights >= 100) break;
+                plboData.lights[plboData.numActiveLights].position = light.position;
+                plboData.lights[plboData.numActiveLights].color = light.color;
+                plboData.numActiveLights++;
+            }
+
+            // Add study lights
+            for (const auto& light : studyLights) {
+                if (plboData.numActiveLights >= 100) break;
+                plboData.lights[plboData.numActiveLights].position = light.position;
+                plboData.lights[plboData.numActiveLights].color = light.color;
+                plboData.numActiveLights++;
+            }
         }
 
         // --- LIGHTING PHASES: DAY vs SUNSET vs NIGHT ---

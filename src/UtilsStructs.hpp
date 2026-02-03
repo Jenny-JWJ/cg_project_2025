@@ -8,6 +8,7 @@
 #include <string>
 #include <fstream>
 #include <vector>
+#include <random>
 class UtilsStructs{
 public:
     enum Format {
@@ -133,6 +134,13 @@ public:
         inst.elements = elems;
 
         return inst;
+    }
+
+    static std::mt19937_64 gen;
+
+    static int rand_int(int lo, int hi) {
+        std::uniform_int_distribution<int> dist(lo, hi);
+        return dist(gen);
     }
 };
 
