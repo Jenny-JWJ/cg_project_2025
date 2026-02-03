@@ -12,6 +12,7 @@
 #include "modules/GlobalGML.hpp"
 #include "UtilsStructs.hpp"
 #include "TeleporterList.hpp"
+#include "DrunkEffectManager.hpp"
 
 using IMElement = UtilsStructs::Element;
 
@@ -1063,6 +1064,7 @@ public:
 
         if(rand_deco == 1){
             elements.emplace_back(UtilsStructs::createElement("bottle_" + std::to_string(instanceNumber), "bottle", {"dungeon","pnois"}, {pos.x, pos.y + 1.3f, pos.z}, {rot.x, rot.y, rot.z}, {tableScale.x, tableScale.y, tableScale.z})); instanceNumber++;
+            DrunkEffectManager::bottles.emplace_back(glm::vec3(pos.x, pos.y + 1.3f, pos.z));
         }
         if(rand_deco == 2){
             glm::vec3 plate1Pos;

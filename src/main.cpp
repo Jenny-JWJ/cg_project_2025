@@ -15,6 +15,7 @@
 #include "CollisionBoxGenerator.hpp"
 #include "Teleporter.hpp"
 #include "TeleporterList.hpp"
+#include "DrunkEffectManager.hpp"
 
 // The uniform buffer object used in this example
 struct VertexChar {
@@ -1172,6 +1173,22 @@ protected:
             for (int i = 0; i < 8; i++) splashJump[i] = 0.0f;
         }
 
+        // Calculate forward direction for bottle detection
+        glm::vec3 forwardDir = glm::vec3(glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0, 1, 0)) * glm::vec4(0, 0, -1, 1));
+        
+        if (DrunkEffectManager::canDrink(Pos, forwardDir) && !canTeleport && glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS){
+            if (!debounce) {
+                debounce = true;
+                curDebounce = GLFW_KEY_E;
+                DrunkEffectManager::drink();
+            }else {
+                if ((curDebounce == GLFW_KEY_E) && debounce) {
+                    debounce = false;
+                    curDebounce = 0;
+                }
+
+        }
+        }
         // --- DAY/NIGHT & SUNSET CYCLE START ---
 
         // Time Accumulator
@@ -1523,7 +1540,12 @@ protected:
         } else if (nearWell && currentWellState == W_IDLE) {
             txt.print(-1.0f, -0.9f, "E to draw water", 4, "CO", false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
                       {0.0f, 1.0f, 1.0f, 1.0f}, {0, 0, 0, 1});
-        } else {
+        }else if (DrunkEffectManager::canDrink(Pos, forwardDir)) {
+            txt.print(-1.0f, -0.9f, "E to drink", 4, "CO",
+                      false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
+                      {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
+        }
+        else {
             txt.print(0.0f, 0.0f, " ", 4, "CO",
                       false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
                       {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
@@ -1693,6 +1715,8 @@ protected:
 
             Pitch = Pitch < minPitch_3rd ? minPitch_3rd : (Pitch > maxPitch_3rd ? maxPitch_3rd : Pitch);
         }
+        
+        DrunkEffectManager::drunkEffect(m, Yaw, Pitch, Roll, deltaT);
 
         float ef = exp(-10.0 * deltaT);
 
