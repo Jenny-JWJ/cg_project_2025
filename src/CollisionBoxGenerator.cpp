@@ -192,6 +192,20 @@ CollisionObject CollisionBoxGenerator::createCollisionObject(const UElement& ele
                 CollisionBox::Shape::cube
         );
     }
+    else if (element.model == "tunnel") {
+        col.addBox(
+                pos + glm::vec3(1.3f, 2.5f, 0.0f),
+                glm::vec3(0.9f, 5.0f, 6.0f),
+                rot,
+                CollisionBox::Shape::cube
+        );
+        col.addBox(
+                pos + glm::vec3(-1.3f, 2.5f, 0.0f),
+                glm::vec3(0.9f, 5.0f, 6.0f),
+                rot,
+                CollisionBox::Shape::cube
+        );
+    }
     else if (element.model == "stairs") {
         float xmult = element.scale[0]/2;
         float ymult = element.scale[1]/1.5;

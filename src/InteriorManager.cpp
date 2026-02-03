@@ -9,7 +9,7 @@ std::map<InteriorManager::HouseTemplate, std::vector<InteriorManager::SpawnPosit
         {Base,                   {{{0,    0, 3.1},  {0,    0}}}},
         {HighBaseFirstFloor,     {{{0,    0, 3.1},  {0,    0}}, {{-4,0,1}, {3,0.5}}}},
         {HighBaseSecondFloor,    {{{-1.7, 0, -2.8}, {-1.6, -0.5}}}},
-        {DoubleFirstFloorRight,  {{{-4.8, 0, 0},    {-1.6, 0}}, {{4,0,-1}, {0,0.5}}}},
+        {DoubleFirstFloorRight,  {{{-4.8, 0, 0},    {-1.5, 0}}, {{4,0,1}, {3,0.5}}}},
         {DoubleSecondFloorRight, {{{-1.4, 0, 3.2},  {-1.6, -0.5}}, {{0,0,-3}, {3,0}}}},
         {DoubleFirstFloorLeft,   {{{4.8,  0, 0},    {1.5,  0}}, {{-4,0,1}, {3,0.5}}}},
         {DoubleSecondFloorLeft,  {{{-1.4, 0, -3.2}, {4.6,  -0.5}}, {{0,0,3}, {0,0}}}},
@@ -35,7 +35,7 @@ InteriorManager::CreateHouseInteriors(glm::vec3 origin, float distance) {
     std::vector<IMElement> elements;
     glm::vec3 offset = {0,0,0};
     for (int i = 0; i < static_cast<int>(HouseTemplate::Count); ++i) {
-        for (int j = 0; j <= housePerType; j++) {
+        for (int j = 0; j <= housePerType[i]; j++) {
             HouseTemplate value = static_cast<HouseTemplate>(i);
             auto newElements = CreateHouse(value, origin + offset);
             elements.insert(elements.end(),  newElements.begin(), newElements.end());
