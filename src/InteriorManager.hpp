@@ -13,6 +13,7 @@
 #include "UtilsStructs.hpp"
 #include "TeleporterList.hpp"
 #include "DrunkEffectManager.hpp"
+#include "CandleManager.hpp"
 
 using IMElement = UtilsStructs::Element;
 
@@ -1088,7 +1089,9 @@ public:
             elements.emplace_back(UtilsStructs::createElement("plate_" + std::to_string(instanceNumber), "full_plate", {"dungeon","pnois"}, {plate2Pos.x,plate2Pos.y,plate2Pos.z}, {rot.x, rot.y, rot.z}, {tableScale.x, tableScale.y, tableScale.z})); instanceNumber++;
         }
         if(rand_deco == 3){
-            elements.emplace_back(UtilsStructs::createElement("candle_" + std::to_string(instanceNumber), "dungeon_light4", {"dungeon","pnois"}, {pos.x, pos.y + 1.3f, pos.z}, {rot.x, rot.y, rot.z}, {tableScale.x, tableScale.y, tableScale.z})); instanceNumber++;
+            elements.emplace_back(UtilsStructs::createElement("candle_" + std::to_string(instanceNumber), "dungeon_light4", {"dungeon","pnois"}, {pos.x, pos.y + 1.3f, pos.z}, {rot.x, rot.y, rot.z}, {tableScale.x, tableScale.y, tableScale.z}));
+            CandleManager::candlePositions["candle_" + std::to_string(instanceNumber)] = glm::vec3(pos.x, pos.y + 1.3f, pos.z);
+            instanceNumber++;
         }
         if(rand_deco == 4){
             elements.emplace_back(UtilsStructs::createElement("flower_" + std::to_string(instanceNumber), "flower1", {"dungeon","pnois"}, {pos.x, pos.y + 1.0f, pos.z}, {rot.x, rot.y, rot.z}, {tableScale.x, tableScale.y, tableScale.z})); instanceNumber++;

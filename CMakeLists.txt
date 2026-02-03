@@ -152,7 +152,7 @@ elseif(UNIX AND NOT APPLE)
     file(GLOB_RECURSE HEADERS include/*.h include/*.hpp)
 
     add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} src/MapManager.hpp)
-    add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} src/CollisionBox.hpp src/CollisionBoxGenerator.hpp src/UtilsStructs.hpp)
+    add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} src/CollisionBox.hpp src/CollisionBoxGenerator.hpp src/UtilsStructs.hpp src/CandleManager.hpp)
 
     find_package(Vulkan REQUIRED)
     find_package(glfw3 REQUIRED)

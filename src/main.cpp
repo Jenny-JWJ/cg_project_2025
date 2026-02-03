@@ -16,6 +16,7 @@
 #include "Teleporter.hpp"
 #include "TeleporterList.hpp"
 #include "DrunkEffectManager.hpp"
+#include "CandleManager.hpp"
 
 // The uniform buffer object used in this example
 struct VertexChar {
@@ -94,6 +95,8 @@ std::vector<StoredLight> lampLights;
 std::vector<StoredLight> candleLights;
 std::vector<StoredLight> studyLights;
 
+glm::mat4 takenCandleWm;
+
 // MAIN !
 class E09 : public BaseProject {
 private:
@@ -127,6 +130,11 @@ private:
 
     float wellBottomLimit = -2.0f;
     bool wellDebounce = false; // Input debounce for the 'E' key
+    
+    // Candle interaction debounce
+    bool candleDebounce = false;
+    float candleCooldown = 0.0f;
+    const float CANDLE_COOLDOWN_TIME = 0.5f; // 500ms cooldown between actions
 
     // SPLASH ANIMATION SETTINGS
     const float WATER_LEVEL = 0.0f; // Y level where splashes occur
@@ -623,10 +631,10 @@ protected:
                 plboData.numLampLights++;
             }
             if (inst.id->find("candle") != std::string::npos) {
-                candleLights.push_back({{inst.Wm[3][0], inst.Wm[3][1], inst.Wm[3][2]}, {0.35f, 0.18f, 0.05f}});
+                candleLights.push_back({{inst.Wm[3][0], inst.Wm[3][1], inst.Wm[3][2]}, {0.42f, 0.22f, 0.06f}});
             }
             if (inst.id->find("study_table") != std::string::npos) {
-                studyLights.push_back({{inst.Wm[3][0] - 0.4, inst.Wm[3][1] + 0.3, inst.Wm[3][2] + 0.6}, {0.35f, 0.18f, 0.05f}});
+                studyLights.push_back({{inst.Wm[3][0] - 0.4, inst.Wm[3][1] + 0.3, inst.Wm[3][2] + 0.6}, {0.42f, 0.22f, 0.06f}});
             }
         }
         std::cout << "[Light Setup] Found " << lampLights.size() << " lamps, " << candleLights.size() << " candles, " << studyLights.size() << " study lights in the scene." << std::endl;
@@ -1103,6 +1111,27 @@ protected:
             }
         }
 
+        // --- CANDLE VISIBILITY CONTROL ---
+        // Handle hiding/showing candles based on pickup state
+        for (int k = 0; k < SC.TechniqueInstanceCount; k++) {
+            for (int i = 0; i < SC.TI[k].InstanceCount; i++) {
+                std::string instanceId = *(SC.TI[k].I[i].id);
+                
+                // If this is the held candle, hide it by scaling to 0
+                if (CandleManager::isHoldingCandle && instanceId == CandleManager::heldCandleId) {
+                    SC.TI[k].I[i].Wm = glm::scale(SC.TI[k].I[i].Wm, glm::vec3(0.0f));
+                }
+                // If this was just dropped, restore it to original position
+                else if (!CandleManager::isHoldingCandle && instanceId == CandleManager::droppedCandle) {
+                    // Reconstruct world matrix from original position with 2x scale
+                    glm::vec3 originalPos = CandleManager::candlePositions[instanceId];
+                    SC.TI[k].I[i].Wm = glm::translate(glm::mat4(1.0f), originalPos) *
+                                       glm::scale(glm::mat4(1.0f), glm::vec3(2.0f, 2.0f, 2.0f));
+                    CandleManager::droppedCandle = "";
+                }
+            }
+        }
+
         // --- WELL INTERACTION AND STATE MACHINE ---
         // Calculate distance to the well (positioned at origin 0,0,0)
         float distToWell = glm::length(Pos - glm::vec3(0.0f, 0.0f, 0.0f));
@@ -1175,7 +1204,8 @@ protected:
 
         // Calculate forward direction for bottle detection
         glm::vec3 forwardDir = glm::vec3(glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0, 1, 0)) * glm::vec4(0, 0, -1, 1));
-        
+
+        //Drunk Effect
         if (DrunkEffectManager::canDrink(Pos, forwardDir) && !canTeleport && glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS){
             if (!debounce) {
                 debounce = true;
@@ -1189,6 +1219,33 @@ protected:
 
         }
         }
+
+        // Update candle interaction cooldown
+        if (candleCooldown > 0.0f) {
+            candleCooldown -= deltaT;
+        }
+
+        //Pickup or drop candle (mutually exclusive with cooldown)
+        if (!canTeleport && glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && !candleDebounce && candleCooldown <= 0.0f){
+            // Try pickup first (only if not holding)
+            if (CandleManager::canPickupCandle(Pos, forwardDir)) {
+                CandleManager::pickupCandle();
+                candleDebounce = true;
+                candleCooldown = CANDLE_COOLDOWN_TIME;
+            }
+            // Try drop only if not picked up (only if holding)
+            else if (CandleManager::canDropCandle(Pos, forwardDir)) {
+                CandleManager::dropCandle();
+                candleDebounce = true;
+                candleCooldown = CANDLE_COOLDOWN_TIME;
+            }
+        }
+        
+        // Reset candle debounce when E key is released
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE) {
+            candleDebounce = false;
+        }
+        
         // --- DAY/NIGHT & SUNSET CYCLE START ---
 
         // Time Accumulator
@@ -1215,7 +1272,7 @@ protected:
         // Atmosphere Color Definitions (RGBA)
         glm::vec4 dayColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // Full Noon (White)
         glm::vec4 sunsetColor = glm::vec4(1.0f, 0.4f, 0.1f, 1.0f); // Horizon Transition (Orange/Red)
-        glm::vec4 nightColor = glm::vec4(0.08f, 0.08f, 0.15f, 1.0f); // Midnight (Deep Blue)
+        glm::vec4 nightColor = glm::vec4(0.072f, 0.072f, 0.135f, 1.0f); // Midnight (Deep Blue)
 
         glm::vec4 currentLightColor;
         float blendFactor = 0.0f; // Interpolation factor for Skybox textures: 0 (Night), 1 (Day)
@@ -1255,6 +1312,7 @@ protected:
             // Add candle lights
             for (const auto& light : candleLights) {
                 if (plboData.numActiveLights >= 100) break;
+                if (CandleManager::isHoldingCandle && CandleManager::candlePositions[CandleManager::heldCandleId] == light.position) break;
                 plboData.lights[plboData.numActiveLights].position = light.position;
                 plboData.lights[plboData.numActiveLights].color = light.color;
                 plboData.numActiveLights++;
@@ -1267,6 +1325,15 @@ protected:
                 plboData.lights[plboData.numActiveLights].color = light.color;
                 plboData.numActiveLights++;
             }
+        }
+
+        // --- ADD HELD CANDLE LIGHT ---
+        // If player is holding a candle, add a dynamic light that follows them
+        if (CandleManager::isHoldingCandle && plboData.numActiveLights < 100) {
+            glm::vec3 candleLightPos = CandleManager::getCandleLightPosition(Pos, Yaw);
+            plboData.lights[plboData.numActiveLights].position = candleLightPos;
+            plboData.lights[plboData.numActiveLights].color = glm::vec3(0.42f, 0.22f, 0.06f); // Warm candle color
+            plboData.numActiveLights++;
         }
 
         // --- LIGHTING PHASES: DAY vs SUNSET vs NIGHT ---
@@ -1542,6 +1609,14 @@ protected:
                       {0.0f, 1.0f, 1.0f, 1.0f}, {0, 0, 0, 1});
         }else if (DrunkEffectManager::canDrink(Pos, forwardDir)) {
             txt.print(-1.0f, -0.9f, "E to drink", 4, "CO",
+                      false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
+                      {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
+        }else if (CandleManager::canPickupCandle(Pos, forwardDir)) {
+        txt.print(-1.0f, -0.9f, "E to pickup candle", 4, "CO",
+                  false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
+                  {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
+         }else if (CandleManager::canDropCandle(Pos, forwardDir)) {
+            txt.print(-1.0f, -0.9f, "E to drop candle", 4, "CO",
                       false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
                       {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
         }
