@@ -946,10 +946,18 @@ public:
             float spacing = 6.0f,
             float rowDepth = 4.0f,
             float scaleMul = 1.0f,
-            std::vector<std::string> modelIds = {"tree3"},
-            std::string textureId = "tex_veg_atlas"
+            const std::vector<std::string>& modelIds = {"tree3"},
+            const std::string& textureId = "tex_veg_atlas"
     ) {
         std::vector<MMElement> elements;
+        
+        // Estimate tree count: perimeter * rows, accounting for river gap
+        int xPositions = (int)((maxX - minX) / spacing) + 1;
+        int zPositions = (int)((maxZ - minZ) / spacing) + 1;
+        int riverGapCount = (int)((riverMaxX - riverMinX) / spacing);
+        int estimatedCount = 2 * rows * (xPositions + zPositions - riverGapCount);
+        elements.reserve(estimatedCount);
+        
         static const std::string pnois = "pnois";
 
         std::uniform_real_distribution<float> rotDist(0.0f, 360.0f);
