@@ -327,7 +327,101 @@ CollisionObject CollisionBoxGenerator::createCollisionObject(const UElement& ele
                 CollisionBox::Shape::cube
         );
     }
+    // =========================
+    // INTERIOR OBJECTS
+    // =========================
 
+    else if (element.model.find("dungeon_box6") != std::string::npos) {
+        // chests
+        col.addBox(
+                pos,
+                glm::vec3(1, 0.6, 0.45),
+                CollisionBox::Shape::cube
+        );
+    }
+    else if (element.model.find("dungeon_box8") != std::string::npos) {
+        // chests
+        col.addBox(
+                pos,
+                glm::vec3(1.4, 0.6, 0.9),
+                CollisionBox::Shape::cube
+        );
+    }
+    else if (element.model.find("dungeon_box10") != std::string::npos) {
+        // chests
+        col.addBox(
+                pos,
+                glm::vec3(1, 0.6, 0.45),
+                CollisionBox::Shape::cube
+        );
+    }
+    else if (element.model.find("dungeon_library3") != std::string::npos) {
+        // bookshelves
+        col.addBox(
+                pos,
+                glm::vec3(1.6, 5.5, 4),
+                CollisionBox::Shape::cube
+        );
+    }
+    else if (element.model.find("dungeon_library4") != std::string::npos) {
+        // bookshelves
+        col.addBox(
+                pos,
+                glm::vec3(1.6, 5.5, 4),
+                CollisionBox::Shape::cube
+        );
+    }
+    else if (element.model.find("dungeon_library5") != std::string::npos) {
+        // bookshelves
+        col.addBox(
+                pos,
+                glm::vec3(1.6, 5.5, 4),
+                CollisionBox::Shape::cube
+        );
+    }
+    else if (element.model.find("dungeon_library6") != std::string::npos) {
+        // bookshelves
+        col.addBox(
+                pos,
+                glm::vec3(1.6, 5.5, 4),
+                CollisionBox::Shape::cube
+        );
+    }
+    else if (element.model == "bed") {
+        col.addBox(
+                pos,
+                glm::vec3(1.3, 1, 2.5),
+                CollisionBox::Shape::cube
+        );
+    }
+    else if (element.model == "table1") {
+        col.addBox(
+                pos,
+                glm::vec3(2, 1, 1),
+                CollisionBox::Shape::cube
+        );
+    }
+    else if (element.model == "table2") {
+        col.addBox(
+                pos,
+                glm::vec3(2, 0.5, 1),
+                CollisionBox::Shape::cube
+        );
+    }
+    else if (element.model == "coffee_table") {
+        col.addBox(
+                pos,
+                glm::vec3(1, 1.8, 1),
+                CollisionBox::Shape::cube
+        );
+    }
+    else if (element.model == "dungeon_chair3") {
+        col.addBox(
+                pos,
+                glm::vec3(0.5, 1.2, 0.5),
+                CollisionBox::Shape::cube
+        );
+    }
     return col;
 }
 
