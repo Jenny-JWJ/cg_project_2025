@@ -11,9 +11,18 @@ std::mt19937_64 MapManager::gen(999999);
 std::mt19937_64 UtilsStructs::gen(999999);
 
 std::vector<int> MapManager::CreatePathVector(int modelNumber, int thisIdNumber) {
-    std::vector<int> path = {};
+    std::vector<int> path;
     std::vector<int> candidate;
-    std::cout<<"Model Number: " + std::to_string(modelNumber) + "\n";
+    
+    // Reserve space based on model complexity
+    if (modelNumber == 3 || modelNumber == 6) {
+        path.reserve(6);  // Double houses: 5 rooms + 1 ID
+    } else if (modelNumber == 4 || modelNumber == 5) {
+        path.reserve(2);  // High houses: 2 floors
+    } else {
+        path.reserve(1);  // Simple houses: 1 room
+    }
+    
     if(modelNumber == 1){
         candidate = RoomManager::GetRoomsByType(InteriorManager::HouseTemplate::Base);
         int x = UtilsStructs::rand_int(0, candidate.size()-1);
@@ -43,25 +52,17 @@ std::vector<int> MapManager::CreatePathVector(int modelNumber, int thisIdNumber)
         path.emplace_back(thisIdNumber - 1);
     }
     else if (modelNumber == 4){
-        std::cout <<"in\n";
         candidate = RoomManager::GetRoomsByType(InteriorManager::HouseTemplate::HighBaseFirstFloor);
-        std::cout <<"candidate selected\n";
         int x = UtilsStructs::rand_int(0, candidate.size()-1);
-        std::cout <<"random int selected\n";
         path.emplace_back(candidate[x]);
-        std::cout <<"path point inserted\n";
         candidate = RoomManager::GetRoomsByType(InteriorManager::HouseTemplate::HighBaseSecondFloor);
         x = UtilsStructs::rand_int(0, candidate.size()-1);
         path.emplace_back(candidate[x]);
     }
     else if (modelNumber == 5){
-        std::cout <<"in\n";
         candidate = RoomManager::GetRoomsByType(InteriorManager::HouseTemplate::HighLShapedFirstFloor);
-        std::cout <<"candidate selected\n";
         int x = UtilsStructs::rand_int(0, candidate.size()-1);
-        std::cout <<"random int selected\n";
         path.emplace_back(candidate[x]);
-        std::cout <<"path point inserted\n";
         candidate = RoomManager::GetRoomsByType(InteriorManager::HouseTemplate::HighLShapedSecondFloor);
         x = UtilsStructs::rand_int(0, candidate.size()-1);
         path.emplace_back(candidate[x]);
@@ -89,47 +90,20 @@ std::vector<int> MapManager::CreatePathVector(int modelNumber, int thisIdNumber)
 
 glm::vec3 MapManager::getTeleporterPos(glm::vec3 housePos,float houseRotY, int modelNumber) {
     glm::vec3 tpPos;
-    if (modelNumber == 1){
-        if(houseRotY == 180)
-            tpPos = housePos + glm::vec3(0,0,5.2);
-        else if (houseRotY == 0){
-            tpPos = housePos + glm::vec3(0,0,-5.2);
-        }
-    }
-    if (modelNumber == 2){
-        if(houseRotY == 180)
-            tpPos = housePos + glm::vec3(5.5,0,5.7);
-        else if (houseRotY == 0){
-            tpPos = housePos + glm::vec3(-5.5,0,-5.7);
-        }
-    }
-    if (modelNumber == 3){
-        if(houseRotY == 180)
-            tpPos = housePos + glm::vec3(8.5,0,7.7);
-        else if (houseRotY == 0){
-            tpPos = housePos + glm::vec3(-8.5,0,-7.7);
-        }
-    }
-    if (modelNumber == 4){
-        if(houseRotY == 180)
-            tpPos = housePos + glm::vec3(0,0,5.2);
-        else if (houseRotY == 0){
-            tpPos = housePos + glm::vec3(0,0,-5.2);
-        }
-    }
-    if (modelNumber == 5){
-        if(houseRotY == 180)
-            tpPos = housePos + glm::vec3(5.5,0,4.7);
-        else if (houseRotY == 0){
-            tpPos = housePos + glm::vec3(-5.5,0,-4.7);
-        }
-    }
-    if (modelNumber == 6){
-        if(houseRotY == 180)
-            tpPos = housePos + glm::vec3(-8.5,0,7.7);
-        else if (houseRotY == 0){
-            tpPos = housePos + glm::vec3(8.5,0,-7.7);
-        }
+    float sign = (houseRotY == 180) ? 1.0f : -1.0f;
+
+    if (modelNumber == 1) {
+        tpPos = housePos + glm::vec3(0.0f, 0.0f, 5.2f * sign);
+    } else if (modelNumber == 2) {
+        tpPos = housePos + glm::vec3(5.5f * sign, 0.0f, 5.7f * sign);
+    } else if (modelNumber == 3) {
+        tpPos = housePos + glm::vec3(8.5f * sign, 0.0f, 7.7f * sign);
+    } else if (modelNumber == 4) {
+        tpPos = housePos + glm::vec3(0.0f, 0.0f, 5.2f * sign);
+    } else if (modelNumber == 5) {
+        tpPos = housePos + glm::vec3(5.5f * sign, 0.0f, 4.7f * sign);
+    } else if (modelNumber == 6) {
+        tpPos = housePos + glm::vec3(-8.5f * sign, 0.0f, 7.7f * sign);
     }
     return tpPos;
 }

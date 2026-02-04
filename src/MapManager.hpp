@@ -214,10 +214,17 @@ public:
  */
     static std::vector<MMElement> createCircularLights() {
         std::vector<MMElement> elements;
-        float centerX = 330.0f;
-        float centerZ = 0.0f;
-        float radius = 48.0f; // Orbit distance between barrels and tents
-        int numLights = 10;
+        elements.reserve(10);  // Pre-allocate to avoid reallocations
+        
+        // Constants
+        const float centerX = 330.0f;
+        const float centerZ = 0.0f;
+        const float radius = 48.0f;
+        const int numLights = 10;
+        
+        // Reusable constant arrays (created once, reused 10 times)
+        static const std::vector<std::string> textures = {"tex_medieval_atlas", "pnois"};
+        static const std::vector<float> baseScale = {1.0f, 1.0f, 1.0f};
 
         for (int i = 0; i < numLights; i++) {
             // Distribute lamps evenly (2 * PI = 360 degrees)
@@ -230,11 +237,11 @@ public:
 
             elements.emplace_back(UtilsStructs::createElement(
                 "castle_lamp_" + std::to_string(i),
-                "lamp1", // Model ID
-                {"tex_medieval_atlas", "pnois"}, // Texture set
+                "lamp1",
+                textures,
                 {posX, 0.0f, posZ},
-                {90, rotY, 0}, // Rotation: 90 on X for coordinate system correction
-                {1.0f, 1.0f, 1.0f}
+                {90.0f, rotY, 0.0f},
+                baseScale
             ));
         }
         return elements;
@@ -247,10 +254,19 @@ public:
  */
     static std::vector<MMElement> createCircularCamp() {
         std::vector<MMElement> elements;
-        float centerX = 330.0f; // Castle X center
-        float centerZ = 0.0f; // Castle Z center
-        float radius = 55.0f; // Distance from the castle
-        int numTents = 8; // Total number of tents in the circle
+        elements.reserve(8);  // Pre-allocate
+        
+        // Constants
+        const float centerX = 330.0f;
+        const float centerZ = 0.0f;
+        const float radius = 55.0f;
+        const int numTents = 8;
+        
+        // Reusable constants (created once, referenced 8 times)
+        static const std::vector<float> tentScale = {1.3f, 1.3f, 1.3f};
+        static const std::string modelIds[2] = {"tent1", "tent2"};
+        static const std::string texIds[2] = {"tent1_texture", "tent2_texture"};
+        static const std::string pnois = "pnois";
 
         for (int i = 0; i < numTents; i++) {
             // Calculate the angle for each tent (360 degrees / numTents)
@@ -259,20 +275,18 @@ public:
             float posZ = centerZ + radius * sin(angle);
 
             // Rotation: orient tents to face the center (castle)
-            // Take the angle, convert to degrees, and adjust for the model's forward axis
             float rotY = -glm::degrees(angle) + 90.0f;
 
-            // Variety logic: select model and texture based on parity (index % 2)
-            std::string modelId = (i % 2 == 0) ? "tent1" : "tent2";
-            std::string texId = (i % 2 == 0) ? "tent1_texture" : "tent2_texture";
+            // Variety logic: select model and texture based on parity
+            int variant = i % 2;
 
             elements.emplace_back(UtilsStructs::createElement(
                 "tent_circ_" + std::to_string(i),
-                modelId,
-                {texId, "pnois"},
+                modelIds[variant],
+                {texIds[variant], pnois},
                 {posX, 0.0f, posZ},
-                {90, rotY, 0},
-                {1.3f, 1.3f, 1.3f} // Scale: Tents should be slightly bigger than the player
+                {90.0f, rotY, 0.0f},
+                tentScale
             ));
         }
         return elements;
@@ -284,31 +298,38 @@ public:
  */
     static std::vector<MMElement> createCircularBarrels() {
         std::vector<MMElement> elements;
-        float centerX = 330.0f;
-        float centerZ = 0.0f;
-        float radius = 42.0f; // Inner ring near the castle walls
-        int numGroups = 6;
+        elements.reserve(18);  // 6 groups × 3 barrels = 18
+        
+        // Constants
+        const float centerX = 330.0f;
+        const float centerZ = 0.0f;
+        const float radius = 42.0f;
+        const int numGroups = 6;
+        
+        // Reusable constants (created once, reused 18 times)
+        static const std::vector<std::string> textures = {"tex_medieval_atlas", "pnois"};
+        static const std::vector<float> rotation = {90.0f, 0.0f, 0.0f};
+        static const std::vector<float> barrelScale = {0.7f, 0.7f, 0.7f};
+        static const std::string barrelModel = "barrel";
+        static const std::string prefixes[3] = {"bar_a_", "bar_b_", "bar_c_"};
 
         for (int i = 0; i < numGroups; i++) {
             float angle = (i * (2.0f * 3.14159f / numGroups)) + 0.5f;
             float posX = centerX + radius * cos(angle);
             float posZ = centerZ + radius * sin(angle);
 
-            // Group of 3 barrels, all standing (Rotation 90,0,0) and on the ground (Y=0)
-            // Barrel 1
-            elements.emplace_back(UtilsStructs::createElement("bar_a_" + std::to_string(i), "barrel",
-                                                              {"tex_medieval_atlas", "pnois"}, {posX, 0, posZ},
-                                                              {90, 0, 0}, {0.7f, 0.7f, 0.7f}));
-            // Barrel 2 - Slightly offset
-            elements.emplace_back(UtilsStructs::createElement("bar_b_" + std::to_string(i), "barrel",
-                                                              {"tex_medieval_atlas", "pnois"},
-                                                              {posX + 1.2f, 0, posZ + 0.8f}, {90, 0, 0},
-                                                              {0.7f, 0.7f, 0.7f}));
-            // Barrel 3 - Standing upright next to the others
-            elements.emplace_back(UtilsStructs::createElement("bar_c_" + std::to_string(i), "barrel",
-                                                              {"tex_medieval_atlas", "pnois"},
-                                                              {posX - 0.8f, 0, posZ + 1.2f}, {90, 0, 0},
-                                                              {0.7f, 0.7f, 0.7f}));
+            // Barrel 1 - Base position
+            elements.emplace_back(UtilsStructs::createElement(prefixes[0] + std::to_string(i), barrelModel,
+                                                              textures, {posX, 0.0f, posZ},
+                                                              rotation, barrelScale));
+            // Barrel 2 - Offset position
+            elements.emplace_back(UtilsStructs::createElement(prefixes[1] + std::to_string(i), barrelModel,
+                                                              textures, {posX + 1.2f, 0.0f, posZ + 0.8f},
+                                                              rotation, barrelScale));
+            // Barrel 3 - Offset position
+            elements.emplace_back(UtilsStructs::createElement(prefixes[2] + std::to_string(i), barrelModel,
+                                                              textures, {posX - 0.8f, 0.0f, posZ + 1.2f},
+                                                              rotation, barrelScale));
         }
         return elements;
     }
@@ -319,20 +340,31 @@ public:
  */
     static std::vector<MMElement> createGrassTufts(int count = 50) {
         std::vector<MMElement> tufts;
-        // Distribute tufts randomly within the ring area (between radius 35 and 65)
+        tufts.reserve(count);  // Pre-allocate
+        
+        // Constants
+        const float centerX = 330.0f;
+        const float centerZ = 0.0f;
+        
+        // Reusable constants (created once, reused 50+ times)
+        static const std::vector<std::string> textures = {"tex_nature_atlas_1", "pnois"};
+        static const std::vector<float> baseScale = {1.0f, 1.0f, 1.0f};
+        static const std::string tuftModel = "grass_tuft";
+        
+        // Random distributions (moved outside loop)
         std::uniform_real_distribution<float> distRadius(35.0f, 65.0f);
         std::uniform_real_distribution<float> distAngle(0.0f, 2.0f * 3.14159f);
 
         for (int i = 0; i < count; i++) {
             float r = distRadius(gen);
             float a = distAngle(gen);
-            float posX = 330.0f + r * cos(a);
-            float posZ = 0.0f + r * sin(a);
+            float posX = centerX + r * cos(a);
+            float posZ = centerZ + r * sin(a);
+            float rotY = distAngle(gen) * 50.0f;
 
-            // Uses Nature Atlas 1 for detailed grass/bush textures
-            tufts.emplace_back(UtilsStructs::createElement("tuft_circ_" + std::to_string(i), "grass_tuft",
-                                                           {"tex_nature_atlas_1", "pnois"}, {posX, 0.0f, posZ},
-                                                           {90, distAngle(gen) * 50.0f, 0}, {1.0f, 1.0f, 1.0f}));
+            tufts.emplace_back(UtilsStructs::createElement("tuft_circ_" + std::to_string(i), tuftModel,
+                                                           textures, {posX, 0.0f, posZ},
+                                                           {90.0f, rotY, 0.0f}, baseScale));
         }
         return tufts;
     }
@@ -488,6 +520,17 @@ public:
 
     static std::vector<MMElement> createGraveyard(glm::vec3 center){
         std::vector<MMElement> elements;
+        elements.reserve(150);  // 100 graves + ~40 fences + 6 extras
+        
+        // Reusable constants (created once, reused 140+ times!)
+        static const std::vector<std::string> dungeonTextures = {"dungeon", "pnois"};
+        static const std::vector<float> graveScale = {1.0f, 1.0f, 1.0f};
+        static const std::vector<float> fenceScale = {1.0f, 1.5f, 1.0f};
+        static const std::vector<float> postScale = {4.0f, 4.0f, 4.0f};
+        static const std::vector<float> statueScale = {1.5f, 1.5f, 1.5f};
+        static const std::vector<float> rot180 = {0.0f, 180.0f, 0.0f};
+        static const std::vector<float> rot90 = {0.0f, 90.0f, 0.0f};
+        static const std::vector<float> rot0 = {0.0f, 0.0f, 0.0f};
         
         // Grid configuration
         int gridSize = 5; // 5x5 graves per grid
@@ -529,10 +572,10 @@ public:
                     elements.emplace_back(UtilsStructs::createElement(
                         "grave_" + std::to_string(grid) + "_" + std::to_string(idNumber),
                         "grave" + std::to_string(graveNumber),
-                        {"dungeon", "pnois"},
+                        dungeonTextures,
                         {posX, 0.5f, posZ},
                         {0.0f, rotY, 0.0f},
-                        {1.0f, 1.0f, 1.0f}
+                        graveScale
                     ));
                 }
             }
@@ -556,10 +599,10 @@ public:
             elements.emplace_back(UtilsStructs::createElement(
                 "graveFence_top_" + std::to_string(i),
                 fenceModel,
-                {"dungeon", "pnois"},
+                dungeonTextures,
                 {posX, 2.25f, center.z + graveYardWidth},
-                {0.0f, 180.0f, 0.0f},
-                {1.0f, 1.5f, 1.0f}
+                rot180,
+                fenceScale
             ));
         }
         
@@ -570,10 +613,10 @@ public:
             elements.emplace_back(UtilsStructs::createElement(
                 "graveFence_bottom_" + std::to_string(i),
                 "fence2",
-                {"dungeon", "pnois"},
+                dungeonTextures,
                 {posX, 2.25f, center.z - graveYardWidth},
-                {0.0f, 180.0f, 0.0f},
-                {1.0f, 1.5f, 1.0f}
+                rot180,
+                fenceScale
             ));
         }
         
@@ -584,10 +627,10 @@ public:
             elements.emplace_back(UtilsStructs::createElement(
                 "graveFence_left_" + std::to_string(i),
                 "fence2",
-                {"dungeon", "pnois"},
+                dungeonTextures,
                 {center.x - graveYardWidth, 2.25f, posZ},
-                {0.0f, 90.0f, 0.0f},
-                {1.0f, 1.5f, 1.0f}
+                rot90,
+                fenceScale
             ));
         }
         
@@ -598,37 +641,37 @@ public:
             elements.emplace_back(UtilsStructs::createElement(
                 "graveFence_right_" + std::to_string(i),
                 "fence2",
-                {"dungeon", "pnois"},
+                dungeonTextures,
                 {center.x + graveYardWidth, 2.25f, posZ},
-                {0.0f, 90.0f, 0.0f},
-                {1.0f, 1.5f, 1.0f}
+                rot90,
+                fenceScale
             ));
         }
 
         // Add corner fence3 posts
-        elements.emplace_back(UtilsStructs::createElement("graveWall1", "fence3", {"dungeon", "pnois"}, {center.x + graveYardWidth, 6, center.z + graveYardWidth}, {0.0f, 0.0f, 0.0f}, {4.0f, 4.0f, 4.0f}));
-        elements.emplace_back(UtilsStructs::createElement("graveWall2", "fence3", {"dungeon", "pnois"}, {center.x - graveYardWidth, 6, center.z + graveYardWidth}, {0.0f, 0.0f, 0.0f}, {4.0f, 4.0f, 4.0f}));
-        elements.emplace_back(UtilsStructs::createElement("graveWall3", "fence3", {"dungeon", "pnois"}, {center.x + graveYardWidth, 6, center.z - graveYardWidth}, {0.0f, 0.0f, 0.0f}, {4.0f, 4.0f, 4.0f}));
-        elements.emplace_back(UtilsStructs::createElement("graveWall4", "fence3", {"dungeon", "pnois"}, {center.x - graveYardWidth, 6, center.z - graveYardWidth}, {0.0f, 0.0f, 0.0f}, {4.0f, 4.0f, 4.0f}));
+        elements.emplace_back(UtilsStructs::createElement("graveWall1", "fence3", dungeonTextures, {center.x + graveYardWidth, 6, center.z + graveYardWidth}, rot0, postScale));
+        elements.emplace_back(UtilsStructs::createElement("graveWall2", "fence3", dungeonTextures, {center.x - graveYardWidth, 6, center.z + graveYardWidth}, rot0, postScale));
+        elements.emplace_back(UtilsStructs::createElement("graveWall3", "fence3", dungeonTextures, {center.x + graveYardWidth, 6, center.z - graveYardWidth}, rot0, postScale));
+        elements.emplace_back(UtilsStructs::createElement("graveWall4", "fence3", dungeonTextures, {center.x - graveYardWidth, 6, center.z - graveYardWidth}, rot0, postScale));
 
         // Add statue at the center
         elements.emplace_back(UtilsStructs::createElement(
             "cemetery_statue",
             "statue",
-            {"dungeon", "pnois"},
+            dungeonTextures,
             {center.x, 0.0f, center.z},
-            {0.0f, 0.0f, 0.0f},
-            {1.5f, 1.5f, 1.5f} // Slightly larger for prominence
+            rot0,
+            statueScale
         ));
         
         // Add cast3 under the statue (will animate upward)
         elements.emplace_back(UtilsStructs::createElement(
             "cemetery_cast3",
             "cast3",
-            {"dungeon", "pnois"},
+            dungeonTextures,
             {center.x, -4.0f, center.z},
-            {0.0f, 0.0f, 0.0f},
-            {1.0f, 1.0f, 1.0f}
+            rot0,
+            graveScale
         ));
         
         return elements;
@@ -638,6 +681,12 @@ public:
     // Left piece: X[-250, 220], Right piece: X[260, 450], both covering Z[-250, 250]
     static std::vector<MMElement> placeGrassGround(const std::vector<MMElement> &riverTiles) {
         std::vector<MMElement> elements;
+        elements.reserve(2);  // Only 2 ground pieces
+        
+        // Reusable constants
+        static const std::vector<std::string> grassTextures = {"tex_nature_atlas_2", "pnois"};
+        static const std::vector<float> groundRotation = {90.0f, 0.0f, 0.0f};
+        static const std::string groundModel = "ground";
         
         // River is at X ≈ 240, width ≈ 60 units (200 to 280)
         float riverCenterX = 240.0f;
@@ -661,10 +710,10 @@ public:
         
         elements.emplace_back(UtilsStructs::createElement(
             "grass_ground_left",
-            "ground",
-            {"tex_nature_atlas_2", "pnois"},
+            groundModel,
+            grassTextures,
             {leftCenterX, 0.0f, leftCenterZ},
-            {90.0f, 0.0f, 0.0f},
+            groundRotation,
             {leftWidth / 20.0f, depth / 20.0f, 1.0f}  // Scale to cover the area (base ground is 20x20)
         ));
         
@@ -675,10 +724,10 @@ public:
         
         elements.emplace_back(UtilsStructs::createElement(
             "grass_ground_right",
-            "ground",
-            {"tex_nature_atlas_2", "pnois"},
+            groundModel,
+            grassTextures,
             {rightCenterX, 0.0f, rightCenterZ},
-            {90.0f, 0.0f, 0.0f},
+            groundRotation,
             {rightWidth / 20.0f, depth / 20.0f, 1.0f}  // Scale to cover the area
         ));
         
@@ -694,6 +743,14 @@ public:
         int x_step = x_pass != 0 ? diff_x / x_pass : 0;
         int z_step = z_pass != 0 ? diff_z / z_pass : 0;
         int steps = std::max(x_step, z_step);
+        
+        elements.reserve(steps);  // Pre-allocate based on calculated steps
+        
+        // Reusable constants
+        static const std::vector<std::string> pathTextures = {"tex_medieval_atlas", "pnois"};
+        static const std::vector<float> pathRotation = {90.0f, 0.0f, 0.0f};
+        static const std::string groundModel = "ground";
+        std::vector<float> scaleVec = {scale[0], scale[1], scale[2]};  // Created once
 
         std::string idName = "path_ground";
         float posx = starting_pos[0];
@@ -703,11 +760,11 @@ public:
             idNumber++;
             elements.emplace_back(UtilsStructs::createElement(
                 idName + std::to_string(idNumber),
-                "ground",
-                {"tex_medieval_atlas", "pnois"},
+                groundModel,
+                pathTextures,
                 {posx, 0.01f, posz},
-                {90, 0, 0},
-                {scale[0], scale[1], scale[2]}
+                pathRotation,
+                scaleVec
             ));
 
             if (i < x_step)
@@ -754,17 +811,32 @@ public:
         std::vector<MMElement> elements;
         int count_x = hight / scale;
         int count_z = lenght / scale;
-        std::string idName = "house";
+        int totalHouses = count_x * count_z;
+        
+        elements.reserve(totalHouses);  // Pre-allocate
+        
+        // Reusable constants (created once, reused 100+ times)
+        static const std::vector<std::string> medievalTextures = {"tex_medieval_atlas", "pnois"};
+        static const std::vector<float> defaultScale = {1.0f, 1.0f, 1.0f};
+        static const std::string idName = "house";
 
         for (int i = 0; i < count_z; i++) {
             for (int j = 0; j < count_x; j++) {
-                std::string model_number = std::to_string(UtilsStructs::rand_int(1, 5));
+                int modelNum = UtilsStructs::rand_int(1, 5);
                 idNumber++;
+                
+                float posX = j * scale - x_offset;
+                float posZ = i * scale - z_offset;
+                
                 elements.emplace_back(UtilsStructs::createElement(
-                    idName + model_number + "_" + std::to_string(idNumber), "bldg" + model_number,
-                    {"tex_medieval_atlas", "pnois"}, {j * scale - x_offset, 0, i * scale - z_offset}, rotation,
-                    {1, 1, 1}));
-                AddTeleporter({j * scale - x_offset, 0, i * scale - z_offset}, std::strtol(model_number.c_str(), nullptr, 10));
+                    idName + std::to_string(modelNum) + "_" + std::to_string(idNumber), 
+                    "bldg" + std::to_string(modelNum),
+                    medievalTextures, 
+                    {posX, 0.0f, posZ}, 
+                    rotation,
+                    defaultScale));
+                
+                AddTeleporter({posX, 0.0f, posZ}, modelNum);
             }
         }
         return elements;
@@ -788,6 +860,11 @@ public:
         int targetCount = (int) ((height * length) / (minDistance * minDistance)) * 0.1;
 
         if (targetCount > 1000) targetCount = 1000; // Hardware safety cap
+        
+        elements.reserve(targetCount);  // Pre-allocate for target count
+        
+        // Reusable constants
+        static const std::string pnois = "pnois";
 
         // RANDOM DISTRIBUTION SETUP
         int idNumber = 0;
@@ -842,11 +919,16 @@ public:
             // All checks passed! Add the instance to the list with randomized scale and rotation
             idNumber++;
             int selectedIndex = modelSelector(gen);
+            float rotY = rotDist(gen);
+            float scale = scaleDist(gen);
+            
             elements.emplace_back(UtilsStructs::createElement(
                 "veg_" + std::to_string(idNumber) + "_" + std::to_string(rand()),
-                modelIds[selectedIndex], {textureId, "pnois"},
-                {plantX, 0.0f, plantZ}, {0.0f, rotDist(gen), 0.0f},
-                {scaleDist(gen), scaleDist(gen), scaleDist(gen)}
+                modelIds[selectedIndex], 
+                {textureId, pnois},
+                {plantX, 0.0f, plantZ}, 
+                {0.0f, rotY, 0.0f},
+                {scale, scale, scale}
             ));
         }
         return elements;
@@ -861,6 +943,10 @@ public:
                                                    std::vector<std::string> modelIds = {"rocks1"},
                                                    std::string textureId = "tex_veg_atlas") {
         std::vector<MMElement> elements;
+        elements.reserve(count);  // Pre-allocate for target count
+        
+        // Reusable constants
+        static const std::string pnois = "pnois";
 
         // RANDOMIZATION PARAMETERS
         std::uniform_real_distribution<float> randomPos(-mapLimit, mapLimit); // Along road length
@@ -906,13 +992,16 @@ public:
             // ELEMENT INSTANTIATION
             int selectedIndex = modelSelector(gen);
             std::string currentModel = modelIds[selectedIndex];
+            float rotY = rotDist(gen);
+            float scale = scaleDist(gen);
+            
             elements.emplace_back(UtilsStructs::createElement(
                 "rock_" + std::to_string(i) + "_" + std::to_string(rand()),
                 currentModel,
-                {textureId, "pnois"},
+                {textureId, pnois},
                 {rockX, rockY, rockZ},
-                {0.0f, rotDist(gen), 0.0f},
-                {scaleDist(gen), scaleDist(gen), scaleDist(gen)}
+                {0.0f, rotY, 0.0f},
+                {scale, scale, scale}
             ));
         }
         return elements;
@@ -932,6 +1021,12 @@ public:
         float start = -mapLimit;
         float end = mapLimit;
         int count = (int) ((end - start) / spacing);
+        
+        elements.reserve(count * 2);  // 2 lamps per position (left + right)
+        
+        // Reusable constants
+        static const std::string pnois = "pnois";
+        static const std::vector<float> lampScale = {1.0f, 1.0f, 1.0f};
 
         // Distance from the road centerline (road width is roughly 12 units)
         float offsetFromCenter = 6.0f;
@@ -963,24 +1058,25 @@ public:
                 posRight = {-offsetFromCenter, 0.0f, currentPos};
                 rotRight = {xRot, -90.0f, 0.0f}; // Face East
             }
-            std::vector<float> scaleVec = {1.0f, 1.0f, 1.0f};
 
             // Left Lamp
             elements.emplace_back(UtilsStructs::createElement(
                 "lamp_" + std::to_string(axis) + "_L_" + std::to_string(i),
-                modelId, {textureId, "pnois"},
+                modelId, 
+                {textureId, pnois},
                 {posLeft.x, posLeft.y, posLeft.z},
                 {rotLeft.x, rotLeft.y, rotLeft.z},
-                scaleVec
+                lampScale
             ));
 
             // Right Lamp
             elements.emplace_back(UtilsStructs::createElement(
                 "lamp_" + std::to_string(axis) + "_R_" + std::to_string(i),
-                modelId, {textureId, "pnois"},
+                modelId, 
+                {textureId, pnois},
                 {posRight.x, posRight.y, posRight.z},
                 {rotRight.x, rotRight.y, rotRight.z},
-                scaleVec
+                lampScale
             ));
         }
         return elements;
