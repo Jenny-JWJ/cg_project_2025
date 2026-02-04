@@ -188,7 +188,9 @@ protected:
     VertexDescriptor VDsimp; // For static objects
     VertexDescriptor VDskyBox; // Minimal layout for the skybox (positions only)
     VertexDescriptor VDtan; // For PBR objects (includes Tangents for normal mapping)
-    RenderPass RP; // Describes the attachments (Color, Depth) used during a draw call
+    VertexDescriptor VDpostProcess; // Empty layout for fullscreen quad (uses gl_VertexIndex)
+    RenderPass RP; // Main render pass for post-processing output to screen
+    RenderPass RPoffscreen; // Offscreen render pass for scene rendering
 
     /** * PIPELINES
  * The "State Machine" of the GPU. Includes Shaders, Rasterization, and Blending settings.
@@ -196,6 +198,21 @@ protected:
     Pipeline Pchar, PsimpObj, PskyBox, P_PBR;
     Pipeline Pveg; // Renders moving vegetation
     Pipeline Pdebug; // Renders wireframe/transparent collision boxes
+
+    /** * POST-PROCESSING RESOURCES
+     * For drunk distortion effects and other screen-space effects
+     */
+    Texture offscreenColorTexture;              // Color attachment for scene rendering
+    FrameBufferAttachment offscreenDepthTexture; // Depth attachment
+    VkFramebuffer offscreenFramebuffer;         // Framebuffer to render scene into
+    DescriptorSetLayout DSLpostProcess;         // Layout for post-process shader
+    Pipeline PpostProcess;                      // Post-process pipeline
+    DescriptorSet DSpostProcess;                // Descriptor set for scene texture + UBO
+    
+    struct PostProcessUBO {
+        float drunkIntensity;
+        float time;
+    } ppUBO;
 
     // Models, textures and Descriptors (values assigned to the uniforms)
     Scene SC; // Container for all 3D models, textures, and instances
@@ -402,6 +419,16 @@ protected:
                           // Binding 2: Texture (Noise) - Used in Vertex or Fragment
 
                       });
+
+        // --- POST-PROCESSING DESCRIPTOR SET LAYOUT ---
+        // For drunk distortion effect shader
+        DSLpostProcess.init(this, {
+            // Binding 0: Scene texture (rendered scene from offscreen pass)
+            {0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 1},
+            // Binding 1: Uniform buffer (drunk intensity and time)
+            {1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(PostProcessUBO), 1}
+        });
+
         // --- CHARACTER VERTEX DESCRIPTOR (VDchar) ---
         // Includes extra attributes for skeletal animation (Joint Indices and Weights)
         VDchar.init(this, {
@@ -476,16 +503,50 @@ protected:
                        }
                    });
 
+        // --- POST-PROCESSING VERTEX DESCRIPTOR ---
+        // Empty - no vertex buffer needed, uses gl_VertexIndex in shader
+        VDpostProcess.init(this, {}, {});
+
         VDRs.resize(4);
         VDRs[0].init("VDchar", &VDchar);
         VDRs[1].init("VDsimp", &VDsimp);
         VDRs[2].init("VDskybox", &VDskyBox);
         VDRs[3].init("VDtan", &VDtan);
 
-        // Initializes the render passes
+        // --- RENDER PASS INITIALIZATION ---
+        // Offscreen render pass: renders scene to texture (color + depth)
+        // Uses single-sample (no MSAA) since we'll apply post-processing
+        std::vector<AttachmentProperties> offscreenProps = {
+            {COLOR_AT, swapChainImageFormat,  // Match swapchain format
+                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT, false, false,
+                {.color = {.float32 = {0.0f, 0.9f, 1.0f, 1.0f}}},  // Blue sky
+                VK_SAMPLE_COUNT_1_BIT,  // No MSAA (can't sample multisampled textures)
+                VK_ATTACHMENT_LOAD_OP_CLEAR,
+                VK_ATTACHMENT_STORE_OP_STORE,
+                VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
+            {DEPTH_AT, findDepthFormat(),
+                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                VK_IMAGE_ASPECT_DEPTH_BIT, false, false,
+                {.depthStencil = {1.0f, 0}},
+                VK_SAMPLE_COUNT_1_BIT,  // No MSAA
+                VK_ATTACHMENT_LOAD_OP_CLEAR,
+                VK_ATTACHMENT_STORE_OP_STORE,
+                VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL}
+        };
+        RPoffscreen.init(this, -1, -1, 1, &offscreenProps);
+        
+        // Main render pass: renders fullscreen quad with post-processing to swapchain
         RP.init(this);
-        // Sets the blue sky
-        RP.properties[0].clearValue = {0.0f, 0.9f, 1.0f, 1.0f};
+        RP.properties[0].clearValue = {0.0f, 0.0f, 0.0f, 1.0f};  // Black (shouldn't be visible)
 
 
         // --- PIPELINE INITIALIZATION ---
@@ -513,6 +574,14 @@ protected:
         Pdebug.init(this, &VDsimp, "shaders/SimplePosNormUV.vert.spv", "shaders/CookTorrance.frag.spv",
                     {&DSLglobal, &DSLdebug});
         Pdebug.setPolygonMode(VK_POLYGON_MODE_FILL);
+
+        // --- POST-PROCESSING PIPELINE ---
+        // Fullscreen quad with distortion effect
+        PpostProcess.init(this, &VDpostProcess, "shaders/PostProcess.vert.spv", "shaders/PostProcess.frag.spv",
+                          {&DSLpostProcess});
+        PpostProcess.setTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);  // 4 vertices as triangle strip
+        PpostProcess.setCompareOp(VK_COMPARE_OP_ALWAYS);  // No depth testing needed
+        PpostProcess.setCullMode(VK_CULL_MODE_NONE);
 
         PRs.resize(5);
         PRs[0].init("CookTorranceChar", {
@@ -642,18 +711,33 @@ protected:
 
     // Here you create your pipelines and Descriptor Sets!
     void pipelinesAndDescriptorSetsInit() {
-        // Initialize the Render Pass (Defines how color and depth buffers are cleared and stored)
+        // Create offscreen render pass first (scene renders here)
+        RPoffscreen.create();
+        
+        // Create main render pass (post-process renders here to swapchain)
         RP.create();
 
-        // Create the Graphics Pipelines
-        // These link the shaders to the render pass and set the GPU's state machine
-        Pchar.create(&RP); // For animated characters (Skeletal Skinning)
-        PsimpObj.create(&RP); // For standard static meshes (Houses, ground)
-        PskyBox.create(&RP); // For the background skybox environment
-        P_PBR.create(&RP); // For Physically Based Rendering (Advanced materials)
-
-        Pveg.create(&RP); // For swaying vegetation (Handles wind and transparency)
-        Pdebug.create(&RP); // For collision box visualization (Usually wireframe/translucent)
+        // Create the Graphics Pipelines - render to offscreen
+        Pchar.create(&RPoffscreen);
+        PsimpObj.create(&RPoffscreen);
+        PskyBox.create(&RPoffscreen);
+        P_PBR.create(&RPoffscreen);
+        Pveg.create(&RPoffscreen);
+        Pdebug.create(&RPoffscreen);
+        
+        // Create post-processing pipeline - renders to main RP (swapchain)
+        PpostProcess.create(&RP);
+        
+        // Initialize post-processing descriptor set
+        // Now attachments exist after RPoffscreen.create()
+        RPoffscreen.attachments[0].createTextureSampler();  // Make color attachment samplable
+        DSpostProcess.init(this, &DSLpostProcess, {
+            RPoffscreen.attachments[0].getViewAndSampler()  // Binding 0: scene texture
+        });
+        
+        // Initialize UBO data
+        ppUBO.drunkIntensity = 0.0f;
+        ppUBO.time = 0.0f;
 
         // Delegate Descriptor Set allocation for the scene and UI
         // This connects the specific textures/buffers to the object instances
@@ -669,12 +753,16 @@ protected:
         PsimpObj.cleanup();
         PskyBox.cleanup();
         P_PBR.cleanup();
+        Pveg.cleanup();
+        Pdebug.cleanup();
+        PpostProcess.cleanup();  // Cleanup post-processing pipeline
 
-        Pveg.cleanup(); // Cleanup vegetation-specific pipeline
-        Pdebug.cleanup(); // Cleanup collision debug pipeline
-
-        // Destroy the Render Pass
+        // Destroy Render Passes
         RP.cleanup();
+        RPoffscreen.cleanup();
+        
+        // Cleanup post-processing descriptor set
+        DSpostProcess.cleanup();
 
         // Cleanup scene-wide and text-specific descriptors
         SC.pipelinesAndDescriptorSetsCleanup();
@@ -729,11 +817,16 @@ protected:
 
     // This is the real place where the Command Buffer is written
     void populateCommandBuffer(VkCommandBuffer commandBuffer, int currentImage) {
-        // begin standard pass
-        RP.begin(commandBuffer, currentImage);
-
+        // PASS 1: Render scene to offscreen texture
+        RPoffscreen.begin(commandBuffer, 0);  // Always use framebuffer 0 (single offscreen buffer)
         SC.populateCommandBuffer(commandBuffer, 0, currentImage);
-
+        RPoffscreen.end(commandBuffer);
+        
+        // PASS 2: Render post-processed fullscreen quad to swapchain
+        RP.begin(commandBuffer, currentImage);
+        PpostProcess.bind(commandBuffer);
+        DSpostProcess.bind(commandBuffer, PpostProcess, 0, currentImage);
+        vkCmdDraw(commandBuffer, 4, 1, 0, 0);  // Draw 4 vertices (fullscreen quad)
         RP.end(commandBuffer);
     }
 
@@ -1565,6 +1658,12 @@ protected:
                 }
             }
         }
+
+        // --- POST-PROCESSING UNIFORM BUFFER UPDATE ---
+        // Update drunk effect intensity and time for shader animation
+        ppUBO.drunkIntensity = DrunkEffectManager::getDrunkIntensity();
+        ppUBO.time = (float)glfwGetTime();
+        DSpostProcess.map(currentImage, &ppUBO, 1);  // Binding 1 = UBO
 
         // Updates the FPS
         static float elapsedT = 0.0f;

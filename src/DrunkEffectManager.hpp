@@ -11,6 +11,7 @@ class DrunkEffectManager{
 public:
     static std::vector<glm::vec3> bottles;
     constexpr static const float drunkTime = 50.0f;
+    static float intensity;
     static float timer;
     static bool isDrunk;
     constexpr static const float distTollerance = 3.5f;
@@ -50,7 +51,7 @@ public:
         }
         
         // Add oscillations to camera rotation for drunk effect
-        float intensity = 1.0f - (timer / drunkTime); // Fade effect over time
+        intensity = 1.0f - (timer / drunkTime); // Fade effect over time
         
         // Yaw oscillation (side to side) - slow wave
         yaw += sin(timer * 1.5f) * 0.08f * intensity;
@@ -66,6 +67,10 @@ public:
         m.z += cos(timer * 1.6f) * 0.02f * intensity;
 
         timer += deltaT;
+    }
+
+    static float getDrunkIntensity(){
+        return intensity;
     }
 };
 #endif //E09_DRUNKEFFECTMANAGER_HPP
