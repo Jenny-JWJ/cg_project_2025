@@ -402,9 +402,17 @@ CollisionObject CollisionBoxGenerator::createCollisionObject(const UElement& ele
         );
     }
     else if (element.model == "table2") {
+        float sx = 2.0f;
+        float sy = 0.5f;
+        float sz = 1.0f;
+
+        if (rot.y == 90 || rot.y == 270) {
+            std::swap(sx, sz);
+        }
+
         col.addBox(
                 pos,
-                glm::vec3(2, 0.5, 1),
+                glm::vec3(sx, sy, sz),
                 CollisionBox::Shape::cube
         );
     }
