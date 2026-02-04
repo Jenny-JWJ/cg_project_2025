@@ -16,9 +16,9 @@ public:
     static bool isDrunk;
     constexpr static const float distTollerance = 3.5f;
 
-    static bool canDrink(glm::vec3 pos, glm::vec3 forwardDir){
+    static bool canDrink(const glm::vec3& pos, const glm::vec3& forwardDir){
         if (isDrunk) return false;
-        for (auto bottle : bottles){
+        for (const auto& bottle : bottles){
             // Check distance
             float distance = glm::length(bottle - pos);
             if (distance > distTollerance) continue;

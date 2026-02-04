@@ -16,6 +16,7 @@ int CollisionBoxGenerator::collisionBoxVisualCount = 0;
 
 void CollisionBoxGenerator::fillCollisionsBoxes(const std::vector<UElement>& elements) {
     std::cout <<"Starting to fill the collisions";
+    collisions.reserve(elements.size());
     for (const auto& element : elements) {
         collisions.emplace_back(createCollisionObject(element));
     }
@@ -486,6 +487,13 @@ UElement CollisionBoxGenerator::createCollisionObjectVisual(const CollisionBox& 
 
 void CollisionBoxGenerator::fillCollisionsBoxesVisual() {
     std::vector<UElement> elements;
+    
+    // Calculate total number of boxes to reserve
+    size_t totalBoxes = 0;
+    for (const auto& colObj : collisions) {
+        totalBoxes += colObj.boxes.size();
+    }
+    elements.reserve(totalBoxes);
 
     for (const auto& colObj : collisions) {
         for (const auto& col : colObj.boxes) {

@@ -15,13 +15,14 @@ int RoomManager::GetRoomId() {
 
 int RoomManager::AddRoom(InteriorManager::HouseTemplate tmp) {
     int id = GetRoomId();
-    rooms.insert({id, tmp});
+    rooms.emplace(id, tmp);
     return id;
 }
 
 std::vector<int> RoomManager::GetRoomsByType(InteriorManager::HouseTemplate type){
-    std::vector<int> rs = {};
-    for (auto room : rooms) {
+    std::vector<int> rs;
+    rs.reserve(rooms.size());
+    for (const auto& room : rooms) {
         if (room.second == type)
             rs.emplace_back(room.first);
     }

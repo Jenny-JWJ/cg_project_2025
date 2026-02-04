@@ -41,7 +41,7 @@ Teleporter* TeleporterList::getTeleporter(int id)
 }
 
 void TeleporterList::SetupTeleportPath(Teleporter* pTeleporter,
-                                       std::deque<int> deque1)
+                                       const std::deque<int>& deque1)
 {
     std::map<TeleportUse, Teleporter*> teleporters_use;
 
@@ -49,7 +49,7 @@ void TeleporterList::SetupTeleportPath(Teleporter* pTeleporter,
             (RoomManager::rooms.at(deque1[0]) == InteriorManager::DoubleFirstFloorRight);
 
     for (int roomId : deque1) {
-        for (auto& tp : teleporters) {
+        for (const auto& tp : teleporters) {
             if (tp.second.roomId == roomId) {
                 teleporters_use.emplace(
                         tp.second.use,

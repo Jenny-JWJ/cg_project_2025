@@ -65,8 +65,8 @@ public:
         std::vector<Element> elements;
     };
 
-    static AssetFile createAssetFile(const std::string &id,
-                                       const std::string &file,
+    static AssetFile createAssetFile(const std::string& id,
+                                       const std::string& file,
                                        Format format) {
         AssetFile a;
         a.id = id;
@@ -75,13 +75,13 @@ public:
         return a;
     }
 
-    static Model createModel(const std::string &id,
-                               const std::string &VD,
-                               const std::string &modelPath,
+    static Model createModel(const std::string& id,
+                               const std::string& VD,
+                               const std::string& modelPath,
                                Format format,
-                               const std::string &node = "",
+                               const std::string& node = "",
                                int meshId = -1,
-                               const std::string &asset = "") {
+                               const std::string& asset = "") {
         Model m;
         m.id = id;
         m.VD = VD;
@@ -93,8 +93,8 @@ public:
         return m;
     }
 
-    static Texture createTexture(const std::string &id,
-                                   const std::string &path,
+    static Texture createTexture(const std::string& id,
+                                   const std::string& path,
                                    Format format) {
         Texture t;
         t.id = id;
@@ -103,12 +103,12 @@ public:
         return t;
     }
 
-    static Element createElement(const std::string &id,
-                                   const std::string &model,
-                                   const std::vector<std::string> &textures,
-                                   const std::vector<float> &translate = {0, 0, 0},
-                                   const std::vector<float> &eulerAngles = {0, 0, 0},
-                                   const std::vector<float> &scale = {1, 1, 1}) {
+    static Element createElement(const std::string& id,
+                                   const std::string& model,
+                                   const std::vector<std::string>& textures,
+                                   const std::vector<float>& translate = {0, 0, 0},
+                                   const std::vector<float>& eulerAngles = {0, 0, 0},
+                                   const std::vector<float>& scale = {1, 1, 1}) {
         Element e;
         e.id = id;
         e.model = model;
@@ -128,7 +128,7 @@ public:
     }
 
     static Instance createInstance(Technique technique,
-                                     const std::vector<Element> &elems) {
+                                     const std::vector<Element>& elems) {
         Instance inst;
         inst.technique = technique;
         inst.elements = elems;

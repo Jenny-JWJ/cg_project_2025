@@ -12,7 +12,7 @@ std::string CandleManager::pickableCandle = "";
 std::string CandleManager::droppedCandle = "";
 std::string CandleManager::heldCandleId = "";
 
-bool CandleManager::canPickupCandle(glm::vec3 pos, glm::vec3 forwardDir){
+bool CandleManager::canPickupCandle(const glm::vec3& pos, const glm::vec3& forwardDir){
     if (isHoldingCandle) return false; // Already holding a candle
     
     for (const auto& [candleId, candlePos] : candlePositions){
@@ -33,7 +33,7 @@ bool CandleManager::canPickupCandle(glm::vec3 pos, glm::vec3 forwardDir){
     return false;
 }
 
-bool CandleManager::canDropCandle(glm::vec3 pos, glm::vec3 forwardDir){
+bool CandleManager::canDropCandle(const glm::vec3& pos, const glm::vec3& forwardDir){
     if (!isHoldingCandle) return false; // Not holding a candle
     
     // Get the original position of the held candle
@@ -68,7 +68,7 @@ void CandleManager::dropCandle(){
     heldCandleId = "";
 }
 
-glm::vec3 CandleManager::getCandleWorldPosition(glm::vec3 playerPos, float characterRotation, bool isFirstPerson){
+glm::vec3 CandleManager::getCandleWorldPosition(const glm::vec3& playerPos, float characterRotation, bool isFirstPerson){
     // Use the same rotation approach as the character model (rotate around Y-axis in world space)
     // When in first person, we need opposite rotation to keep candle visible
     float rotation = isFirstPerson ? characterRotation : -characterRotation;
@@ -95,7 +95,7 @@ glm::vec3 CandleManager::getCandleWorldPosition(glm::vec3 playerPos, float chara
     return candleWorldPos;
 }
 
-glm::vec3 CandleManager::getCandleLightPosition(glm::vec3 playerPos, float characterRotation, bool isFirstPerson){
+glm::vec3 CandleManager::getCandleLightPosition(const glm::vec3& playerPos, float characterRotation, bool isFirstPerson){
     glm::vec3 candlePos = getCandleWorldPosition(playerPos, characterRotation, isFirstPerson);
     return candlePos + glm::vec3(0.0f, 0.3f, 0.0f); // Flame is 0.3 units above candle
 }

@@ -47,7 +47,7 @@ public:
     static Teleporter* getTeleporter(int id);
     static std::map<int, TeleportInfo> teleporters;
 
-    static void SetupTeleportPath(Teleporter *pTeleporter, std::deque<int> deque1);
+    static void SetupTeleportPath(Teleporter *pTeleporter, const std::deque<int>& deque1);
 
 private:
 

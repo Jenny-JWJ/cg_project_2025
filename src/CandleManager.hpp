@@ -23,16 +23,16 @@ public:
     // Offset from player position (right hand position)
     static constexpr glm::vec3 candleOffset = glm::vec3(0.15f, 1.3f, 0.7f);
     
-    static bool canPickupCandle(glm::vec3 pos, glm::vec3 forwardDir);
-    static bool canDropCandle(glm::vec3 pos, glm::vec3 forwardDir);
+    static bool canPickupCandle(const glm::vec3& pos, const glm::vec3& forwardDir);
+    static bool canDropCandle(const glm::vec3& pos, const glm::vec3& forwardDir);
     static void pickupCandle();
     static void dropCandle();
     
     // Calculate world position of held candle relative to player
-    static glm::vec3 getCandleWorldPosition(glm::vec3 playerPos, float characterRotation, bool isFirstPerson);
+    static glm::vec3 getCandleWorldPosition(const glm::vec3& playerPos, float characterRotation, bool isFirstPerson);
     
     // Get the light position (slightly above the candle flame)
-    static glm::vec3 getCandleLightPosition(glm::vec3 playerPos, float characterRotation, bool isFirstPerson);
+    static glm::vec3 getCandleLightPosition(const glm::vec3& playerPos, float characterRotation, bool isFirstPerson);
 };
 
 #endif //E09_CANDLEMANAGER_HPP
