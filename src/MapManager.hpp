@@ -934,6 +934,78 @@ public:
         return elements;
     }
 
+    // -------------------------------------------------------
+// PERIMETER TREES WITH RIVER GAP
+// Dense forest border, leaving an opening for the river
+// -------------------------------------------------------
+    static std::vector<MMElement> placePerimeterForest(
+            float minX, float maxX,
+            float minZ, float maxZ,
+            float riverMinX, float riverMaxX,
+            int rows = 10,
+            float spacing = 6.0f,
+            float rowDepth = 4.0f,
+            float scaleMul = 1.0f,
+            std::vector<std::string> modelIds = {"tree3"},
+            std::string textureId = "tex_veg_atlas"
+    ) {
+        std::vector<MMElement> elements;
+        static const std::string pnois = "pnois";
+
+        std::uniform_real_distribution<float> rotDist(0.0f, 360.0f);
+        std::uniform_real_distribution<float> scaleJitter(0.85f, 1.15f);
+        std::uniform_real_distribution<float> offsetJitter(-1.0f, 1.0f);
+        std::uniform_int_distribution<int> modelSelector(0, modelIds.size() - 1);
+
+        int id = 0;
+
+        auto spawnTree = [&](float x, float z, float depthOffsetX, float depthOffsetZ) {
+            float scale = scaleMul * scaleJitter(gen);
+            int modelIdx = modelSelector(gen);
+
+            elements.emplace_back(UtilsStructs::createElement(
+                    "perimeter_tree_" + std::to_string(id++),
+                    modelIds[modelIdx],
+                    {textureId, pnois},
+                    {
+                            x + depthOffsetX + offsetJitter(gen),
+                            0.0f,
+                            z + depthOffsetZ + offsetJitter(gen)
+                    },
+                    {0.0f, rotDist(gen), 0.0f},
+                    {scale, scale, scale}
+            ));
+        };
+
+        // -------------------------
+        // TOP & BOTTOM borders
+        // -------------------------
+        for (int r = 0; r < rows; r++) {
+            float dz = r * rowDepth;
+
+            for (float x = minX; x <= maxX; x += spacing) {
+                if (x > riverMinX && x < riverMaxX) continue;
+
+                spawnTree(x, minZ - dz, 0.0f, 0.0f); // top
+                spawnTree(x, maxZ + dz, 0.0f, 0.0f); // bottom
+            }
+        }
+
+        // -------------------------
+        // LEFT & RIGHT borders
+        // -------------------------
+        for (int r = 0; r < rows; r++) {
+            float dx = r * rowDepth;
+
+            for (float z = minZ; z <= maxZ; z += spacing) {
+                spawnTree(minX - dx, z, 0.0f, 0.0f); // left
+                spawnTree(maxX + dx, z, 0.0f, 0.0f); // right
+            }
+        }
+
+        return elements;
+    }
+
     /**
  * ROAD DEBRIS GENERATOR (Rocks/Pebbles)
  * Scatters small, randomized rocks strictly along the road centerlines.
@@ -1852,6 +1924,27 @@ public:
         vegElements.insert(vegElements.end(), v4.begin(), v4.end());
 
         simpElements.insert(simpElements.end(), allObstacles.begin(), allObstacles.end());
+
+        // --- PERIMETER TREE WALL ---
+        auto perimeterForest = placePerimeterForest(
+                -205.0f, 400.0f,     // map X limits
+                -205.0f, 205.0f,     // map Z limits
+                205.0f, 275.0f,      // river gap
+                10,                   // FIVE rows
+                6.0f,                // spacing between trees
+                4.0f,                // distance between rows
+                1,                // tall trees
+                {"tree1"},  // pine-like trees
+                "tex_veg_atlas"
+        );
+
+
+        vegElements.insert(
+                vegElements.end(),
+                perimeterForest.begin(),
+                perimeterForest.end()
+        );
+
 
         // --- I. FINALIZING INSTANCES ---
         std::vector<MMElement> skyboxElements = {UtilsStructs::createElement("skybox", "skybox", {"skybox"})};
