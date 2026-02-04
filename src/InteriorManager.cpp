@@ -33,6 +33,7 @@ void InteriorManager::AddTeleporter(glm::vec3 spawnPos, glm::vec2 spawnDir,Telep
 std::vector<IMElement>
 InteriorManager::CreateHouseInteriors(glm::vec3 origin, float distance) {
     std::vector<IMElement> elements;
+    elements.reserve(1000);  // Pre-allocate for multiple house interiors
     glm::vec3 offset = {0,0,0};
     for (int i = 0; i < static_cast<int>(HouseTemplate::Count); ++i) {
         for (int j = 0; j <= housePerType[i]; j++) {
