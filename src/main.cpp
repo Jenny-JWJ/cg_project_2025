@@ -235,7 +235,7 @@ protected:
 
     glm::mat4 ViewPrj; // Combined View and Projection matrix
     glm::mat4 World; // Global world transformation matrix
-    glm::vec3 Pos = glm::vec3(0, 0, 5); // Character's current world position
+    glm::vec3 Pos = glm::vec3(200, 0, 0); // Character's current world position
     glm::vec3 cameraPos; // Physical location of the camera in 3D space
     float Yaw = glm::radians(0.0f); // Euler angles for camera/character orientation
     float Pitch = glm::radians(0.0f); // The Y-axis rotation specifically for the player model

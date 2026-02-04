@@ -629,33 +629,54 @@ public:
         return elements;
     }
 
-    // Modified ground generation to prevent tiles from overlapping and covering the river
-    static std::vector<MMElement> placeGrassGround(const std::vector<MMElement> &riverTiles,
-                                                   float hight = 800.0f, float lenght = 800.0f,
-                                                   float x_offset = 400.0f, float z_offset = 400.0f,
-                                                   float scale = 20.0f) {
+    // Optimized ground generation: Creates only 2 large ground pieces instead of 1600+ small tiles
+    // Left piece: X[-250, 220], Right piece: X[260, 450], both covering Z[-250, 250]
+    static std::vector<MMElement> placeGrassGround(const std::vector<MMElement> &riverTiles) {
         std::vector<MMElement> elements;
-        int count_x = hight / scale;
-        int count_z = lenght / scale;
-        int idNumber = 0;
-        std::string idName = "grass_ground";
-
-        for (int i = 0; i < count_z; i++) {
-            for (int j = 0; j < count_x; j++) {
-                float posX = j * scale - x_offset;
-                float posZ = i * scale - z_offset;
-
-                if (isRiverZone(posX, posZ, riverTiles)) {
-                    continue;
-                }
-
-                idNumber++;
-                elements.emplace_back(UtilsStructs::createElement(idName + std::to_string(idNumber), "ground",
-                                                                  {"tex_nature_atlas_2", "pnois"}, {
-                                                                      j * scale - x_offset, 0, i * scale - z_offset
-                                                                  }, {90, 0, 0}, {1, 1, 1}));
-            }
-        }
+        
+        // River is at X ≈ 240, width ≈ 60 units (200 to 280)
+        float riverCenterX = 240.0f;
+        float riverHalfWidth = 30.0f;  // Increased to prevent ground invasion
+        
+        // World bounds
+        float minX = -250.0f;
+        float maxX = 450.0f;
+        float minZ = -250.0f;
+        float maxZ = 250.0f;
+        
+        // Calculate dimensions for each ground piece
+        float leftWidth = (riverCenterX - riverHalfWidth) - minX;  // ~470 units
+        float rightWidth = maxX - (riverCenterX + riverHalfWidth); // ~190 units
+        float depth = maxZ - minZ;                                  // 500 units
+        
+        // LEFT GROUND PIECE (west of river)
+        // Center it between minX and river left edge
+        float leftCenterX = minX + leftWidth / 2.0f;
+        float leftCenterZ = (minZ + maxZ) / 2.0f;
+        
+        elements.emplace_back(UtilsStructs::createElement(
+            "grass_ground_left",
+            "ground",
+            {"tex_nature_atlas_2", "pnois"},
+            {leftCenterX, 0.0f, leftCenterZ},
+            {90.0f, 0.0f, 0.0f},
+            {leftWidth / 20.0f, depth / 20.0f, 1.0f}  // Scale to cover the area (base ground is 20x20)
+        ));
+        
+        // RIGHT GROUND PIECE (east of river)
+        // Center it between river right edge and maxX
+        float rightCenterX = (riverCenterX + riverHalfWidth) + rightWidth / 2.0f;
+        float rightCenterZ = (minZ + maxZ) / 2.0f;
+        
+        elements.emplace_back(UtilsStructs::createElement(
+            "grass_ground_right",
+            "ground",
+            {"tex_nature_atlas_2", "pnois"},
+            {rightCenterX, 0.0f, rightCenterZ},
+            {90.0f, 0.0f, 0.0f},
+            {rightWidth / 20.0f, depth / 20.0f, 1.0f}  // Scale to cover the area
+        ));
+        
         return elements;
     }
 
