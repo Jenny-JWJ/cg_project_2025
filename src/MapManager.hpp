@@ -404,19 +404,24 @@ public:
  * RIVER PATH GENERATION
  * Loops through a linear path to spawn "river_mid" segments.
  */
+    // Optimized: 1 large river piece instead of 25 small tiles
     static std::vector<MMElement> createRiverPath() {
         std::vector<MMElement> river;
-        float startX = 240.0f;
-        float startZ = -250.0f;
-        float depth = -2.3f; // Sunken below ground level (0.0)
-        float step = 20.0f; // Gap between each water/riverbed segment
-
-        for (int i = 0; i < 25; i++) {
-            float currentZ = startZ + (i * step);
-            river.emplace_back(UtilsStructs::createElement("river_v_" + std::to_string(i), "river_mid",
-                                                           {"tex_medieval_atlas", "pnois"}, {startX, depth, currentZ},
-                                                           {90, 90, 0}));
-        }
+        float centerX = 240.0f;
+        float centerZ = 0.0f;  // Center of Z range [-250, 250]
+        float depth = -2.3f;
+        float riverLength = 500.0f;  // Covers -250 to 250
+        
+        // Single large river bed piece, scaled to cover entire length
+        river.emplace_back(UtilsStructs::createElement(
+            "river_main",
+            "river_mid",
+            {"tex_medieval_atlas", "pnois"},
+            {centerX, depth, centerZ},
+            {90, 90, 0},
+            {riverLength / 20.0f, 1.0f, 1.0f}  // Scale X to cover full length (base is 20 units)
+        ));
+        
         return river;
     }
 
