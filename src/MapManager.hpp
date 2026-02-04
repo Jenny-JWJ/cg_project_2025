@@ -1588,7 +1588,8 @@ public:
         glm::vec3 graveyardCenter = {350.0f, 0.0f, -110.0f};
         std::vector<MMElement> graveYard = createGraveyard(graveyardCenter);
         simpElements.insert(simpElements.end(), graveYard.begin(), graveYard.end());
-        
+
+        simpElements.emplace_back(UtilsStructs::createElement("held_candle","dungeon_light4",{"dungeon","pnois"}, {0,0,0}));
         // Graveyard paths - Cross roads and perimeter
         // Parameters from createGraveyard: spacing=4, roadWidth=8, gridSize=5
         float graveyardExtent = 20.0f; // Cross roads through center

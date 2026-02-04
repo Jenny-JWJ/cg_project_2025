@@ -18,7 +18,7 @@
 using IMElement = UtilsStructs::Element;
 
 class InteriorManager{
-    constexpr static const int housePerType[13] = {0, 6, 6, 6, 6, 6, 6, 6, 1, 6, 6, 6, 0};
+    constexpr static const int housePerType[13] = {0, 6, 6, 3, 6, 3, 6, 3, 1, 6, 6, 2, 0};
 public:
     enum HouseTemplate{
         ExternalEntrance,
@@ -1131,7 +1131,7 @@ public:
 
     static std::vector<IMElement> CreateGroundedDeco(glm::vec3 pos, glm::vec3 rot = {0,0,0}){
         std::vector<IMElement> elements;
-        int rand_int = UtilsStructs::rand_int(1,4);
+        int rand_int = UtilsStructs::rand_int(1,5);
         if (rand_int == 1){
             elements = CreateStudyTableWithChair(pos, rot + glm::vec3(0,90,0));
         }

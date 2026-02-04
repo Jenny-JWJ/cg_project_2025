@@ -7,8 +7,8 @@
 std::map<std::string,std::string> MapManager::modelsPaths = {};
 std::map<std::string,std::string> MapManager::texturePaths = {};
 std::string MapManager::jsonPath = "";
-std::mt19937_64 MapManager::gen(123456);
-std::mt19937_64 UtilsStructs::gen(123456);
+std::mt19937_64 MapManager::gen(999999);
+std::mt19937_64 UtilsStructs::gen(999999);
 
 std::vector<int> MapManager::CreatePathVector(int modelNumber, int thisIdNumber) {
     std::vector<int> path = {};

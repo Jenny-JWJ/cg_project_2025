@@ -1129,6 +1129,13 @@ protected:
                                        glm::scale(glm::mat4(1.0f), glm::vec3(2.0f, 2.0f, 2.0f));
                     CandleManager::droppedCandle = "";
                 }
+                else if (instanceId == "held_candle"){
+                    if(CandleManager::isHoldingCandle){
+                        SC.TI[k].I[i].Wm = glm::translate(glm::mat4(1.0f), CandleManager::getCandleWorldPosition(Pos, characterRotation, isFirstPerson)) *
+                                           glm::scale(glm::mat4(1.0f), glm::vec3(2.0f, 2.0f, 2.0f)) * glm::rotate(glm::mat4(1.0f), isFirstPerson? Yaw : 0, {0,1,0});
+                    }
+                    else SC.TI[k].I[i].Wm = glm::scale(SC.TI[k].I[i].Wm, glm::vec3(0.0f));
+                }
             }
         }
 
@@ -1330,7 +1337,7 @@ protected:
         // --- ADD HELD CANDLE LIGHT ---
         // If player is holding a candle, add a dynamic light that follows them
         if (CandleManager::isHoldingCandle && plboData.numActiveLights < 100) {
-            glm::vec3 candleLightPos = CandleManager::getCandleLightPosition(Pos, Yaw);
+            glm::vec3 candleLightPos = CandleManager::getCandleLightPosition(Pos, characterRotation, isFirstPerson);
             plboData.lights[plboData.numActiveLights].position = candleLightPos;
             plboData.lights[plboData.numActiveLights].color = glm::vec3(0.42f, 0.22f, 0.06f); // Warm candle color
             plboData.numActiveLights++;
