@@ -37,6 +37,12 @@ struct skyBoxVertex {
     glm::vec3 pos;
 };
 
+// Vertex structure for the sun billboard (simple quad)
+struct SunVertex {
+    glm::vec3 pos;
+    glm::vec2 UV;
+};
+
 struct VertexTan {
     glm::vec3 pos;
     glm::vec3 norm;
@@ -71,6 +77,14 @@ struct UniformBufferObjectSimp {
 struct skyBoxUniformBufferObject {
     alignas(16) glm::mat4 mvpMat; // Position of the skybox
     alignas(16) glm::vec4 settings; // x = blendFactor (0 night , 1 day)
+};
+
+// Uniforms for the Sun rendering
+struct SunUniformBufferObject {
+    alignas(16) glm::mat4 mvpMat; // Model-View-Projection for sun billboard
+    alignas(16) glm::vec4 sunColor; // Color and intensity of the sun
+    alignas(16) glm::vec3 sunPosition; // Position in world space
+    alignas(4) float sunIntensity; // Brightness multiplier
 };
 
 // Point Light structure: Defines an individual lamp's properties
@@ -819,7 +833,10 @@ protected:
     void populateCommandBuffer(VkCommandBuffer commandBuffer, int currentImage) {
         // PASS 1: Render scene to offscreen texture
         RPoffscreen.begin(commandBuffer, 0);  // Always use framebuffer 0 (single offscreen buffer)
+        
+        // Render all scene objects (including skybox and sun sphere if added to scene)
         SC.populateCommandBuffer(commandBuffer, 0, currentImage);
+        
         RPoffscreen.end(commandBuffer);
         
         // PASS 2: Render post-processed fullscreen quad to swapchain
@@ -1353,13 +1370,13 @@ protected:
         static float sunAngle = 0.0f;
 
         // Total real-world seconds for one full 360-degree cycle (5 minutes)
-        float dayDuration = 300.0f;
+        float dayDuration = 50.0f;
 
         // Determine rotation speed: radians per second based on day duration
         float rotationSpeed = glm::radians(360.0f) / dayDuration;
 
         // Update angle based on frame delta time (deltaT)
-        sunAngle += deltaT * rotationSpeed;
+        sunAngle -= deltaT * rotationSpeed; // Negative to reverse direction
 
         // Sun Direction Calculation
         // Rotates the light vector around X (Rise/Set) with a fixed tilt on Y (-30 deg)
@@ -1474,6 +1491,31 @@ protected:
         gubo.eyePos = cameraPos; // Required for specular highlights
         gubo.time = (float) glfwGetTime(); // Required for wind/sway vertex animations
         gubo.eyePos = cameraPos;
+        
+        // --- SUN SPHERE POSITIONING ---
+        // Calculate sun world position relative to player (like a skybox)
+        float sunDistance = 180.0f; // Distance from player (always far away in sky)
+        glm::vec3 sunWorldPos = Pos + (currentLightDir * sunDistance); // Position sun relative to player
+        float sunSize = 20.0f; // Scale of the sun sphere (larger = more visible)
+        
+        // --- UPDATE SUN SPHERE IN SCENE ---
+        // Find and position the sun sphere model
+        for (int k = 0; k < SC.TechniqueInstanceCount; k++) {
+            for (int i = 0; i < SC.TI[k].InstanceCount; i++) {
+                std::string instanceId = *(SC.TI[k].I[i].id);
+                if (instanceId == "sun_sphere") {
+                    // Position sun in the sky based on light direction, following player
+                    // Scale down if below horizon (or hide completely)
+                    float visibleScale = (sunHeight > 0.0f) ? sunSize : 0.0f;
+                    
+                    glm::mat4 transform = glm::translate(glm::mat4(1.0f), sunWorldPos) *
+                                          glm::scale(glm::mat4(1.0f), glm::vec3(visibleScale));
+                    
+                    SC.TI[k].I[i].Wm = transform;
+                    break;
+                }
+            }
+        }
 
         // --- PLAYER CHARACTER RENDERING LOGIC ---
         // Calculate transparency based on distance (Dither/Fade effect)
@@ -1759,7 +1801,7 @@ protected:
         // --- VIEW PARAMETERS ---
         const float FOVy = glm::radians(45.0f);
         const float nearPlane = 0.5f; // Prevents "near-clipping" inside house walls
-        const float farPlane = 100.f;
+        const float farPlane = 200.f;
 
         // Player starting point
         const glm::vec3 StartingPosition = glm::vec3(0.0, 0.0, 5);

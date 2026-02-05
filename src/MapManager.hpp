@@ -1687,6 +1687,7 @@ public:
             {"assets/textures/water.png","water_well_texture"},
             {"assets/textures/Castle_Textures/SPW_Medieval_Tent_03_Color02.png", "tent2_texture"},
             {"assets/textures/water_river.png", "water_river_texture"},
+            {"assets/textures/MainScene/SunTexture.png", "sun_texture"},
 
         };
     }
@@ -1853,6 +1854,17 @@ public:
         std::vector<MMElement> extras;
         extras.emplace_back(UtilsStructs::createElement("ww1", "well", {"tex_medieval_atlas", "pnois"}, {0, 0, 0},
                                                         {90, 0, 0}, {1, 1, 1}));
+
+        // --- SUN SPHERE ---
+        // Will be positioned dynamically in main.cpp based on day/night cycle
+        extras.emplace_back(UtilsStructs::createElement(
+            "sun_sphere",
+            "sphere",
+            {"sun_texture", "pnois"},
+            {0.0f, 1000.0f, 0.0f}, // Initial position (will be updated each frame)
+            {0.0f, 0.0f, 0.0f},
+            {50.0f, 50.0f, 50.0f}  // Sun size
+        ));
 
         // --- Inside makeJson() -> extras section ---
         for (int i = 0; i < 8; i++) {
