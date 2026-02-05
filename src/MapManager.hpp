@@ -58,7 +58,7 @@ public:
             return ""; // The dot is in a folder, not an extension
         }
 
-        return path.substr(dotPos); // Include il punto
+        return path.substr(dotPos); // Include the dot
     }
 
 
@@ -112,9 +112,7 @@ public:
         return textures;
     }
 
-    // -------------------------------------------------------
     // ENUM → STRING conversion
-    // -------------------------------------------------------
 
     static std::string formatToString(MMFormat f) {
         switch (f) {
@@ -133,17 +131,14 @@ public:
             case UtilsStructs::CookTorranceChar: return "CookTorranceChar";
             case UtilsStructs::CookTorranceNoiseSimp: return "CookTorranceNoiseSimp";
             case UtilsStructs::SkyBox: return "SkyBox";
-            //case UtilsStructs::PBR: return "PBR";
             case UtilsStructs::Vegetation: return "Vegetation";
             case UtilsStructs::CBoxDebug: return "DebugCollisionBoxes";
         }
         return "";
     }
 
-    // -------------------------------------------------------
-    // SERIALIZATION FUNCTIONS
-    // -------------------------------------------------------
 
+    // Serialization functions
     static json writeAssetFile(const MMAssetFile &a) {
         json j;
         j["id"] = a.id;
@@ -378,7 +373,7 @@ public:
         castles.emplace_back(UtilsStructs::createElement(
             "the_big_castle",
             "castle_model",
-            {"tex_medieval_atlas", "pnois"},
+            {"dungeon", "pnois"},
             {330.0f, 0.0f, 0.0f},
             {90.0f, -90.0f, 0.0f},
             {1.0f, 1.0f, 1.0f}
@@ -457,9 +452,8 @@ public:
         return river;
     }
 
-    // -------------------------------------------------------
+
     // WATER LAYER: generate water tiles on top of river bed
-    // -------------------------------------------------------
     static std::vector<MMElement>
     createRiverWaterFromBed(const std::vector<MMElement>& riverBed) {
 
@@ -518,6 +512,7 @@ public:
         return false; // Point is safe to use for standard ground generation
     }
 
+    // Graveyard generation
     static std::vector<MMElement> createGraveyard(glm::vec3 center){
         std::vector<MMElement> elements;
         elements.reserve(150);  // 100 graves + ~40 fences + 6 extras
@@ -664,7 +659,7 @@ public:
             statueScale
         ));
         
-        // Add cast3 under the statue (will animate upward)
+        // Add ghost under the statue (will animate upward)
         elements.emplace_back(UtilsStructs::createElement(
             "cemetery_cast3",
             "cast3",
@@ -677,11 +672,11 @@ public:
         return elements;
     }
 
-    // Optimized ground generation: Creates only 2 large ground pieces instead of 1600+ small tiles
-    // Left piece: X[-250, 220], Right piece: X[260, 450], both covering Z[-250, 250]
+    // Optimized ground generation
+    // Left piece: X[-250, 220], Right piece: X[260, 450]
     static std::vector<MMElement> placeGrassGround(const std::vector<MMElement> &riverTiles) {
         std::vector<MMElement> elements;
-        elements.reserve(2);  // Only 2 ground pieces
+        elements.reserve(2);
         
         // Reusable constants
         static const std::vector<std::string> grassTextures = {"tex_nature_atlas_2", "pnois"};
@@ -690,7 +685,7 @@ public:
         
         // River is at X ≈ 240, width ≈ 60 units (200 to 280)
         float riverCenterX = 240.0f;
-        float riverHalfWidth = 30.0f;  // Increased to prevent ground invasion
+        float riverHalfWidth = 30.0f;
         
         // World bounds
         float minX = -250.0f;
@@ -775,15 +770,18 @@ public:
         return elements;
     }
 
+    // Teleporter path creation
     static std::vector<int> CreatePathVector(int modelNumber, int thisIdNumber = 0);
 
+    // Place the teleporter at the house depending on model number
     static glm::vec3 getTeleporterPos(glm::vec3 housePos, float houseRotY, int modelNumber);
 
+    // Add teleporter to the house depending on model number
     static void AddTeleporter(glm::vec3 housePos, int modelNumber){
         if(modelNumber == 3)
-            AddTeleporter(housePos, 6);
-        float houseRotY;
-        glm::vec2 lookDir;
+            AddTeleporter(housePos, 6); // house model 3 (double) creates two entrances, so we use model 6 to place the teleporter for the second entrance
+        float houseRotY; // rotattion of the house, used to determine where the teleporter will be placed
+        glm::vec2 lookDir; // direction the player will look to teleport
         if(housePos.z <= 0){
             lookDir = {0,0};
             houseRotY = 180;
@@ -792,7 +790,7 @@ public:
             lookDir = {3.0, 0};
             houseRotY = 0;
         }
-        glm::vec2 spawnLookDir;
+        glm::vec2 spawnLookDir; // direction the player will look when they spawn in the house
         if(housePos.z <= 0)
             spawnLookDir = {3.0,0};
         if(housePos.z > 0)
@@ -800,11 +798,12 @@ public:
         glm::vec3 teleporterPos = getTeleporterPos(housePos, houseRotY,modelNumber);
         glm::vec3 halfSize = {1,1,1};
 
-        int id = RoomManager::AddRoom(InteriorManager::ExternalEntrance);
-        int tpId = TeleporterList::addTeleporter(teleporterPos,halfSize,lookDir,teleporterPos,spawnLookDir,TeleporterList::TeleportUse::ExternalHouse, id);
-        TeleporterList::teleporters.at(tpId).teleporter->SetTeleportPath(CreatePathVector(modelNumber, id));
+        int id = RoomManager::AddRoom(InteriorManager::ExternalEntrance); // add the room correspondining to the external entrace to the house
+        int tpId = TeleporterList::addTeleporter(teleporterPos,halfSize,lookDir,teleporterPos,spawnLookDir,TeleporterList::TeleportUse::ExternalHouse, id); //add the teleporter
+        TeleporterList::teleporters.at(tpId).teleporter->SetTeleportPath(CreatePathVector(modelNumber, id)); //set the path
     }
 
+    // Place houses groups
     static std::vector<MMElement> placeHouses(float hight = 200.0, float lenght = 200.0, float x_offset = 50.0,
                                               float z_offset = 50.0, float scale = 20.0, int idNumber = 0,
                                               std::vector<float> rotation = {90, 0, 0}) {
@@ -822,7 +821,7 @@ public:
 
         for (int i = 0; i < count_z; i++) {
             for (int j = 0; j < count_x; j++) {
-                int modelNum = UtilsStructs::rand_int(1, 5);
+                int modelNum = UtilsStructs::rand_int(1, 5); // randomly select a house model from 1 to 5
                 idNumber++;
                 
                 float posX = j * scale - x_offset;
@@ -836,7 +835,7 @@ public:
                     rotation,
                     defaultScale));
                 
-                AddTeleporter({posX, 0.0f, posZ}, modelNum);
+                AddTeleporter({posX, 0.0f, posZ}, modelNum); // add teleporter for the house
             }
         }
         return elements;
@@ -934,7 +933,7 @@ public:
         return elements;
     }
 
-    // -------------------------------------------------------
+// -------------------------------------------------------
 // PERIMETER TREES WITH RIVER GAP
 // Dense forest border, leaving an opening for the river
 // -------------------------------------------------------
