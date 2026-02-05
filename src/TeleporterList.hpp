@@ -48,7 +48,7 @@ public:
     static Teleporter* getTeleporter(int id);
     static std::map<int, TeleportInfo> teleporters;
 
-    static void SetupTeleportPath(Teleporter *pTeleporter, const std::deque<int>& deque1); // Sets up the teleport path for a given teleporter using a deque of teleporter IDs
+    static void SetupTeleportPath(Teleporter *pTeleporter, const std::deque<int>& deque1); // Sets up connection between pairs of teleporters to create paths between rooms, based on the use of the teleporters in the path
 
 private:
 
