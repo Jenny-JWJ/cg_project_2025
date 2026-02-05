@@ -946,7 +946,7 @@ public:
             float spacing = 6.0f,
             float rowDepth = 4.0f,
             float scaleMul = 1.0f,
-            const std::vector<std::string>& modelIds = {"tree3"},
+            const std::vector<std::string>& modelIds = {"tree1"},
             const std::string& textureId = "tex_veg_atlas"
     ) {
         std::vector<MMElement> elements;
