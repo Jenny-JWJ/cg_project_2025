@@ -22,13 +22,13 @@ bool Teleporter::CanTeleport(const glm::vec3& pos,
 {
     constexpr float PERIOD = 6.0f;
 
-    auto normalize = [&](float a) {
+    auto normalize = [&](float a) { // Normalizes an angle to the range [0, PERIOD), used for normalizing Yaw angles to compare them
         a = std::fmod(a, PERIOD);
         if (a < 0.0f) a += PERIOD;
         return a;
     };
 
-    auto angDist = [&](float a, float b) {
+    auto angDist = [&](float a, float b) { // Calculates the angular distance between two angles, considering the periodicity of angles
         float d = std::abs(a - b);
         return std::min(d, PERIOD - d);
     };
@@ -36,10 +36,12 @@ bool Teleporter::CanTeleport(const glm::vec3& pos,
     float viewYaw = normalize(viewDir.x);
     float tpYaw   = normalize(lookDir.x);
 
+    // Checks if the player is within the teleporter's area
     bool isInArea =  std::abs(center.x - pos.x) <= halfSize.x &&
                      std::abs(center.y - pos.y) <= halfSize.y &&
                      std::abs(center.z - pos.z) <= halfSize.z;
 
+    // Checks if the player is looking in the right direction, allowing for some tolerance defined by lookTol
     bool looksInRightDirection = angDist(viewYaw, tpYaw) <= lookTol &&
                                  std::abs(viewDir.y - lookDir.y) <= lookTol;
 

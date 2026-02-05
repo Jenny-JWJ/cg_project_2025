@@ -26,7 +26,7 @@ public:
             // Calculate direction to bottle
             glm::vec3 toBottle = glm::normalize(bottle - pos);
             
-            // Check if looking at bottle (dot product > 0.6 means within ~53 degree cone)
+            // Check if looking at bottle
             if (glm::dot(forwardDir, toBottle) > 0.6f){
                 return true;
             }
@@ -62,7 +62,7 @@ public:
         // Roll oscillation (head tilt) - different frequency
         roll += sin(timer * 1.2f) * 0.15f * intensity;
         
-        // Position wobble
+        // Movement wobble
         m.x += sin(timer * 1.8f) * 0.02f * intensity;
         m.z += cos(timer * 1.6f) * 0.02f * intensity;
 

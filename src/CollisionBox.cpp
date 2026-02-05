@@ -2,12 +2,12 @@
 #include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
 
-// ---------------- CollisionBox ----------------
+//CollisionBox
 
-CollisionBox::CollisionBox(const glm::vec3& c, const glm::vec3& size, Shape s)
+CollisionBox::CollisionBox(const glm::vec3& c, const glm::vec3& size, Shape s) //Without rotation
         : center(c), halfSize(size * 0.5f), eulerAngles(0.0f), shape(s) {}
 
-CollisionBox::CollisionBox(const glm::vec3& c, const glm::vec3& size, const glm::vec3& angles, Shape s)
+CollisionBox::CollisionBox(const glm::vec3& c, const glm::vec3& size, const glm::vec3& angles, Shape s) //With rotation
         : center(c), halfSize(size * 0.5f), eulerAngles(angles), shape(s) {}
 
 glm::mat3 CollisionBox::getRotationMatrix() const {
@@ -147,7 +147,7 @@ bool sphereSphere(const CollisionBox& a, const CollisionBox& b) {
 }
 
 bool cylinderCylinder(const CollisionBox& a, const CollisionBox& b) {
-    // Overlap verticale (asse Y)
+    // Vertical overlap (Y axis)
     float aMinY = a.center.y - a.halfSize.y;
     float aMaxY = a.center.y + a.halfSize.y;
     float bMinY = b.center.y - b.halfSize.y;
@@ -156,7 +156,7 @@ bool cylinderCylinder(const CollisionBox& a, const CollisionBox& b) {
     if (aMaxY < bMinY || bMaxY < aMinY)
         return false;
 
-    // Distanza sul piano orizzontale (X-Z)
+    // Distance on the horizontal plane (X-Z)
     glm::vec2 d(a.center.x - b.center.x,
                 a.center.z - b.center.z);
 
@@ -239,13 +239,13 @@ bool cubeCylinder(const CollisionBox& cube, const CollisionBox& cyl) {
 }
 
 bool sphereCylinder(const CollisionBox& sphere, const CollisionBox& cyl) {
-    // Clamp verticale
+    // Vertical clamp
     float cylMinY = cyl.center.y - cyl.halfSize.y;
     float cylMaxY = cyl.center.y + cyl.halfSize.y;
 
     float y = clamp(sphere.center.y, cylMinY, cylMaxY);
 
-    // Distanza orizzontale (X-Z)
+    // Horizontal distance (X-Z)
     glm::vec2 d(sphere.center.x - cyl.center.x,
                 sphere.center.z - cyl.center.z);
 
@@ -289,17 +289,17 @@ bool CollisionBox::intersects(const CollisionBox& o) const {
 
 }
 
-// ---------------- CollisionObject ----------------
+//CollisionObject
 
-void CollisionObject::addBox(const glm::vec3& center, const glm::vec3& size, CollisionBox::Shape shape) {
+void CollisionObject::addBox(const glm::vec3& center, const glm::vec3& size, CollisionBox::Shape shape) { // Without rotation
     boxes.emplace_back(center, size, shape);
 }
 
-void CollisionObject::addBox(const glm::vec3& center, const glm::vec3& size, const glm::vec3& eulerAngles, CollisionBox::Shape shape) {
+void CollisionObject::addBox(const glm::vec3& center, const glm::vec3& size, const glm::vec3& eulerAngles, CollisionBox::Shape shape) { //With rotation
     boxes.emplace_back(center, size, eulerAngles, shape);
 }
 
-bool CollisionObject::collidesWith(const CollisionObject& other) const {
+bool CollisionObject::collidesWith(const CollisionObject& other) const { // Check collision between boxes of two objects
     for (const auto& a : boxes)
         for (const auto& b : other.boxes)
             if (a.intersects(b))

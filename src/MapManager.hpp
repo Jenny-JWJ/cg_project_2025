@@ -46,16 +46,16 @@ public:
     static std::mt19937_64 gen;
 
     static std::string getExtension(const std::string &path) {
-        // Trova l'ultima occorrenza del punto
+        // Find the last occurrence of the dot
         size_t dotPos = path.find_last_of('.');
         if (dotPos == std::string::npos) {
-            return ""; // Nessun punto → nessuna estensione
+            return ""; // No dot → no extension
         }
 
-        // Trova l'ultima slash per evitare errori tipo "/path.to/file"
+        // Find the last slash to avoid errors like "/path.to/file"
         size_t slashPos = path.find_last_of("/\\");
         if (slashPos != std::string::npos && dotPos < slashPos) {
-            return ""; // Il punto è in una cartella, non è un'estensione
+            return ""; // The dot is in a folder, not an extension
         }
 
         return path.substr(dotPos); // Include il punto

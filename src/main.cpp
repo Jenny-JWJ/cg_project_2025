@@ -647,7 +647,7 @@ protected:
         PRs[4].init("DebugCollisionBoxes", {
                         {
                             &Pdebug, {
-                                // Puoi usare PsimpObj o una pipeline dedicata wireframe
+                                // You can use PsimpObj or a dedicated wireframe pipeline
                                 {}, // DSLglobal
                                 {{true, 0, {}}, {true, 1, {}}} // DSLlocalSimp (Binding 0 e 1)
                             }
@@ -850,7 +850,7 @@ protected:
     void repositionCameraImmediately() {
         static float camHeight = 1.5;
         static float camDist = 5;
-        // Ricalcola la posizione ideale della camera
+        // Recalculate the ideal camera position
         glm::mat4 camWorld =
                 glm::translate(glm::mat4(1), Pos) *
                 glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0, 1, 0));

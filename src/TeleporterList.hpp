@@ -8,6 +8,7 @@
 
 class TeleporterList {
 public:
+    // Enum defining the different uses of teleporters, which determines how they are connected to other teleporters to create paths between rooms
     enum class TeleportUse {
         ExternalHouse,
         BaseEntrance,
@@ -47,7 +48,7 @@ public:
     static Teleporter* getTeleporter(int id);
     static std::map<int, TeleportInfo> teleporters;
 
-    static void SetupTeleportPath(Teleporter *pTeleporter, const std::deque<int>& deque1);
+    static void SetupTeleportPath(Teleporter *pTeleporter, const std::deque<int>& deque1); // Sets up the teleport path for a given teleporter using a deque of teleporter IDs
 
 private:
 

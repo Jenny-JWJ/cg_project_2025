@@ -18,8 +18,10 @@
 using IMElement = UtilsStructs::Element;
 
 class InteriorManager{
+    // Number of houses per type to generate
     constexpr static const int housePerType[13] = {0, 6, 6, 3, 6, 3, 6, 3, 1, 6, 6, 2, 0};
 public:
+    // House templates, represents the different structures of interiors needed to represent all possible "rooms" of houses
     enum HouseTemplate{
         ExternalEntrance,
         Base,
@@ -42,7 +44,7 @@ public:
         glm::vec2 rotation;
     };
 
-    static std::map<HouseTemplate, std::vector<SpawnPosition>> spawnPositions; //{template, position w.r.t the center, camera rotation(Yaw, Pitch)}
+    static std::map<HouseTemplate, std::vector<SpawnPosition>> spawnPositions; //{template, {{spawn position w.r.t the center, camera spawn rotation(Yaw, Pitch)}, ...}}
 
     static glm::vec3 offset;
 
@@ -76,11 +78,14 @@ public:
     inline static const std::vector<float> rot90_90 = {90.0f, 90.0f, 0.0f};
     inline static const std::vector<float> rot90_270 = {90.0f, 270.0f, 0.0f};
 
+    // Add a new room to the RoomManager and return its ID
     static int AddRoom(HouseTemplate aTemplate);
 
+    // Add a teleporter at specified position and rotation, linked to a room ID
     static void AddTeleporter(glm::vec3 spawnPos, glm::vec2 spawnDir, TeleporterList::TeleportUse tpUse, int roomId);
 
     //House Template
+    //Base, rectangular house with one floor
     static std::vector<IMElement> CreateBaseHouseTemplate(glm::vec3 center){
 
         std::vector<IMElement> elements;
@@ -149,6 +154,7 @@ public:
 
         elements.emplace_back(UtilsStructs::createElement("house_floor_" + std::to_string(instanceNumber),"ground",texNature,{center.x, center.y + 3.1f, center.z}, rot270X, scaleGround)); instanceNumber++;
 
+        // Add interior layout
         std::vector<IMElement> layoutElements = CreateBaseHouseLayout(center);
 
         elements.insert(elements.end(), layoutElements.begin(), layoutElements.end());
@@ -158,8 +164,8 @@ public:
         AddTeleporter(center + spawnPositions.at(Base)[0].position, spawnPositions.at(Base)[0].rotation, TeleporterList::TeleportUse::BaseEntrance, id);
 
         return elements;
-    }
-
+        }
+    //High Base House, rectangular house with two floors, first floor
     static std::vector<IMElement> CreateHighBaseHouseFirstFloorTemplate(glm::vec3 center){
 
             std::vector<IMElement> elements;
@@ -230,7 +236,8 @@ public:
 
             //Stairs
             elements.emplace_back(UtilsStructs::createElement("stairs" + std::to_string(instanceNumber),"stairs",texForniture,{center.x - 4.0f, center.y, center.z + 1},rot0, {2, 1.5, 1.5f})); instanceNumber++;
-
+            
+            // Add interior layout
             std::vector<IMElement> layoutElements = CreateHighHouseFirstFloorLayout(center);
 
             elements.insert(elements.end(), layoutElements.begin(), layoutElements.end());
@@ -243,6 +250,7 @@ public:
         return elements;
         }
 
+    //High Base House, rectangular house with two floors, second floor
     static std::vector<IMElement> CreateHighBaseHouseSecondFloorTemplate(glm::vec3 center){
 
             std::vector<IMElement> elements;
@@ -304,6 +312,7 @@ public:
             //Stairs
             elements.emplace_back(UtilsStructs::createElement("stairs" + std::to_string(instanceNumber),"stairs",texForniture,{center.x - 4.0f, center.y - 3, center.z + 0.5f},rot0, {2.5, 1.5, 1.5f})); instanceNumber++;
 
+            // Add interior layout
             std::vector<IMElement> layoutElements = CreateHighHouseSecondFloorLayout(center);
             elements.insert(elements.end(), layoutElements.begin(), layoutElements.end());
 
@@ -314,6 +323,7 @@ public:
             return elements;
         }
 
+    //Double House, two rectangular houses joined, first floor, left side
     static std::vector<IMElement> CreateDoubleFirstFloorLeftTemplate(glm::vec3 center){
 
         std::vector<IMElement> elements;
@@ -347,7 +357,6 @@ public:
         elements.emplace_back(UtilsStructs::createElement("pillar_" + std::to_string(instanceNumber),"wall_pillar",texNature,{center.x - 2.0f, center.y, center.z + 4.2f}, rot90_180)); instanceNumber++;
         elements.emplace_back(UtilsStructs::createElement("pillar_" + std::to_string(instanceNumber),"wall_pillar",texNature,{center.x + 2.0f, center.y, center.z - 4.2f}, rot90X)); instanceNumber++;
         elements.emplace_back(UtilsStructs::createElement("pillar_" + std::to_string(instanceNumber),"wall_pillar",texNature,{center.x - 2.0f, center.y, center.z - 4.2f}, rot90X)); instanceNumber++;
-        //elements.emplace_back(UtilsStructs::createElement("pillar_" + std::to_string(instanceNumber),"wall_pillar",texNature,{center.x + 6.0f, center.y, center.z}, rot90_270)); instanceNumber++;
         elements.emplace_back(UtilsStructs::createElement("pillar_" + std::to_string(instanceNumber),"wall_pillar",texNature,{center.x - 6.0f, center.y, center.z}, rot90_90)); instanceNumber++;
         elements.emplace_back(UtilsStructs::createElement("pillar_" + std::to_string(instanceNumber),"wall_pillar",texNature,{center.x + 5.9f, center.y, center.z + 3.9f}, rot90_270)); instanceNumber++;
         elements.emplace_back(UtilsStructs::createElement("pillar_" + std::to_string(instanceNumber),"wall_pillar",texNature,{center.x - 5.9f, center.y, center.z + 3.9f}, rot90_90)); instanceNumber++;
@@ -383,6 +392,7 @@ public:
         //Stairs
         elements.emplace_back(UtilsStructs::createElement("stairs" + std::to_string(instanceNumber),"stairs",texForniture,{center.x - 4.0f, center.y, center.z + 1},rot0, {2, 1.5, 1.5f})); instanceNumber++;
 
+        // Add interior layout
         std::vector<IMElement> layoutElements = CreateDoubleFirstFloorLayout(center);
 
         elements.insert(elements.end(), layoutElements.begin(), layoutElements.end());
@@ -395,8 +405,8 @@ public:
 
 
         return elements;
-    }
-
+        }
+    //Double House, two rectangular houses joined, first floor, right side
     static std::vector<IMElement> CreateDoubleFirstFloorRightTemplate(glm::vec3 center){
 
             std::vector<IMElement> elements;
@@ -466,7 +476,8 @@ public:
 
             //Stairs
             elements.emplace_back(UtilsStructs::createElement("stairs" + std::to_string(instanceNumber),"stairs",texForniture,{center.x + 4.0f, center.y, center.z +1},rot0, {2, 1.5, 1.5f})); instanceNumber++;
-
+            
+            // Add interior layout
             std::vector<IMElement> layoutElements = CreateDoubleFirstFloorLayout(center);
 
             elements.insert(elements.end(), layoutElements.begin(), layoutElements.end());
@@ -481,6 +492,7 @@ public:
         return elements;
         }
 
+    //Double House, two rectangular houses joined, second floor, left side
     static std::vector<IMElement> CreateDoubleSecondFloorLeftTemplate(glm::vec3 center){
 
             std::vector<IMElement> elements;
@@ -512,14 +524,13 @@ public:
             elements.emplace_back(UtilsStructs::createElement("pillar_" + std::to_string(instanceNumber),"wall_pillar",texNature,{center.x - 2.0f, center.y, center.z + 4.2f}, rot90_180)); instanceNumber++;
             elements.emplace_back(UtilsStructs::createElement("pillar_" + std::to_string(instanceNumber),"wall_pillar",texNature,{center.x + 2.0f, center.y, center.z - 4.2f}, rot90X)); instanceNumber++;
             elements.emplace_back(UtilsStructs::createElement("pillar_" + std::to_string(instanceNumber),"wall_pillar",texNature,{center.x - 2.0f, center.y, center.z - 4.2f}, rot90X)); instanceNumber++;
-            //elements.emplace_back(UtilsStructs::createElement("pillar_" + std::to_string(instanceNumber),"wall_pillar",texNature,{center.x + 6.0f, center.y, center.z}, rot90_270)); instanceNumber++;
             elements.emplace_back(UtilsStructs::createElement("pillar_" + std::to_string(instanceNumber),"wall_pillar",texNature,{center.x - 6.0f, center.y, center.z}, rot90_90)); instanceNumber++;
             elements.emplace_back(UtilsStructs::createElement("pillar_" + std::to_string(instanceNumber),"wall_pillar",texNature,{center.x + 5.9f, center.y, center.z + 3.9f}, rot90_270)); instanceNumber++;
             elements.emplace_back(UtilsStructs::createElement("pillar_" + std::to_string(instanceNumber),"wall_pillar",texNature,{center.x - 5.9f, center.y, center.z + 3.9f}, rot90_90)); instanceNumber++;
             elements.emplace_back(UtilsStructs::createElement("pillar_" + std::to_string(instanceNumber),"wall_pillar",texNature,{center.x + 5.9f, center.y, center.z - 3.9f}, rot90_270)); instanceNumber++;
             elements.emplace_back(UtilsStructs::createElement("pillar_" + std::to_string(instanceNumber),"wall_pillar",texNature,{center.x - 5.9f, center.y, center.z - 3.9f}, rot90_90)); instanceNumber++;
 
-        //Floor
+            //Floor
             elements.emplace_back(UtilsStructs::createElement("house_floor_" + std::to_string(instanceNumber),"house_floor",texMedieval,{center.x, center.y, center.z}, rot0)); instanceNumber++;
             elements.emplace_back(UtilsStructs::createElement("house_floor_" + std::to_string(instanceNumber),"house_floor",texMedieval,{center.x + 4.0f, center.y, center.z},rot0)); instanceNumber++;
             elements.emplace_back(UtilsStructs::createElement("house_floor_" + std::to_string(instanceNumber),"house_floor",texMedieval,{center.x, center.y, center.z + 4.0f}, rot0)); instanceNumber++;
@@ -545,6 +556,7 @@ public:
             //Stairs
             elements.emplace_back(UtilsStructs::createElement("stairs" + std::to_string(instanceNumber),"stairs",texForniture,{center.x - 4.0f, center.y - 3, center.z + 0.5f},rot0, {2.5, 1.5, 1.5f})); instanceNumber++;
 
+            // Add interior layout
             std::vector<IMElement> layoutElements = CreateDoubleSecondFloorLeftLayout(center);
 
             elements.insert(elements.end(), layoutElements.begin(), layoutElements.end());
@@ -558,7 +570,8 @@ public:
 
         return elements;
         }
-
+    
+    //Double House, two rectangular houses joined, second floor, right side
     static std::vector<IMElement> CreateDoubleSecondFloorRightTemplate(glm::vec3 center){
 
             std::vector<IMElement> elements;
@@ -622,7 +635,8 @@ public:
 
             //Stairs
             elements.emplace_back(UtilsStructs::createElement("stairs" + std::to_string(instanceNumber),"stairs",texForniture,{center.x - 4.0f, center.y - 3, center.z - 0.5f},rot180, {2.5, 1.5, 1.5f})); instanceNumber++;
-
+            
+            // Add interior layout
             std::vector<IMElement> layoutElements = CreateDoubleSecondFloorRightLayout(center);
 
             elements.insert(elements.end(), layoutElements.begin(), layoutElements.end());
@@ -637,6 +651,7 @@ public:
         return elements;
         }
 
+    //Connecting Bridge between two double houses
     static std::vector<IMElement> ConnectingBridge(glm::vec3 center){
 
         std::vector<IMElement> elements;
@@ -668,8 +683,8 @@ public:
 
 
         return elements;
-    }
-
+        }
+    //L-Shaped House, one floor
     static std::vector<IMElement> CreateLShapedTemplate(glm::vec3 center){
 
             std::vector<IMElement> elements;
@@ -686,7 +701,7 @@ public:
             elements.emplace_back(UtilsStructs::createElement("window_"+ std::to_string(instanceNumber),"window",texForniture,{center.x + 2, center.y + 1.5f, center.z + 15.7f}, rot0, scaleWindow));  instanceNumber++;
             elements.emplace_back(UtilsStructs::createElement("window_"+ std::to_string(instanceNumber),"window",texForniture,{center.x + 6, center.y + 1.5f, center.z + 15.7f}, rot0, scaleWindow));  instanceNumber++;
 
-        //Walls
+            //Walls
             elements.emplace_back(UtilsStructs::createElement("wall_" + std::to_string(instanceNumber),"wall",texDungeon,{center.x + 2.0f, center.y, center.z - 0.1f}, rot0, scaleWall)); instanceNumber++;
             elements.emplace_back(UtilsStructs::createElement("wall_" + std::to_string(instanceNumber),"wall",texDungeon,{center.x + 6.0f, center.y, center.z - 0.1f}, rot0, scaleWall)); instanceNumber++;
             elements.emplace_back(UtilsStructs::createElement("wall_" + std::to_string(instanceNumber),"wall",texDungeon,{center.x + 10.0f, center.y, center.z - 0.1f}, rot0, scaleWall)); instanceNumber++;
@@ -761,6 +776,7 @@ public:
 
             elements.emplace_back(UtilsStructs::createElement("house_floor_" + std::to_string(instanceNumber),"ground",texNature,{center.x + 10, center.y + 3.1f, center.z + 10},rot270X, scaleGround)); instanceNumber++;
 
+            // Add interior layout
             std::vector<IMElement> layoutElements = CreateLShapedLayout(center);
 
             elements.insert(elements.end(), layoutElements.begin(), layoutElements.end());
@@ -772,6 +788,7 @@ public:
         return elements;
         }
 
+    //High L-Shaped House, two floor, first floor
     static std::vector<IMElement> CreateHighLShapedFirstFloorTemplate(glm::vec3 center){
 
             std::vector<IMElement> elements;
@@ -861,6 +878,7 @@ public:
             //Stairs
             elements.emplace_back(UtilsStructs::createElement("stairs" + std::to_string(instanceNumber),"stairs",texForniture,{center.x + 2, center.y, center.z + 6.05f},rot180, {2.5, 1.5, 2.0f})); instanceNumber++;
 
+            // Add interior layout
             std::vector<IMElement> layoutElements = CreateHighLShapedFirstFloorLayout(center);
 
             elements.insert(elements.end(), layoutElements.begin(), layoutElements.end());
@@ -873,7 +891,7 @@ public:
 
         return elements;
         }
-
+    //High L-Shaped House, two floor, second floor
     static std::vector<IMElement> CreateHighLShapedSecondFloorTemplate(glm::vec3 center){
 
             std::vector<IMElement> elements;
@@ -935,8 +953,6 @@ public:
 
             //Floor
             elements.emplace_back(UtilsStructs::createElement("house_floor_" + std::to_string(instanceNumber),"house_floor",texMedieval,{center.x + 2, center.y, center.z + 2}, rot0)); instanceNumber++;
-            //elements.emplace_back(UtilsStructs::createElement("house_floor_" + std::to_string(instanceNumber),"house_floor",texMedieval,{center.x + 2, center.y, center.z + 6}, rot0)); instanceNumber++;
-            //elements.emplace_back(UtilsStructs::createElement("house_floor_" + std::to_string(instanceNumber),"house_floor",texMedieval,{center.x + 2, center.y, center.z + 10}, rot0)); instanceNumber++;
             elements.emplace_back(UtilsStructs::createElement("house_floor_" + std::to_string(instanceNumber),"house_floor",texMedieval,{center.x + 2, center.y, center.z + 14}, rot0)); instanceNumber++;
             elements.emplace_back(UtilsStructs::createElement("house_floor_" + std::to_string(instanceNumber),"house_floor",texMedieval,{center.x + 6, center.y, center.z + 2}, rot0)); instanceNumber++;
             elements.emplace_back(UtilsStructs::createElement("house_floor_" + std::to_string(instanceNumber),"house_floor",texMedieval,{center.x + 10, center.y, center.z + 2}, rot0)); instanceNumber++;
@@ -969,6 +985,7 @@ public:
             //Stairs
             elements.emplace_back(UtilsStructs::createElement("stairs" + std::to_string(instanceNumber),"stairs",texForniture,{center.x + 2, center.y - 3, center.z + 6.05f},rot180, {2.5, 1.5, 2.0f})); instanceNumber++;
 
+            // Add interior layout
             std::vector<IMElement> layoutElements = CreateHighLShapedSecondFloorLayout(center);
 
             elements.insert(elements.end(), layoutElements.begin(), layoutElements.end());
@@ -981,7 +998,10 @@ public:
             return elements;
         }
 
+    
+    
     //House Layout
+    //Wall decorations
     static IMElement CreateWallDeco(glm::vec3 pos, glm::vec3 rot = {0,0,0}, glm::vec3 scale = {1,1,1} ){
         IMElement element;
         int rand_int = UtilsStructs::rand_int(1,3);
@@ -1009,7 +1029,7 @@ public:
         }
         return element;
     }
-
+    // Study table with single chair
     static std::vector<IMElement> CreateStudyTableWithChair(glm::vec3 pos, glm::vec3 rot = {0,0,0}, glm::vec3 tableScale = {1,1,1}){
         std::vector<IMElement> elements;
         elements.reserve(2);
@@ -1040,7 +1060,7 @@ public:
         
         return elements;
     }
-
+    // Dining table with chairs
     static std::vector<IMElement> CreateTableWithChairs(glm::vec3 pos, glm::vec3 rot = {0,0,0}, glm::vec3 tableScale = {2,2,2}, int numChairs = 2){
         std::vector<IMElement> elements;
         elements.reserve(5);
@@ -1166,7 +1186,7 @@ public:
         }
         return elements;
     }
-
+    //Decoration placed on the ground (tables and chairs)
     static std::vector<IMElement> CreateGroundedDeco(glm::vec3 pos, glm::vec3 rot = {0,0,0}){
         std::vector<IMElement> elements;
         elements.reserve(10);
@@ -1177,7 +1197,7 @@ public:
         else elements = CreateTableWithChairs(pos);
         return elements;
     }
-
+    //Random Boxes
     static IMElement CreateRandomBox(glm::vec3 pos, glm::vec3 rot = {0,0,0}, glm::vec3 scale = {1,1,1}){
         int rand_int = UtilsStructs::rand_int(1,3);
         if (rand_int == 1){
@@ -1192,6 +1212,7 @@ public:
         return UtilsStructs::createElement("chest_" + std::to_string(instanceNumber),"dungeon_box6",texDungeon,{pos.x , pos.y + 0.4f, pos.z}, {rot.x , rot.y, rot.z}, {scale.x , scale.y, scale.z});
 
     }
+    //Random Libraries
     static IMElement CreateRandomLibrary(glm::vec3 pos, glm::vec3 rot = {0,0,0}, glm::vec3 scale = {1,1,1}){
         int rand_int = UtilsStructs::rand_int(1,4);
         if (rand_int == 1){
@@ -1209,7 +1230,7 @@ public:
         return UtilsStructs::createElement("library_" + std::to_string(instanceNumber),"dungeon_library1",texDungeon,{pos.x , pos.y + 0.4f, pos.z}, {rot.x , rot.y, rot.z}, {scale.x , scale.y, scale.z});
 
     }
-
+    // Layout of a Base House
     static std::vector<IMElement> CreateBaseHouseLayout(glm::vec3 center){
         std::vector<IMElement> elements;
         elements.reserve(10);
@@ -1229,7 +1250,7 @@ public:
 
         return elements;
     }
-
+    // Layout of a High House, first floor
     static std::vector<IMElement> CreateHighHouseFirstFloorLayout(glm::vec3 center){
         std::vector<IMElement> elements;
         elements.reserve(10);
@@ -1245,7 +1266,7 @@ public:
 
         return elements;
     }
-
+    // Layout of a High House, second floor
     static std::vector<IMElement> CreateHighHouseSecondFloorLayout(glm::vec3 center){
         std::vector<IMElement> elements;
         elements.reserve(10);
@@ -1263,7 +1284,7 @@ public:
 
         return elements;
     }
-
+    // Layout of a Double House, first floor (left and right are the same)
     static std::vector<IMElement> CreateDoubleFirstFloorLayout(glm::vec3 center){
         std::vector<IMElement> elements;
         elements.reserve(15);
@@ -1279,7 +1300,7 @@ public:
 
         return elements;
     }
-
+    // Layout of a Double House, second floor right side
     static std::vector<IMElement> CreateDoubleSecondFloorRightLayout(glm::vec3 center){
         std::vector<IMElement> elements;
         elements.reserve(10);
@@ -1294,6 +1315,7 @@ public:
 
         return elements;
     }
+    // Layout of a Double House, second floor left side
     static std::vector<IMElement> CreateDoubleSecondFloorLeftLayout(glm::vec3 center){
         std::vector<IMElement> elements;
         elements.reserve(10);
@@ -1308,7 +1330,7 @@ public:
 
         return elements;
     }
-
+    // Layout of a L-Shaped House
     static std::vector<IMElement> CreateLShapedLayout(glm::vec3 center){
         std::vector<IMElement> elements;
         elements.reserve(15);
@@ -1332,6 +1354,7 @@ public:
 
         return elements;
     }
+    // Layout of a High L-Shaped House, first floor
     static std::vector<IMElement> CreateHighLShapedFirstFloorLayout(glm::vec3 center){
         std::vector<IMElement> elements;
         elements.reserve(15);
@@ -1354,6 +1377,7 @@ public:
 
         return elements;
     }
+    // Layout of a High L-Shaped House, second floor
     static std::vector<IMElement> CreateHighLShapedSecondFloorLayout(glm::vec3 center){
         std::vector<IMElement> elements;
         elements.reserve(10);

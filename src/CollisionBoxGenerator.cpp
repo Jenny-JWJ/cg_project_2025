@@ -7,12 +7,12 @@
 #include <glm/vec3.hpp>
 #include <iostream>
 
-// === STATIC MEMBERS ===
+
 std::vector<CollisionObject> CollisionBoxGenerator::collisions = {};
 UInstance CollisionBoxGenerator::collisionInstance;
 int CollisionBoxGenerator::collisionBoxVisualCount = 0;
 
-// === FUNCTIONS ===
+
 
 void CollisionBoxGenerator::fillCollisionsBoxes(const std::vector<UElement>& elements) {
     std::cout <<"Starting to fill the collisions";
@@ -26,20 +26,20 @@ void CollisionBoxGenerator::fillCollisionsBoxes(const std::vector<UElement>& ele
 CollisionObject CollisionBoxGenerator::createCollisionObject(const UElement& element) {
     CollisionObject col;
 
-    glm::vec3 pos = glm::vec3(
+    glm::vec3 pos = glm::vec3( // Element position
             element.translate[0],
             element.translate[1],
             element.translate[2]
     );
 
-    glm::vec3 rot = glm::vec3(
+    glm::vec3 rot = glm::vec3( // Element rotation
             element.eulerAngles[0],
             element.eulerAngles[1],
             element.eulerAngles[2]
     );
 
 
-
+    // Houses
     if (element.id.find("house1") != std::string::npos) {
         col.addBox(
                 pos + glm::vec3(0.0f, 2.5f, 0.0f),
@@ -118,6 +118,7 @@ CollisionObject CollisionBoxGenerator::createCollisionObject(const UElement& ele
                        CollisionBox::Shape::cube);
         }
     }
+    // Well
     else if (element.id.find("ww") != std::string::npos) {
         col.addBox(
                 pos + glm::vec3(0.0f, 0.5f, 0.0f),
@@ -125,6 +126,7 @@ CollisionObject CollisionBoxGenerator::createCollisionObject(const UElement& ele
                 CollisionBox::Shape::cylinder
         );
     }
+    // Vegetation
     else if (element.model.find("tree1") != std::string::npos || element.model.find("tree2") != std::string::npos) {
         col.addBox(
                 pos + glm::vec3(0.0f, 2.5f, 0.0f),
@@ -139,6 +141,7 @@ CollisionObject CollisionBoxGenerator::createCollisionObject(const UElement& ele
                 CollisionBox::Shape::sphere
         );
     }
+    // External props
     else if (element.model.find("barrel") != std::string::npos) {
         col.addBox(
                 pos + glm::vec3(0.0f, 0.5f, 0.0f),
@@ -185,6 +188,7 @@ CollisionObject CollisionBoxGenerator::createCollisionObject(const UElement& ele
                 CollisionBox::Shape::cube
         );
     }
+    // Houses structural elements
     else if (element.model == "wall") {
         col.addBox(
                 pos + glm::vec3(0.0f, 2.5f, 0.0f),
@@ -237,43 +241,7 @@ CollisionObject CollisionBoxGenerator::createCollisionObject(const UElement& ele
             );
         }
     }
-    /*else if (element.model.find("tent1") != std::string::npos) {
-        col.addBox(
-                pos + glm::vec3(0.0f, 1, 1.0f),
-                glm::vec3(2.0f, 2.0f, 0.1f),
-                CollisionBox::Shape::cube
-        );
-        col.addBox(
-                pos + glm::vec3(0.0f, 1, -1.0f),
-                glm::vec3(2.0f, 2.0f, 0.1f),
-                CollisionBox::Shape::cube
-        );
-        col.addBox(
-                pos + glm::vec3(2.0f, 1, 0.0f),
-                glm::vec3(0.1f, 2.0f, 2.0f),
-                CollisionBox::Shape::cube
-        );
-    }
-    else if (element.model.find("tent2") != std::string::npos) {
-        col.addBox(
-                pos + glm::vec3(4.0f, 1, 2.0f),
-                glm::vec3(0.1f, 2.0f, 12),
-                rot + glm::vec3(-90, 0, 0),
-                CollisionBox::Shape::cube
-        );
-        col.addBox(
-                pos + glm::vec3(-4.0f, 1, -2.0f),
-                glm::vec3(0.1f, 2.0f, 12),
-                rot + glm::vec3(-90, 0, 0),
-                CollisionBox::Shape::cube
-        );
-        col.addBox(
-                pos + glm::vec3(-3.0f, 1, 6.0f),
-                glm::vec3(8.0f, 2.0f, 0.1f),
-                rot + glm::vec3(-90, 0, 0),
-                CollisionBox::Shape::cube
-        );
-    }*/
+    // Graveyard props
     else if(element.model.find("statue") != std::string::npos){
         col.addBox(
                 pos,
@@ -328,12 +296,9 @@ CollisionObject CollisionBoxGenerator::createCollisionObject(const UElement& ele
                 CollisionBox::Shape::cube
         );
     }
-    // =========================
-    // INTERIOR OBJECTS
-    // =========================
+    // House interior props
 
     else if (element.model.find("dungeon_box6") != std::string::npos) {
-        // chests
         col.addBox(
                 pos,
                 glm::vec3(1, 0.6, 0.45),
@@ -341,7 +306,6 @@ CollisionObject CollisionBoxGenerator::createCollisionObject(const UElement& ele
         );
     }
     else if (element.model.find("dungeon_box8") != std::string::npos) {
-        // chests
         col.addBox(
                 pos,
                 glm::vec3(1.4, 0.6, 0.9),
@@ -349,7 +313,6 @@ CollisionObject CollisionBoxGenerator::createCollisionObject(const UElement& ele
         );
     }
     else if (element.model.find("dungeon_box10") != std::string::npos) {
-        // chests
         col.addBox(
                 pos,
                 glm::vec3(1, 0.6, 0.45),
@@ -357,7 +320,6 @@ CollisionObject CollisionBoxGenerator::createCollisionObject(const UElement& ele
         );
     }
     else if (element.model.find("dungeon_library3") != std::string::npos) {
-        // bookshelves
         col.addBox(
                 pos,
                 glm::vec3(1.6, 5.5, 4),
@@ -365,7 +327,6 @@ CollisionObject CollisionBoxGenerator::createCollisionObject(const UElement& ele
         );
     }
     else if (element.model.find("dungeon_library4") != std::string::npos) {
-        // bookshelves
         col.addBox(
                 pos,
                 glm::vec3(1.6, 5.5, 4),
@@ -373,7 +334,6 @@ CollisionObject CollisionBoxGenerator::createCollisionObject(const UElement& ele
         );
     }
     else if (element.model.find("dungeon_library5") != std::string::npos) {
-        // bookshelves
         col.addBox(
                 pos,
                 glm::vec3(1.6, 5.5, 4),
@@ -381,7 +341,6 @@ CollisionObject CollisionBoxGenerator::createCollisionObject(const UElement& ele
         );
     }
     else if (element.model.find("dungeon_library6") != std::string::npos) {
-        // bookshelves
         col.addBox(
                 pos,
                 glm::vec3(1.6, 5.5, 4),
@@ -471,7 +430,6 @@ UElement CollisionBoxGenerator::createCollisionObjectVisual(const CollisionBox& 
         element.scale[0] = collision.halfSize.x * 2.0f * 2.0f;
         element.scale[1] = collision.halfSize.y * 2.0f;
         element.scale[2] = collision.halfSize.z * 2.0f * 2.0f;
-        //element.translate[1] = collision.center.y - collision.halfSize.y * 2.0f;
     }
 
 

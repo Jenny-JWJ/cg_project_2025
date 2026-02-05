@@ -5,6 +5,8 @@
 #include "InteriorManager.hpp"
 #include "RoomManager.hpp"
 
+// For each house template, define spawn positions and rotations (relative to house center)
+// The first in the list represent the main entrance spawn point 
 std::map<InteriorManager::HouseTemplate, std::vector<InteriorManager::SpawnPosition>> InteriorManager::spawnPositions = {
         {Base,                   {{{0,    0, 3.1},  {0,    0}}}},
         {HighBaseFirstFloor,     {{{0,    0, 3.1},  {0,    0}}, {{-4,0,1}, {3,0.5}}}},
@@ -30,6 +32,7 @@ void InteriorManager::AddTeleporter(glm::vec3 spawnPos, glm::vec2 spawnDir,Telep
     TeleporterList::addTeleporter(spawnPos,{1,1,1},spawnDir + glm::vec2(3,0),spawnPos,spawnDir, tpUse, roomId);
 }
 
+// Cycle through all house templates and create interiors
 std::vector<IMElement>
 InteriorManager::CreateHouseInteriors(glm::vec3 origin, float distance) {
     std::vector<IMElement> elements;
@@ -47,6 +50,7 @@ InteriorManager::CreateHouseInteriors(glm::vec3 origin, float distance) {
     return elements;
 }
 
+// Call specific house template creation function
 std::vector<IMElement> InteriorManager::CreateHouse(HouseTemplate tmp, glm::vec3 center){
     switch (tmp) {
         case ExternalEntrance:  return {};

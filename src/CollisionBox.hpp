@@ -4,9 +4,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 
-// --------------------------------------------------
-// Single Axis-Aligned Bounding Box (AABB)
-// --------------------------------------------------
+// Collision box representing cube, sphere, or cylinder
 struct CollisionBox {
 
     enum Shape{
@@ -28,10 +26,9 @@ struct CollisionBox {
     bool intersects(const CollisionBox& other) const;
 };
 
-// --------------------------------------------------
+
 // A collision object composed of multiple boxes
 // (for L-shaped buildings, etc.)
-// --------------------------------------------------
 class CollisionObject {
 public:
     std::vector<CollisionBox> boxes;

@@ -23,7 +23,7 @@ bool CandleManager::canPickupCandle(const glm::vec3& pos, const glm::vec3& forwa
         // Calculate direction to candle
         glm::vec3 toCandle = glm::normalize(candlePos - pos);
         
-        // Check if looking at candle (dot product > 0.6 means within ~53 degree cone)
+        // Check if looking at candle
         if (glm::dot(forwardDir, toCandle) > 0.6f){
             pickableCandle = candleId;
             return true;
@@ -82,10 +82,10 @@ glm::vec3 CandleManager::getCandleWorldPosition(const glm::vec3& playerPos, floa
     // Adjust offsets based on camera mode
     glm::vec3 offset;
     if (isFirstPerson) {
-        // First person: candle to the right and forward
+        // First person
         offset = right * candleOffset.x + up * candleOffset.y + forward * candleOffset.z;
     } else {
-        // Third person: candle behind and to the right of character (visible from camera)
+        // Third person
         offset = right * (candleOffset.x - 0.5f) + up * candleOffset.y + forward * (-candleOffset.z +0.4f);
     }
     
