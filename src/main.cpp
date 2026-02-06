@@ -158,11 +158,11 @@ private:
     bool bucketIsOnGround = false; // Logic flag: is the full bucket near the well?
     glm::vec3 groundedBucketPos = glm::vec3(1.2f, 0.3f, 0.0f); // Where the full bucket spawns
 
-    // --- CAST 3 RISING ANIMATION ---
+    // --- CAST 3 (Ghost) RISING ANIMATION ---
     enum CastState { CAST_HIDDEN, CAST_RISING, CAST_VISIBLE, CAST_CHASING, CAST_RETURNING };
 
     CastState currentCastState = CAST_HIDDEN;
-    glm::vec3 castCurrentPos = glm::vec3(350.0f, -3.0f, -110.0f); // Current cast3 position
+    glm::vec3 castCurrentPos = glm::vec3(350.0f, -3.0f, -110.0f); // Current ghost (cast 3) position
     float castCurrentRotation = 0;
     float castTargetHeight = 5.0f; // How high it rises
     float castRiseSpeed = 1.0f; // Rising speed
@@ -174,7 +174,7 @@ private:
     float rotation_speed = 0.001f;
     float return_speed = 0.001f;
     glm::vec3 statuePos = glm::vec3(350.0f, 0.0f, -110.0f); // Statue position in graveyard
-    glm::vec3 castReturnPos = glm::vec3(350.0f, -3.0f, -110.0f); // Where cast3 returns to
+    glm::vec3 castReturnPos = glm::vec3(350.0f, -3.0f, -110.0f); // Where ghost (cast 3) returns to
     bool castDebounce = false; // Input debounce for trigger key
     float timeBeforeChasing = 3.0f;
     float chaseTime = 10.0;
@@ -649,7 +649,7 @@ protected:
                             &Pdebug, {
                                 // You can use PsimpObj or a dedicated wireframe pipeline
                                 {}, // DSLglobal
-                                {{true, 0, {}}, {true, 1, {}}} // DSLlocalSimp (Binding 0 e 1)
+                                {{true, 0, {}}, {true, 1, {}}} // DSLlocalSimp (Binding 0 and 1)
                             }
                         }
                     }, 2, &VDsimp); // Uses 2 textures total
@@ -1051,7 +1051,6 @@ protected:
                 debounce = true;
                 curDebounce = GLFW_KEY_SPACE;
                 running = true;
-                std::cout << "Playing anim: " << curAnim << "\n";
             }
         } else {
             if ((curDebounce == GLFW_KEY_SPACE) && debounce) {
@@ -1221,6 +1220,32 @@ protected:
             }
         }
 
+        // Death and respawn when ghost catches player
+        float distanceToGhost = glm::length(Pos - castCurrentPos);
+        
+        if (distanceToGhost <= 1.5f && currentCastState == CAST_CHASING){
+            // Reset ghost state
+            castCurrentPos = castReturnPos;
+            currentCastState = CAST_HIDDEN;
+            chaseTimer = 0.0f;
+            rotation_speed = 0.001f;
+            return_speed = 0.001f;
+            floatingValue = 0.0f;
+            floatUp = true;
+            floatDown = false;
+            
+            // Teleport player to spawn
+            Pos = glm::vec3(0, 0, 5);
+            oldPos = Pos;
+            
+            // Reset camera to prevent it from staying at old position
+            Yaw = glm::radians(0.0f);
+            Pitch = glm::radians(0.0f);
+            characterRotation = glm::radians(0.0f);
+            resetCamera = true;
+            repositionCameraImmediately();
+        }
+
         // --- CANDLE VISIBILITY CONTROL ---
         // Handle hiding/showing candles based on pickup state
         for (int k = 0; k < SC.TechniqueInstanceCount; k++) {
@@ -1370,7 +1395,7 @@ protected:
         static float sunAngle = 0.0f;
 
         // Total real-world seconds for one full 360-degree cycle (5 minutes)
-        float dayDuration = 50.0f;
+        float dayDuration = 300.0f;
 
         // Determine rotation speed: radians per second based on day duration
         float rotationSpeed = glm::radians(360.0f) / dayDuration;
@@ -1402,15 +1427,15 @@ protected:
         // Switch between lamps (near origin) and candles/study lights (far from origin)
         float distFromOrigin = glm::length(Pos);
 
-        if (distFromOrigin < 800.0f) {
+        if (distFromOrigin < 500.0f) {
             // Near origin: activate lamps with dynamic color based on daylight
             plboData.numActiveLights = 0;
 
-            // --- LOGICA LUCI DINAMICHE ---
-            // lampIntensity va a 0 quando il sole è alto, e a 1 quando il sole scende
+            // --- DYNAMIC LIGHTS LOGIC ---
+            // lampIntensity goes to 0 when the sun is high, and to 1 when the sun goes down
             float lampIntensity = glm::clamp(1.0f - (sunHeight + 0.1f) / 0.3f, 0.0f, 1.0f);
 
-            // Moltiplichiamo per 10.0f per renderle MOLTO più luminose
+            // Multiply by 10.0f to make them brighter
             glm::vec3 warmAmber = glm::vec3(1.0f, 0.5f, 0.1f);
             float brightness = 3.0f;
             glm::vec3 currentLampColor = warmAmber * (lampIntensity * brightness);
@@ -1755,6 +1780,14 @@ protected:
         } else if (nearWell && currentWellState == W_IDLE) {
             txt.print(-1.0f, -0.9f, "E to draw water", 4, "CO", false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
                       {0.0f, 1.0f, 1.0f, 1.0f}, {0, 0, 0, 1});
+        }else if (nearStatue && currentCastState == CAST_HIDDEN) {
+            txt.print(-1.0f, -0.9f, "E to interact with statue", 4, "CO",
+                      false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
+                      {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
+        }else if (currentCastState == CAST_CHASING) {
+            txt.print(-1.0f, -0.9f, "RUN!", 4, "CO",
+                      false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
+                      {1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
         }else if (DrunkEffectManager::canDrink(Pos, forwardDir)) {
             txt.print(-1.0f, -0.9f, "E to drink", 4, "CO",
                       false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,

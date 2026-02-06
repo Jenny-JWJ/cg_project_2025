@@ -1783,7 +1783,7 @@ public:
         std::vector<MMElement> lightsV = placeStreetLights(200.0f, 1, 25.0f, "lamp1", "tex_medieval_atlas");
         simpElements.insert(simpElements.end(), lightsV.begin(), lightsV.end());
 
-        std::vector<MMElement> interior = InteriorManager::CreateHouseInteriors({900, 0, 900});
+        std::vector<MMElement> interior = InteriorManager::CreateHouseInteriors({500, 0, 500});
         simpElements.insert(simpElements.end(), interior.begin(), interior.end());
 
         // --- G. GRAVEYARD ---
