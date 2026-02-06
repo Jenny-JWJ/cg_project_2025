@@ -1670,18 +1670,6 @@ protected:
         sbubo.settings.x = blendFactor; // Controls Day/Night texture mixing
         SC.TI[2].I[0].DS[0][0]->map(currentImage, &sbubo, 0);
 
-        //TODO THIS CAUSED SOME CRASHES WHEN THE PROGRAM WAS COMPILED AND RUNNED IDK WHY SO I COMMENTED IT BECAUSE THEORETICALLY WE DO NOT USE PBR OBJECTS PLS CHECK THIS
-        // PBR objects
-        /*for (instanceId = 0; instanceId < SC.TI[3].InstanceCount; instanceId++) {
-            ubos.mMat = SC.TI[3].I[instanceId].Wm;
-            ubos.mvpMat = ViewPrj * ubos.mMat;
-            ubos.nMat = glm::inverse(glm::transpose(ubos.mMat));
-
-            SC.TI[3].I[instanceId].DS[0][0]->map(currentImage, &gubo, 0); // Set 0
-            SC.TI[3].I[instanceId].DS[0][1]->map(currentImage, &ubos, 0); // Set 1
-        }
-        */
-
         // --- VEGETATION RENDERING (TI[3]) ---
         for (instanceId = 0; instanceId < SC.TI[3].InstanceCount; instanceId++) {
             ubos.mMat = SC.TI[3].I[instanceId].Wm;
