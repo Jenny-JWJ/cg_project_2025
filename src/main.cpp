@@ -1222,8 +1222,8 @@ protected:
 
         // Death and respawn when ghost catches player
         float distanceToGhost = glm::length(Pos - castCurrentPos);
-        
-        if (distanceToGhost <= 1.5f && currentCastState == CAST_CHASING){
+
+        if (distanceToGhost <= 1.5f && currentCastState == CAST_CHASING) {
             // Reset ghost state
             castCurrentPos = castReturnPos;
             currentCastState = CAST_HIDDEN;
@@ -1233,11 +1233,11 @@ protected:
             floatingValue = 0.0f;
             floatUp = true;
             floatDown = false;
-            
+
             // Teleport player to spawn
             Pos = glm::vec3(0, 0, 5);
             oldPos = Pos;
-            
+
             // Reset camera to prevent it from staying at old position
             Yaw = glm::radians(0.0f);
             Pitch = glm::radians(0.0f);
@@ -1251,25 +1251,26 @@ protected:
         for (int k = 0; k < SC.TechniqueInstanceCount; k++) {
             for (int i = 0; i < SC.TI[k].InstanceCount; i++) {
                 std::string instanceId = *(SC.TI[k].I[i].id);
-                
+
                 // If this is the held candle, hide it by scaling to 0
                 if (CandleManager::isHoldingCandle && instanceId == CandleManager::heldCandleId) {
                     SC.TI[k].I[i].Wm = glm::scale(SC.TI[k].I[i].Wm, glm::vec3(0.0f));
                 }
-                // If this was just dropped, restore it to original position
+                    // If this was just dropped, restore it to original position
                 else if (!CandleManager::isHoldingCandle && instanceId == CandleManager::droppedCandle) {
                     // Reconstruct world matrix from original position with 2x scale
                     glm::vec3 originalPos = CandleManager::candlePositions[instanceId];
                     SC.TI[k].I[i].Wm = glm::translate(glm::mat4(1.0f), originalPos) *
                                        glm::scale(glm::mat4(1.0f), glm::vec3(2.0f, 2.0f, 2.0f));
                     CandleManager::droppedCandle = "";
-                }
-                else if (instanceId == "held_candle"){
-                    if(CandleManager::isHoldingCandle){
-                        SC.TI[k].I[i].Wm = glm::translate(glm::mat4(1.0f), CandleManager::getCandleWorldPosition(Pos, characterRotation, isFirstPerson)) *
-                                           glm::scale(glm::mat4(1.0f), glm::vec3(2.0f, 2.0f, 2.0f)) * glm::rotate(glm::mat4(1.0f), isFirstPerson? Yaw : 0, {0,1,0});
-                    }
-                    else SC.TI[k].I[i].Wm = glm::scale(SC.TI[k].I[i].Wm, glm::vec3(0.0f));
+                } else if (instanceId == "held_candle") {
+                    if (CandleManager::isHoldingCandle) {
+                        SC.TI[k].I[i].Wm = glm::translate(glm::mat4(1.0f),
+                                                          CandleManager::getCandleWorldPosition(Pos, characterRotation,
+                                                                                                isFirstPerson)) *
+                                           glm::scale(glm::mat4(1.0f), glm::vec3(2.0f, 2.0f, 2.0f)) *
+                                           glm::rotate(glm::mat4(1.0f), isFirstPerson ? Yaw : 0, {0, 1, 0});
+                    } else SC.TI[k].I[i].Wm = glm::scale(SC.TI[k].I[i].Wm, glm::vec3(0.0f));
                 }
             }
         }
@@ -1345,21 +1346,23 @@ protected:
         }
 
         // Calculate forward direction for bottle detection
-        glm::vec3 forwardDir = glm::vec3(glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0, 1, 0)) * glm::vec4(0, 0, -1, 1));
+        glm::vec3 forwardDir = glm::vec3(
+                glm::rotate(glm::mat4(1.0f), Yaw, glm::vec3(0, 1, 0)) * glm::vec4(0, 0, -1, 1));
 
         //Drunk Effect
-        if (DrunkEffectManager::canDrink(Pos, forwardDir) && !canTeleport && glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS){
+        if (DrunkEffectManager::canDrink(Pos, forwardDir) && !canTeleport &&
+            glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
             if (!debounce) {
                 debounce = true;
                 curDebounce = GLFW_KEY_E;
                 DrunkEffectManager::drink();
-            }else {
+            } else {
                 if ((curDebounce == GLFW_KEY_E) && debounce) {
                     debounce = false;
                     curDebounce = 0;
                 }
 
-        }
+            }
         }
 
         // Update candle interaction cooldown
@@ -1368,26 +1371,26 @@ protected:
         }
 
         //Pickup or drop candle (mutually exclusive with cooldown)
-        if (!canTeleport && glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && !candleDebounce && candleCooldown <= 0.0f){
+        if (!canTeleport && glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && !candleDebounce && candleCooldown <= 0.0f) {
             // Try pickup first (only if not holding)
             if (CandleManager::canPickupCandle(Pos, forwardDir)) {
                 CandleManager::pickupCandle();
                 candleDebounce = true;
                 candleCooldown = CANDLE_COOLDOWN_TIME;
             }
-            // Try drop only if not picked up (only if holding)
+                // Try drop only if not picked up (only if holding)
             else if (CandleManager::canDropCandle(Pos, forwardDir)) {
                 CandleManager::dropCandle();
                 candleDebounce = true;
                 candleCooldown = CANDLE_COOLDOWN_TIME;
             }
         }
-        
+
         // Reset candle debounce when E key is released
         if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE) {
             candleDebounce = false;
         }
-        
+
         // --- DAY/NIGHT & SUNSET CYCLE START ---
 
         // Time Accumulator
@@ -1441,7 +1444,7 @@ protected:
             glm::vec3 currentLampColor = warmAmber * (lampIntensity * brightness);
 
             // Load lamp lights from storage and apply dynamic color
-            for (const auto& light : lampLights) {
+            for (const auto &light: lampLights) {
                 if (plboData.numActiveLights >= 100) break;
                 plboData.lights[plboData.numActiveLights].position = light.position;
                 plboData.lights[plboData.numActiveLights].color = currentLampColor;
@@ -1452,16 +1455,18 @@ protected:
             plboData.numActiveLights = 0;
 
             // Add candle lights
-            for (const auto& light : candleLights) {
+            for (const auto &light: candleLights) {
                 if (plboData.numActiveLights >= 100) break;
-                if (CandleManager::isHoldingCandle && CandleManager::candlePositions[CandleManager::heldCandleId] == light.position) break;
+                if (CandleManager::isHoldingCandle &&
+                    CandleManager::candlePositions[CandleManager::heldCandleId] == light.position)
+                    break;
                 plboData.lights[plboData.numActiveLights].position = light.position;
                 plboData.lights[plboData.numActiveLights].color = light.color;
                 plboData.numActiveLights++;
             }
 
             // Add study lights
-            for (const auto& light : studyLights) {
+            for (const auto &light: studyLights) {
                 if (plboData.numActiveLights >= 100) break;
                 plboData.lights[plboData.numActiveLights].position = light.position;
                 plboData.lights[plboData.numActiveLights].color = light.color;
@@ -1516,13 +1521,13 @@ protected:
         gubo.eyePos = cameraPos; // Required for specular highlights
         gubo.time = (float) glfwGetTime(); // Required for wind/sway vertex animations
         gubo.eyePos = cameraPos;
-        
+
         // --- SUN SPHERE POSITIONING ---
         // Calculate sun world position relative to player (like a skybox)
         float sunDistance = 180.0f; // Distance from player (always far away in sky)
         glm::vec3 sunWorldPos = Pos + (currentLightDir * sunDistance); // Position sun relative to player
         float sunSize = 20.0f; // Scale of the sun sphere (larger = more visible)
-        
+
         // --- UPDATE SUN SPHERE IN SCENE ---
         // Find and position the sun sphere model
         for (int k = 0; k < SC.TechniqueInstanceCount; k++) {
@@ -1532,10 +1537,10 @@ protected:
                     // Position sun in the sky based on light direction, following player
                     // Scale down if below horizon (or hide completely)
                     float visibleScale = (sunHeight > 0.0f) ? sunSize : 0.0f;
-                    
+
                     glm::mat4 transform = glm::translate(glm::mat4(1.0f), sunWorldPos) *
                                           glm::scale(glm::mat4(1.0f), glm::vec3(visibleScale));
-                    
+
                     SC.TI[k].I[i].Wm = transform;
                     break;
                 }
@@ -1563,9 +1568,9 @@ protected:
         // Build the base Model Matrix for the character (Scale -> Rotate -> Translate)
         glm::mat4 AdaptMat =
                 glm::scale(glm::mat4(1.0f), glm::vec3(0.01f)) * glm::rotate(
-                    glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) * glm::translate(
-                    glm::mat4(1.0f), glm::vec3(Pos.x * 100, Pos.z * 100, -Pos.y * 100)) * glm::rotate(
-                    glm::mat4(1.0f), characterRotation, glm::vec3(0.0f, 0.0f, 1.0f));
+                        glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) * glm::translate(
+                        glm::mat4(1.0f), glm::vec3(Pos.x * 100, Pos.z * 100, -Pos.y * 100)) * glm::rotate(
+                        glm::mat4(1.0f), characterRotation, glm::vec3(0.0f, 0.0f, 1.0f));
 
         // In First Person View, we scale the player to 0 to hide the model from the camera
         if (isFirstPerson) {
@@ -1613,31 +1618,27 @@ protected:
                 } else {
                     ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -100.0f, 0.0f));
                 }
-            }
-            else if (*inst.id == "well_bucket") {
+            } else if (*inst.id == "well_bucket") {
                 // Move the bucket attached to the rope
                 if (!bucketIsOnGround) {
                     ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, bucketAnimY, 0.0f));
                 } else {
                     ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -100.0f, 0.0f));
                 }
-            }
-            else if (*inst.id == "spawned_bucket") {
+            } else if (*inst.id == "spawned_bucket") {
                 if (bucketIsOnGround) {
                     ubos.mMat = glm::translate(glm::mat4(1.0f), groundedBucketPos);
                 } else {
                     ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -100.0f, 0.0f));
                 }
-            }
-            else if (*inst.id == "well_mask") {
+            } else if (*inst.id == "well_mask") {
                 if (!bucketIsOnGround) {
                     ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, bucketAnimY + maskOffset, 0.0f)) *
                                 glm::scale(glm::mat4(1.0f), glm::vec3(0.36f, 0.01f, 0.36f));
                 } else {
                     ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -100.0f, 0.0f));
                 }
-            }
-            else if (inst.id->find("well_splash_") != std::string::npos) {
+            } else if (inst.id->find("well_splash_") != std::string::npos) {
                 // Handle the 8 individual splash particles
                 int idx = std::stoi(inst.id->substr(12)); // Get index after "well_splash_"
                 float jump = splashJump[idx];
@@ -1648,8 +1649,7 @@ protected:
                 } else {
                     ubos.mMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -100.0f, 0.0f));
                 }
-            }
-            else {
+            } else {
                 // Standard static object position from World Matrix
                 ubos.mMat = inst.Wm;
             }
@@ -1717,7 +1717,7 @@ protected:
         // --- POST-PROCESSING UNIFORM BUFFER UPDATE ---
         // Update drunk effect intensity and time for shader animation
         ppUBO.drunkIntensity = DrunkEffectManager::getDrunkIntensity();
-        ppUBO.time = (float)glfwGetTime();
+        ppUBO.time = (float) glfwGetTime();
         DSpostProcess.map(currentImage, &ppUBO, 1);  // Binding 1 = UBO
 
         // Updates the FPS
@@ -1768,37 +1768,37 @@ protected:
         } else if (nearWell && currentWellState == W_IDLE) {
             txt.print(-1.0f, -0.9f, "E to draw water", 4, "CO", false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
                       {0.0f, 1.0f, 1.0f, 1.0f}, {0, 0, 0, 1});
-        }else if (nearStatue && currentCastState == CAST_HIDDEN) {
+        } else if (nearStatue && currentCastState == CAST_HIDDEN) {
             txt.print(-1.0f, -0.9f, "E to interact with statue", 4, "CO",
                       false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
                       {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
-        }else if (currentCastState == CAST_CHASING) {
+        } else if (currentCastState == CAST_CHASING) {
             txt.print(-1.0f, -0.9f, "RUN!", 4, "CO",
                       false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
                       {1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
-        }else if (DrunkEffectManager::canDrink(Pos, forwardDir)) {
+        } else if (DrunkEffectManager::canDrink(Pos, forwardDir)) {
             txt.print(-1.0f, -0.9f, "E to drink", 4, "CO",
                       false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
                       {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
-        }else if (CandleManager::canPickupCandle(Pos, forwardDir)) {
-        txt.print(-1.0f, -0.9f, "E to pickup candle", 4, "CO",
-                  false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
-                  {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
-         }else if (CandleManager::canDropCandle(Pos, forwardDir)) {
+        } else if (CandleManager::canPickupCandle(Pos, forwardDir)) {
+            txt.print(-1.0f, -0.9f, "E to pickup candle", 4, "CO",
+                      false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
+                      {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
+        } else if (CandleManager::canDropCandle(Pos, forwardDir)) {
             txt.print(-1.0f, -0.9f, "E to drop candle", 4, "CO",
                       false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
                       {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
-        }
-        else {
+        } else {
             txt.print(0.0f, 0.0f, " ", 4, "CO",
                       false, false, true, TAL_LEFT, TRH_LEFT, TRV_TOP,
                       {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
         }
+        if (MapManager::debug){
         std::ostringstream oss;
         oss << std::fixed << std::setprecision(1)
-                << "Player position  x: " << std::floor(Pos.x * 10) / 10
-                << " y: " << std::floor(Pos.y * 10) / 10
-                << " z: " << std::floor(Pos.z * 10) / 10;
+            << "Player position  x: " << std::floor(Pos.x * 10) / 10
+            << " y: " << std::floor(Pos.y * 10) / 10
+            << " z: " << std::floor(Pos.z * 10) / 10;
 
         std::string coordinateTxt = oss.str();
         txt.print(-1.0, -0.8, coordinateTxt, 5, "CO", false, false, true,
@@ -1806,14 +1806,14 @@ protected:
                   {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
         std::ostringstream oss2;
         oss2 << std::fixed << std::setprecision(1)
-                << "Camera direction Yaw: " << std::floor(Yaw * 10) / 10
-                << " Pitch: " << std::floor(Pitch * 10) / 10;
+             << "Camera direction Yaw: " << std::floor(Yaw * 10) / 10
+             << " Pitch: " << std::floor(Pitch * 10) / 10;
 
         std::string directionTxt = oss2.str();
         txt.print(-1.0, -0.7, directionTxt, 6, "CO", false, false, true,
                   TAL_LEFT, TRH_LEFT, TRV_TOP,
                   {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f});
-
+    }
 
         txt.updateCommandBuffer();
     }
