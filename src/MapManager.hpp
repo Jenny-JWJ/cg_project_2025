@@ -1964,6 +1964,13 @@ public:
                 perimeterForest.end()
         );
 
+        CollisionObject* collisionObject = new CollisionObject();
+        collisionObject->addBox({205, 10, 0}, {250, 20, 5});
+        collisionObject->addBox({0, 10, 205}, {5, 20, 500});
+        collisionObject->addBox({0, 10, -205}, {5, 20, 500});
+        collisionObject->addBox({400, 10, 0}, {250, 20, 5});
+        CollisionBoxGenerator::collisions.emplace_back(*collisionObject);
+
 
         // --- I. FINALIZING INSTANCES ---
         std::vector<MMElement> skyboxElements = {UtilsStructs::createElement("skybox", "skybox", {"skybox"})};

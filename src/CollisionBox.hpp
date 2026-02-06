@@ -32,6 +32,7 @@ struct CollisionBox {
 class CollisionObject {
 public:
     std::vector<CollisionBox> boxes;
+    CollisionObject();
 
     void addBox(const glm::vec3& center, const glm::vec3& size, CollisionBox::Shape shape = CollisionBox::Shape::cube);
     void addBox(const glm::vec3& center, const glm::vec3& size, const glm::vec3& eulerAngles, CollisionBox::Shape shape = CollisionBox::Shape::cube);
